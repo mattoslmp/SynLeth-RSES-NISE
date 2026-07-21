@@ -1,0 +1,67 @@
+alphafold:
+  api: https://alphafold.ebi.ac.uk/api/prediction
+  output_dir: data/raw/structures/alphafold
+  download_formats:
+    - pdb
+    - cif
+    - pae
+  preserve_fragments: true
+
+residue_sources:
+  mcsa:
+    endpoint: https://www.ebi.ac.uk/thornton-srv/m-csa/api/residues/
+    exact_uniprot_only: true
+  uniprot:
+    endpoint: https://rest.uniprot.org/uniprotkb
+    feature_types:
+      - Active site
+      - Binding site
+      - Metal binding
+      - Site
+      - Nucleotide binding
+  pdbe:
+    molecules_endpoint: https://www.ebi.ac.uk/pdbe/api/pdb/entry/molecules
+    binding_sites_endpoint: https://www.ebi.ac.uk/pdbe/api/pdb/entry/binding_sites
+    require_uniprot_numbering: true
+
+rendering:
+  engine: pymol
+  executable: pymol
+  whole_width_px: 2800
+  whole_height_px: 2200
+  site_width_px: 2800
+  site_height_px: 2200
+  dpi: 600
+  background: white
+  ray_trace: true
+  orthoscopic: true
+  structure_style: cartoon
+  show_surface_in_site_view: false
+  strict_missing_structure: false
+  strict_missing_annotation: false
+
+colors:
+  mcsa_catalytic: red
+  uniprot_active_site: red
+  uniprot_binding: orange
+  uniprot_metal: violet
+  uniprot_site: yellow
+  pdbe_ligand: magenta
+  drug_binding: cyan
+  curated_user: marine
+
+confidence:
+  very_high: 90
+  confident: 70
+  low: 50
+
+publication:
+  main_figure_id: Figure_8
+  first_activity_figure_number: 15
+  coverage_figure_id: Figure_S30
+  provenance_figure_id: Figure_S31
+  pair_summary_figure_id: Figure_S32
+  individual_render_dir: article_outputs/structure_atlas/individual
+  main_figure_dir: article_outputs/figures/main
+  supplementary_figure_dir: article_outputs/figures/supplementary
+  source_data_dir: article_outputs/source_data/figures/structures
