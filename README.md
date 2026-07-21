@@ -1,6 +1,6 @@
 # SynLeth-RSES-Onco / RSES-Onco
 
-**RSES-Onco v0.10.1** is a coverage-aware framework for discovering and
+**RSES-Onco v0.10.2** is a coverage-aware framework for discovering and
 prioritizing cancer-selective dependencies created by non-homologous
 isofunctional enzymes (NISEs), homologous paralogs, pathway backups, collateral
 deletions and downstream vulnerabilities. The initial disease scope is
@@ -40,6 +40,11 @@ The complete, command-by-command protocol from DepMap/GDC acquisition through al
 analyses, all 40 figures, all tables, checksums and post-run validation is:
 
 - [`docs/END_TO_END_ARTICLE_PROTOCOL.md`](docs/END_TO_END_ARTICLE_PROTOCOL.md)
+
+STRING mapping, per-gene caching and recovery after a functional-evidence failure
+are documented in:
+
+- [`docs/STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md`](docs/STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md)
 
 The canonical post-run verification command is:
 
@@ -122,6 +127,45 @@ PIPELINE_EXITCODE_FILE=logs/run_expanded_after_download_v0101.exitcode \
 bash scripts/verify_complete_article_run.sh \
   2>&1 | tee logs/verify_complete_article_run.log
 ```
+
+## Resume after a functional-evidence interruption
+
+Use this only when candidate construction, Ensembl expansion and all-target DepMap
+discovery already completed, and the previous execution stopped at STRING,
+DoRothEA, HPA or UniProt acquisition:
+
+```bash
+OLD="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-NISE"
+NEW="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010"
+
+cd "$NEW" || exit 1
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate rses-onco
+
+export DEPMAP_DIR="$OLD/data/raw/depmap"
+export GDC_DIR="$OLD/data/raw/gdc"
+
+mkdir -p logs
+set -o pipefail
+
+MPLBACKEND=Agg \
+PYTHONUNBUFFERED=1 \
+DEPMAP_DIR="$DEPMAP_DIR" \
+GDC_DIR="$GDC_DIR" \
+bash scripts/run_expanded_pipeline.sh resume-functional \
+  2>&1 | tee logs/run_expanded_resume_functional_v0102.log
+
+status=${PIPESTATUS[0]}
+echo "$status" > logs/run_expanded_resume_functional_v0102.exitcode
+echo "Resume exit code: $status"
+test "$status" -eq 0
+```
+
+The STRING downloader maps symbols to exact STRING IDs, uses the version-specific
+stable API, waits one second between network calls, writes per-gene caches and
+reuses completed queries after interruption. It records unmapped identifiers as
+missing coverage rather than score zero. Persistent request failures remain fatal
+in the strict pipeline stage after status and resume files have been written.
 
 ## Structural atlas only
 
@@ -235,6 +279,7 @@ article_outputs/
 ## Documentation
 
 - [`docs/END_TO_END_ARTICLE_PROTOCOL.md`](docs/END_TO_END_ARTICLE_PROTOCOL.md)
+- [`docs/STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md`](docs/STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md)
 - [`docs/REAL_DATA_WORKFLOW.md`](docs/REAL_DATA_WORKFLOW.md)
 - [`docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md`](docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md)
 - [`docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md`](docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md)
