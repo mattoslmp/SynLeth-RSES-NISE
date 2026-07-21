@@ -19,7 +19,12 @@ jobs:
       - run: bash -n scripts/run_real_data_pipeline.sh
       - run: bash -n scripts/run_expanded_pipeline.sh
       - run: bash -n scripts/run_publication_pipeline.sh
-      - run: python -m pytest -q -p no:cacheprovider
+      - name: Publication tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_publication.py
+      - name: Pharmacology tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_pharmacology.py
+      - name: Complete test suite
+        run: python -m pytest -q -p no:cacheprovider
       - name: Build complete directed NISE universe
         run: |
           python scripts/build_expanded_candidate_universe.py \
