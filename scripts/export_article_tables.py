@@ -6,7 +6,6 @@ import argparse
 from dataclasses import asdict, dataclass
 from pathlib import Path
 import shutil
-from typing import Callable
 
 import pandas as pd
 from pandas.errors import EmptyDataError
@@ -100,6 +99,9 @@ def main() -> None:
   parser.add_argument("--drug-sensitivity", default="data/processed/pharmacology/drug_response_selectivity.tsv")
   parser.add_argument("--pharmacology-source-status", default="data/processed/pharmacology/pharmacology_source_status.tsv")
   parser.add_argument("--pharmacology-source-coverage", default="results/expanded_26Q1/pharmacology/pharmacology_source_coverage.tsv")
+  parser.add_argument("--structure-manifest", default="data/processed/structures/alphafold_structure_manifest.tsv")
+  parser.add_argument("--structural-annotations", default="data/processed/structures/nise_structural_residue_annotations.tsv")
+  parser.add_argument("--structure-render-manifest", default="data/processed/structures/nise_structure_render_manifest.tsv")
   parser.add_argument("--output-root", default="article_outputs")
   parser.add_argument("--top-n", type=int, default=20)
   parser.add_argument("--fdr", type=float, default=0.05)
@@ -108,9 +110,9 @@ def main() -> None:
   config = yaml.safe_load(resolve_path(args.config).read_text(encoding="utf-8")) or {}
   configured_main = list(config.get("main_tables") or [])
   configured_supplementary = list(config.get("supplementary_tables") or [])
-  if len(configured_main) != 4 or len(configured_supplementary) != 15:
+  if len(configured_main) != 4 or len(configured_supplementary) != 18:
     raise ValueError(
-      "config/article_assets.yaml must define 4 main and 15 supplementary tables"
+      "config/article_assets.yaml must define 4 main and 18 supplementary tables"
     )
 
   paths = {
@@ -129,6 +131,9 @@ def main() -> None:
     "sensitivity": resolve_path(args.drug_sensitivity),
     "pharmacology_status": resolve_path(args.pharmacology_source_status),
     "pharmacology_coverage": resolve_path(args.pharmacology_source_coverage),
+    "structure_manifest": resolve_path(args.structure_manifest),
+    "structural_annotations": resolve_path(args.structural_annotations),
+    "structure_render_manifest": resolve_path(args.structure_render_manifest),
   }
   ranking = pd.read_csv(paths["ranking"], sep="\t")
   candidates = pd.read_csv(paths["candidates"], sep="\t")
@@ -145,6 +150,9 @@ def main() -> None:
   sensitivity = read_optional(paths["sensitivity"])
   pharmacology_status = read_optional(paths["pharmacology_status"])
   pharmacology_coverage = read_optional(paths["pharmacology_coverage"])
+  structure_manifest = read_optional(paths["structure_manifest"])
+  structural_annotations = read_optional(paths["structural_annotations"])
+  structure_render_manifest = read_optional(paths["structure_render_manifest"])
 
   output_root = resolve_path(args.output_root)
   main_dir = output_root / "tables" / "main"
@@ -170,50 +178,24 @@ def main() -> None:
     )
     .sort_values("maximum_adjusted_rses", ascending=False)
   )
-  records.append(write_table(
-    class_summary,
-    main_dir / configured_main[0],
-    "main",
-    [paths["ranking"]],
-  ))
+  records.append(write_table(class_summary, main_dir / configured_main[0], "main", [paths["ranking"]]))
 
   top_vulnerabilities = (
-    ranking.sort_values(
-      ["cancer", "coverage_adjusted_rses"],
-      ascending=[True, False],
-    )
+    ranking.sort_values(["cancer", "coverage_adjusted_rses"], ascending=[True, False])
     .groupby("cancer", group_keys=False)
     .head(args.top_n)
   )
-  records.append(write_table(
-    top_vulnerabilities,
-    main_dir / configured_main[1],
-    "main",
-    [paths["ranking"]],
-  ))
+  records.append(write_table(top_vulnerabilities, main_dir / configured_main[1], "main", [paths["ranking"]]))
 
   significant = significant_dependency(dependency, args.fdr)
-  records.append(write_table(
-    significant,
-    main_dir / configured_main[2],
-    "main",
-    [paths["dependency"]],
-  ))
+  records.append(write_table(significant, main_dir / configured_main[2], "main", [paths["dependency"]]))
 
   top_pharmacology = (
-    pharmacology_ranking.sort_values(
-      "therapeutic_hypothesis_score", ascending=False
-    ).head(args.top_n * 3)
-    if not pharmacology_ranking.empty
-    and "therapeutic_hypothesis_score" in pharmacology_ranking
+    pharmacology_ranking.sort_values("therapeutic_hypothesis_score", ascending=False).head(args.top_n * 3)
+    if not pharmacology_ranking.empty and "therapeutic_hypothesis_score" in pharmacology_ranking
     else pharmacology_ranking
   )
-  records.append(write_table(
-    top_pharmacology,
-    main_dir / configured_main[3],
-    "main",
-    [paths["pharmacology_ranking"]],
-  ))
+  records.append(write_table(top_pharmacology, main_dir / configured_main[3], "main", [paths["pharmacology_ranking"]]))
 
   component_columns = [
     column for column in ranking.columns
@@ -267,6 +249,9 @@ def main() -> None:
     (pharmacology_ranking, [paths["pharmacology_ranking"]]),
     (sensitivity, [paths["sensitivity"]]),
     (status_coverage, [paths["pharmacology_status"], paths["pharmacology_coverage"]]),
+    (structure_manifest, [paths["structure_manifest"]]),
+    (structural_annotations, [paths["structural_annotations"]]),
+    (structure_render_manifest, [paths["structure_render_manifest"]]),
   ]
   for name, (frame, source_paths) in zip(configured_supplementary, supplementary_frames):
     records.append(write_table(frame, supplementary_dir / name, "supplementary", source_paths))
@@ -274,14 +259,13 @@ def main() -> None:
   source_dir.mkdir(parents=True, exist_ok=True)
   for record in records:
     table_path = Path(record.path)
-    destination = source_dir / table_path.name
-    shutil.copy2(table_path, destination)
+    shutil.copy2(table_path, source_dir / table_path.name)
 
   manifest_dir.mkdir(parents=True, exist_ok=True)
   manifest = pd.DataFrame([asdict(record) for record in records])
   manifest.to_csv(manifest_dir / "table_manifest.tsv", sep="\t", index=False)
-  if len(records) != 19:
-    raise RuntimeError(f"Expected 19 article tables; observed {len(records)}")
+  if len(records) != 22:
+    raise RuntimeError(f"Expected 22 article tables; observed {len(records)}")
   print(manifest[["table_id", "category", "rows", "status"]].to_string(index=False))
   print(f"Wrote all article tables to {output_root / 'tables'}")
 
