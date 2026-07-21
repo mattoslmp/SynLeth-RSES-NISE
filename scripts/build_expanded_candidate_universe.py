@@ -9,6 +9,7 @@ vulnerabilities or other explicitly sourced classes.
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -21,6 +22,14 @@ from rses_onco.expanded import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+SIMPLE_LOSS_PATTERNS = [
+  re.compile(r"^([A-Za-z0-9-]+)$", re.I),
+  re.compile(r"^([A-Za-z0-9-]+)\s+loss$", re.I),
+  re.compile(r"^([A-Za-z0-9-]+)\s+homozygous deletion$", re.I),
+  re.compile(r"^([A-Za-z0-9-]+)\s+loss/low expression$", re.I),
+  re.compile(r"^([A-Za-z0-9-]+)\s+loss or low expression$", re.I),
+  re.compile(r"^([A-Za-z0-9-]+)\s+loss/low activity$", re.I),
+]
 
 
 def resolve_path(value: str | None) -> Path | None:
@@ -28,6 +37,15 @@ def resolve_path(value: str | None) -> Path | None:
     return None
   path = Path(value)
   return path if path.is_absolute() else ROOT / path
+
+
+def simple_lost_gene(value: object) -> str | None:
+  text = str(value).strip()
+  for pattern in SIMPLE_LOSS_PATTERNS:
+    match = pattern.fullmatch(text)
+    if match:
+      return match.group(1).upper()
+  return None
 
 
 def main() -> None:
@@ -64,9 +82,7 @@ def main() -> None:
   if "source_class" not in benchmarks:
     benchmarks["source_class"] = benchmarks["relation_type"].astype(str)
   if "lost_gene" not in benchmarks:
-    benchmarks["lost_gene"] = benchmarks["lost_feature"].astype(str).str.extract(
-      r"^([A-Za-z0-9-]+)", expand=False
-    )
+    benchmarks["lost_gene"] = benchmarks["lost_feature"].map(simple_lost_gene)
 
   nise_candidates = build_directed_nise_candidates(nise_pairs)
   additional = []
@@ -90,9 +106,11 @@ def main() -> None:
   nise_genes = set(
     members.loc[members["source_class"] == "NISE", "gene"].astype(str)
   )
+  complex_benchmarks = int(benchmarks["lost_gene"].isna().sum())
   print(f"Wrote {len(universe):,} candidate directions to {output}")
   print(f"Directed NISE candidates: {directed_nise:,}")
   print(f"Unique NISE genes represented: {len(nise_genes):,}")
+  print(f"Complex benchmark biomarkers retained without fake lost genes: {complex_benchmarks:,}")
   print(f"Wrote class-member inventory to {members_output}")
 
 
