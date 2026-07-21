@@ -1,0 +1,47 @@
+sources:
+  prism:
+    enabled: true
+    path_globs:
+      - data/raw/pharmacology/prism/*secondary*.csv
+      - data/raw/pharmacology/prism/*primary*.csv
+      - data/raw/pharmacology/prism/*.csv
+    layout: long
+    model_columns: [ModelID, model_id, depmap_id, DepMap_ID, cell_line, cell_line_name]
+    drug_columns: [drug_name, name, compound, compound_name, broad_id]
+    drug_id_columns: [drug_id, broad_id, perturbagen_id]
+    value_columns: [log_fold_change, viability, auc, AUC, IC50]
+    metric: PRISM_response
+    lower_is_more_sensitive: true
+
+  gdsc:
+    enabled: true
+    path_globs:
+      - data/raw/pharmacology/gdsc/*.csv
+      - data/raw/pharmacology/gdsc/*.tsv
+    layout: long
+    model_columns: [ModelID, model_id, depmap_id, COSMIC_ID, CELL_LINE_NAME, cell_line]
+    drug_columns: [DRUG_NAME, drug_name, compound, compound_name]
+    drug_id_columns: [DRUG_ID, drug_id]
+    value_columns: [LN_IC50, IC50, AUC, auc]
+    metric: GDSC_response
+    lower_is_more_sensitive: true
+
+  ctrp:
+    enabled: true
+    path_globs:
+      - data/raw/pharmacology/ctrp/*.csv
+      - data/raw/pharmacology/ctrp/*.tsv
+    layout: long
+    model_columns: [ModelID, model_id, depmap_id, ccle_name, cell_line]
+    drug_columns: [master_cpd_id, drug_name, compound_name, compound]
+    drug_id_columns: [master_cpd_id, drug_id]
+    value_columns: [area_under_curve, AUC, auc, ec50]
+    metric: CTRP_response
+    lower_is_more_sensitive: true
+
+# For a wide matrix, set layout: wide and provide:
+#   row_id_column: compound_name
+#   metric: log_fold_change
+#   lower_is_more_sensitive: true
+# All remaining columns containing recognized ModelIDs or mapped cell-line names
+# will be melted to long format.

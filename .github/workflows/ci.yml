@@ -6,6 +6,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -16,7 +18,19 @@ jobs:
       - run: python -m compileall -q src scripts
       - run: bash -n scripts/run_real_data_pipeline.sh
       - run: bash -n scripts/run_expanded_pipeline.sh
-      - run: python -m pytest -q -p no:cacheprovider
+      - run: bash -n scripts/run_publication_pipeline.sh
+      - name: Figure triplet smoke test
+        run: python -m pytest -q -p no:cacheprovider tests/test_publication.py::test_scripted_figure_exports_png_pdf_svg
+      - name: Axes overlap detection test
+        run: python -m pytest -q -p no:cacheprovider tests/test_publication.py::test_axes_overlap_is_detected
+      - name: Figure manifest test
+        run: python -m pytest -q -p no:cacheprovider tests/test_publication.py::test_figure_manifest_and_legends
+      - name: Strict layout rejection test
+        run: python -m pytest -q -p no:cacheprovider tests/test_publication.py::test_strict_layout_rejects_overlap
+      - name: Pharmacology tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_pharmacology.py
+      - name: Complete test suite
+        run: python -m pytest -q -p no:cacheprovider
       - name: Build complete directed NISE universe
         run: |
           python scripts/build_expanded_candidate_universe.py \

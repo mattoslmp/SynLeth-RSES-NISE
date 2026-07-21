@@ -17,6 +17,7 @@ data/raw/depmap/
 data/raw/gdc/
 data/raw/ensembl/
 data/raw/human_functional_evidence/
+data/raw/pharmacology/
 data/raw/SwissProt_NISE.tsv.gz
 
 # Large processed cohort and release-specific evidence matrices
@@ -24,11 +25,13 @@ data/processed/TCGA_*_homdel_discrete.tsv
 data/processed/expanded_candidate_universe.tsv
 data/processed/expanded_class_member_inventory.tsv
 data/processed/expanded_pair_functional_evidence.tsv
+data/processed/pharmacology/
 
-# Release-specific empirical outputs generated locally
+# Release-specific empirical and publication outputs generated locally
 results/empirical_26Q1/
 results/expanded_26Q1/
 figures/empirical_26Q1/
 figures/expanded_26Q1/
+article_outputs/
 supplementary/RSES_Onco_Empirical_*.xlsx
 supplementary/RSES_Onco_Expanded_*.xlsx
