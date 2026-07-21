@@ -16,6 +16,7 @@ ARTICLE_ROOT="${ARTICLE_ROOT:-article_outputs}"
 LOG_DIR="${LOG_DIR:-logs/structures_26Q1}"
 PYMOL_EXECUTABLE="${PYMOL_EXECUTABLE:-pymol}"
 STRICT_LAYOUT="${STRICT_LAYOUT:-1}"
+CURATED_STRUCTURAL_RESIDUES="${CURATED_STRUCTURAL_RESIDUES:-data/curated/nise_exact_drug_contact_residues.tsv}"
 
 mkdir -p data/raw/structures data/processed/structures \
   "$ARTICLE_ROOT/structure_atlas/individual" "$LOG_DIR"
@@ -41,12 +42,17 @@ download_structures() {
 }
 
 collect_annotations() {
-  run_logged "$LOG_DIR/02_collect_structural_annotations.log" \
-    python -u scripts/collect_nise_structural_annotations.py \
-      --proteins "$PROTEINS" \
-      --output "$ANNOTATIONS" \
-      --coverage-output "$COVERAGE" \
-      --cache-dir data/raw/structures/annotation_cache
+  local command=(
+    python -u scripts/collect_nise_structural_annotations.py
+    --proteins "$PROTEINS"
+    --output "$ANNOTATIONS"
+    --coverage-output "$COVERAGE"
+    --cache-dir data/raw/structures/annotation_cache
+  )
+  if [[ -s "$CURATED_STRUCTURAL_RESIDUES" ]]; then
+    command+=(--curated-residues "$CURATED_STRUCTURAL_RESIDUES")
+  fi
+  run_logged "$LOG_DIR/02_collect_structural_annotations.log" "${command[@]}"
 }
 
 render_structures() {
@@ -95,7 +101,12 @@ Stages:
   all           Run all stages
 
 Install the rendering engine with:
-  conda install -c conda-forge pymol-open-source
+  conda install -c conda-forge pymol-open-source pillow
+
+Optional exact drug-contact mappings:
+  cp data/curated/nise_exact_drug_contact_residues.template.tsv \
+     data/curated/nise_exact_drug_contact_residues.tsv
+  # Fill only exact UniProt-numbered residues with source and mapping status.
 EOF
 }
 
