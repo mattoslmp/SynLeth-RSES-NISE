@@ -1,0 +1,71 @@
+group_id	ec_number	activity	gene_symbol	uniprot_accession	structural_cluster
+HNISE01	1.3.1.20	carbonyl reductase activity	DHDH	Q9UQ10	1
+HNISE01	1.3.1.20	carbonyl reductase activity	AKR1C2	P52895	2
+HNISE01	1.3.1.20	carbonyl reductase activity	AKR1C1	Q04828	2
+HNISE02	1.15.1.1	superoxide dismutase activity	SOD2	P04179	1
+HNISE02	1.15.1.1	superoxide dismutase activity	SOD1	P00441	2
+HNISE02	1.15.1.1	superoxide dismutase activity	SOD3	P08294	2
+HNISE03	2.4.1.22	lactose synthase / beta-1,4-galactosyltransferase activity	B4GALT2	O60909	1
+HNISE03	2.4.1.22	lactose synthase / beta-1,4-galactosyltransferase activity	B4GALT1	P15291	1
+HNISE03	2.4.1.22	lactose synthase / beta-1,4-galactosyltransferase activity	LALBA	P00709	2
+HNISE04	2.4.2.31	NAD+-protein ADP-ribosyltransferase activity	SIRT6	Q8N6T7	1
+HNISE04	2.4.2.31	NAD+-protein ADP-ribosyltransferase activity	ART1	P52961	2
+HNISE04	2.4.2.31	NAD+-protein ADP-ribosyltransferase activity	ART3	Q13508	2
+HNISE04	2.4.2.31	NAD+-protein ADP-ribosyltransferase activity	ART4	Q93070	2
+HNISE04	2.4.2.31	NAD+-protein ADP-ribosyltransferase activity	ART5	Q96L15	2
+HNISE05	2.7.1.67	phosphatidylinositol 4-kinase activity	PI4KA	P42356	1
+HNISE05	2.7.1.67	phosphatidylinositol 4-kinase activity	PI4KB	Q9UBF8	1
+HNISE05	2.7.1.67	phosphatidylinositol 4-kinase activity	PI4K2A	Q9BTU6	2
+HNISE05	2.7.1.67	phosphatidylinositol 4-kinase activity	PI4K2B	Q8TCG2	2
+HNISE06	2.7.4.21	inositol polyphosphate kinase activity	PPIP5K2	O43314	1
+HNISE06	2.7.4.21	inositol polyphosphate kinase activity	PPIP5K1	Q6PFW1	1
+HNISE06	2.7.4.21	inositol polyphosphate kinase activity	IP6K1	Q92551	2
+HNISE06	2.7.4.21	inositol polyphosphate kinase activity	IP6K3	Q96PC2	2
+HNISE06	2.7.4.21	inositol polyphosphate kinase activity	IP6K2	Q9UHH9	2
+HNISE07	3.1.1.3	triacylglycerol lipase activity	AADAC	P22760	3
+HNISE07	3.1.1.3	triacylglycerol lipase activity	CEL	B4DSX9	3
+HNISE07	3.1.1.3	triacylglycerol lipase activity	LIPC	P11150	4
+HNISE07	3.1.1.3	triacylglycerol lipase activity	PNLIP	P16233	4
+HNISE07	3.1.1.3	triacylglycerol lipase activity	PNLIPRP1	P54315	4
+HNISE07	3.1.1.3	triacylglycerol lipase activity	PNLIPRP3	Q17RR3	4
+HNISE07	3.1.1.3	triacylglycerol lipase activity	LIPG	Q9Y5X9	4
+HNISE07	3.1.1.3	triacylglycerol lipase activity	PNLIPRP2	P54317	4
+HNISE07	3.1.1.3	triacylglycerol lipase activity	LIPF	P07098	9
+HNISE07	3.1.1.3	triacylglycerol lipase activity	PNPLA3	Q9NST1	10
+HNISE08	3.1.1.29	aminoacyl-tRNA hydrolase activity	PTRH2	Q9Y3E5	1
+HNISE08	3.1.1.29	aminoacyl-tRNA hydrolase activity	PTRH1	Q86Y79	2
+HNISE08	3.1.1.29	aminoacyl-tRNA hydrolase activity	ICT1	Q14197	3
+HNISE09	3.1.2.2	palmitoyl-CoA hydrolase activity	ACOT2	P49753	1
+HNISE09	3.1.2.2	palmitoyl-CoA hydrolase activity	BAAT	Q14032	1
+HNISE09	3.1.2.2	palmitoyl-CoA hydrolase activity	ACOT1	Q86TX2	1
+HNISE09	3.1.2.2	palmitoyl-CoA hydrolase activity	ACOT4	Q8N9L9	1
+HNISE09	3.1.2.2	palmitoyl-CoA hydrolase activity	ACOT7	O00154	2
+HNISE10	3.1.3.2	acid phosphatase activity	ACP5	P13686	1
+HNISE10	3.1.3.2	acid phosphatase activity	ACP2	P11117	2
+HNISE10	3.1.3.2	acid phosphatase activity	ACPP	P15309	2
+HNISE10	3.1.3.2	acid phosphatase activity	ACPT	Q9BZG2	2
+HNISE10	3.1.3.2	acid phosphatase activity	ACP6	Q9NPH0	2
+HNISE10	3.1.3.2	acid phosphatase activity	ACP1	P24666	5
+HNISE11	3.1.3.5	5'-nucleotidase activity	NT5C1B	Q96P26	2
+HNISE11	3.1.3.5	5'-nucleotidase activity	NT5C1A	Q9BXI3	2
+HNISE11	3.1.3.5	5'-nucleotidase activity	NT5E	P21589	3
+HNISE11	3.1.3.5	5'-nucleotidase activity	NT5C	Q8TCD5	5
+HNISE11	3.1.3.5	5'-nucleotidase activity	NT5M	Q9NPB1	5
+HNISE11	3.1.3.5	5'-nucleotidase activity	NT5C3A	Q9H0P0	7
+HNISE11	3.1.3.5	5'-nucleotidase activity	NT5C2	P49902	9
+HNISE12	3.1.4.12	sphingomyelin phosphodiesterase activity	SMPD2	O60906	1
+HNISE12	3.1.4.12	sphingomyelin phosphodiesterase activity	SMPD3	Q9NY59	1
+HNISE12	3.1.4.12	sphingomyelin phosphodiesterase activity	SMPD1	P17405	2
+HNISE12	3.1.4.12	sphingomyelin phosphodiesterase activity	SMPD4	Q9NXE4	3
+HNISE12	3.1.4.12	sphingomyelin phosphodiesterase activity	ENPP7	Q6UWV6	4
+HNISE13	4.2.99.18	DNA N-glycosylase / AP-lyase-related repair activity	NTHL1	P78549	1
+HNISE13	4.2.99.18	DNA N-glycosylase / AP-lyase-related repair activity	OGG1	O15527	1
+HNISE13	4.2.99.18	DNA N-glycosylase / AP-lyase-related repair activity	NEIL2	Q969S2	1
+HNISE13	4.2.99.18	DNA N-glycosylase / AP-lyase-related repair activity	NEIL1	Q96FI4	1
+HNISE13	4.2.99.18	DNA N-glycosylase / AP-lyase-related repair activity	APEX1	P27695	1
+HNISE13	4.2.99.18	DNA N-glycosylase / AP-lyase-related repair activity	APEX2	Q9UBZ4	1
+HNISE13	4.2.99.18	DNA N-glycosylase / AP-lyase-related repair activity	APLF	Q8IW19	6
+HNISE14	5.3.99.2	prostaglandin-D synthase activity	PTGDS	P41222	1
+HNISE14	5.3.99.2	prostaglandin-D synthase activity	HPGDS	O60760	2
+HNISE15	5.3.99.3	prostaglandin-E synthase activity	PTGES2	Q9H7Z7	1
+HNISE15	5.3.99.3	prostaglandin-E synthase activity	PTGES	O14684	2

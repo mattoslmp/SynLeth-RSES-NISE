@@ -1,0 +1,19 @@
+name: rses-onco
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - networkx
+  - requests
+  - pyyaml
+  - pytest
+  - mafft
+  - fasttree
+  - pip
+  - pip:
+      - -e .

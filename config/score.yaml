@@ -1,0 +1,15 @@
+weights:
+  tumor_event: 0.18
+  dependency: 0.25
+  selectivity: 0.17
+  expression_compensation: 0.10
+  functional_relation: 0.12
+  validation_tractability: 0.18
+thresholds:
+  homozygous_deletion_copy_number: -1.5
+  strong_crispr_dependency: -0.5
+  minimum_loss_models: 3
+  minimum_intact_models: 3
+  high_priority_observed_score: 0.72
+  high_priority_minimum_coverage: 0.67
+  high_priority_minimum_domains: 4

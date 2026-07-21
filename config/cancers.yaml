@@ -1,0 +1,13 @@
+projects:
+  colon:
+    gdc_projects: [TCGA-COAD, TCGA-READ]
+    depmap_lineage: Colorectal
+    primary_biomarkers: [MSI, MMR_deficiency, MTAP_loss, HRD, NTHL1_loss]
+  stomach:
+    gdc_projects: [TCGA-STAD]
+    depmap_lineage: Gastric
+    primary_biomarkers: [MSI, MMR_deficiency, ARID1A_loss, MTAP_loss, HRD]
+  lung:
+    gdc_projects: [TCGA-LUAD, TCGA-LUSC]
+    depmap_lineage: Lung
+    primary_biomarkers: [SMARCA4_loss, MTAP_loss, ATM_loss, HRD]

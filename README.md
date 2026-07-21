@@ -40,9 +40,7 @@ pytest -q
 ## Reproduce the bundled pilot
 
 ```bash
-rses-onco score-literature \
-  --input data/curated/synthetic_lethality_reference_pairs.tsv \
-  --output results/literature_anchored_candidates.tsv
+rses-onco score-literature   --input data/curated/synthetic_lethality_reference_pairs.tsv   --output results/literature_anchored_candidates.tsv
 ```
 
 ## Obtain current human NISE records
@@ -80,15 +78,7 @@ The first command writes a complete query manifest without downloading. Review i
 ## Run empirical analysis
 
 ```bash
-python scripts/run_empirical_rses_onco.py \
-  --gene-effect data/raw/depmap/CRISPRGeneEffect.csv \
-  --copy-number data/raw/depmap/OmicsCNGene.csv \
-  --models data/raw/depmap/Model.csv \
-  --expression data/raw/depmap/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv \
-  --tcga colon=data/processed/TCGA_COADREAD_discrete_cna.tsv \
-  --tcga stomach=data/processed/TCGA_STAD_discrete_cna.tsv \
-  --tcga lung=data/processed/TCGA_LUNG_discrete_cna.tsv \
-  --output results/empirical_rses_onco.tsv
+python scripts/run_empirical_rses_onco.py   --gene-effect data/raw/depmap/CRISPRGeneEffect.csv   --copy-number data/raw/depmap/OmicsCNGene.csv   --models data/raw/depmap/Model.csv   --expression data/raw/depmap/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv   --tcga colon=data/processed/TCGA_COADREAD_discrete_cna.tsv   --tcga stomach=data/processed/TCGA_STAD_discrete_cna.tsv   --tcga lung=data/processed/TCGA_LUNG_discrete_cna.tsv   --output results/empirical_rses_onco.tsv
 ```
 
 Complex biomarkers such as MSI, MMR deficiency and HRD should be supplied as explicit model annotations in a future extension; they must not be inferred from a single copy-number column.

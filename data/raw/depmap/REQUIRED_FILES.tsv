@@ -1,0 +1,5 @@
+logical_name	tested_release	required	purpose	official_page
+CRISPRGeneEffect.csv	26Q1	yes	CRISPR knockout gene-effect matrix	https://depmap.org/portal/data_page/?tab=currentRelease
+OmicsCNGene.csv	26Q1	yes	gene-level copy-number matrix	https://depmap.org/portal/data_page/?tab=currentRelease
+Model.csv	26Q1	yes	model metadata and lineage labels	https://depmap.org/portal/data_page/?tab=currentRelease
+OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv	26Q1	recommended	baseline expression and compensation	https://depmap.org/portal/data_page/?tab=currentRelease

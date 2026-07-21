@@ -1,0 +1,14 @@
+resource	citation	use	url	access_date
+EcoNISE/RSES conceptual source	Uploaded manuscript	Functional microniches and coverage-aware RSES	local user file	2026-07-20
+Human bona fide analogs	Piergiorge et al. 2017	70 proteins, 15 activities	https://doi.org/10.1093/gbe/evx119	2026-07-20
+Current NISE dataset	de Oliveira et al. 2026	UniProtKB 2025_01 HISE/NISE	https://doi.org/10.5281/zenodo.18008936	2026-07-20
+DepMap	DepMap Public 26Q1	CRISPR, copy number, expression, model metadata	https://depmap.org/portal/data_page/?tab=currentRelease	2026-07-20
+GDC	NCI Genomic Data Commons	TCGA public molecular data	https://portal.gdc.cancer.gov/	2026-07-20
+MTAP-PRMT5	Kryukov et al. 2016	Collateral metabolic dependency	https://doi.org/10.1126/science.aad5214	2026-07-20
+MSI-WRN	Chan et al. 2019	DNA repair synthetic lethality	https://doi.org/10.1038/s41586-019-1102-x	2026-07-20
+WRN inhibitor	Ferretti et al. 2024	HRO761 pharmacological validation	https://doi.org/10.1038/s41586-024-07350-y	2026-07-20
+BRCA-PARP	Bryant et al. 2005	HRD synthetic lethality	https://doi.org/10.1038/nature03443	2026-07-20
+HRD-POLQ	Ceccaldi et al. 2015	POLQ dependence	https://doi.org/10.1038/nature14184	2026-07-20
+ENO1-ENO2	Muller et al. 2012	Collateral glycolytic lethality	https://doi.org/10.1038/nature11331	2026-07-20
+ME2-ME3	Dey et al. 2017	Collateral mitochondrial metabolic lethality	https://doi.org/10.1038/nature21052	2026-07-20
+SMARCA4/2-MCL1	Jiang et al. 2026	Dual-SWI/SNF-loss apoptotic dependency in lung cancer	https://doi.org/10.1038/s41698-026-01350-z	2026-07-20

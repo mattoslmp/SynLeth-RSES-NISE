@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rses-onco"
+version = "0.1.0"
+description = "Coverage-aware prioritization of synthetic-lethal cancer dependencies from enzyme analogs, TCGA, and DepMap"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Leandro de Mattos Pereira"}]
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "scipy>=1.10",
+  "matplotlib>=3.7",
+  "networkx>=3.1",
+  "requests>=2.31",
+  "pyyaml>=6.0",
+]
+
+[project.scripts]
+rses-onco = "rses_onco.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

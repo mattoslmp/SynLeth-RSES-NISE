@@ -1,0 +1,6 @@
+analysis_label	gdc_project_id	cancer_scope	requested_data_category	access
+colon	TCGA-COAD	colon adenocarcinoma	Copy Number Variation	open
+colon	TCGA-READ	rectal adenocarcinoma	Copy Number Variation	open
+stomach	TCGA-STAD	stomach adenocarcinoma	Copy Number Variation	open
+lung	TCGA-LUAD	lung adenocarcinoma	Copy Number Variation	open
+lung	TCGA-LUSC	lung squamous cell carcinoma	Copy Number Variation	open
