@@ -1,11 +1,11 @@
 cff-version: 1.2.0
-title: "RSES-Onco: cancer synthetic-lethality prioritization from functional enzyme backups"
+title: "RSES-Onco: all-NISE and multi-class cancer synthetic-lethality prioritization"
 message: "Please cite this software and the associated manuscript."
 type: software
 authors:
   - family-names: "Pereira"
     given-names: "Leandro de Mattos"
-version: 0.1.0
-date-released: 2026-07-20
-repository-code: "https://github.com/mattoslmp/SynLeth-RSES-NISE"
+version: 0.8.0
+date-released: 2026-07-21
+repository-code: "https://github.com/mattoslmp/SynLeth-RSES-Onco"
 license: MIT

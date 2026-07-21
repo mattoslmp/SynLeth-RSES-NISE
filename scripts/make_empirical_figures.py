@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate publication-ready empirical RSES-Onco figures in PNG, PDF and SVG."""
+"""Generate publication-ready benchmark or expanded RSES-Onco figures."""
 from __future__ import annotations
 
 import argparse
@@ -33,6 +33,14 @@ def read_optional(path: Path) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def read_first(parent: Path, names: list[str]) -> pd.DataFrame:
+  for name in names:
+    frame = read_optional(parent / name)
+    if not frame.empty:
+      return frame
+  return pd.DataFrame()
+
+
 def save_all(fig: plt.Figure, output_base: Path) -> None:
   output_base.parent.mkdir(parents=True, exist_ok=True)
   for extension in FORMATS:
@@ -51,6 +59,8 @@ def pair_label(frame: pd.DataFrame) -> pd.Series:
 
 def ranking_figure(scores: pd.DataFrame, output_dir: Path, top_n: int) -> None:
   cancers = [c for c in ["colon", "stomach", "lung"] if c in set(scores["cancer"])]
+  if not cancers:
+    return
   fig, axes = plt.subplots(1, len(cancers), figsize=(6.2 * len(cancers), 8), squeeze=False)
   for axis, cancer in zip(axes[0], cancers):
     subset = (
@@ -64,7 +74,8 @@ def ranking_figure(scores: pd.DataFrame, output_dir: Path, top_n: int) -> None:
     axis.barh(labels, subset["coverage_adjusted_rses"])
     axis.set_xlabel("Coverage-adjusted RSES-Onco")
     axis.set_title(CANCER_LABELS.get(cancer, cancer.title()))
-    axis.set_xlim(0, max(1.0, float(subset["coverage_adjusted_rses"].max()) * 1.10))
+    maximum = float(subset["coverage_adjusted_rses"].max()) if not subset.empty else 1.0
+    axis.set_xlim(0, max(1.0, maximum * 1.10))
     axis.tick_params(axis="y", labelsize=9)
     axis.grid(axis="x", alpha=0.25)
   fig.suptitle("Cancer-specific RSES-Onco ranking", fontsize=16, fontweight="bold")
@@ -172,30 +183,77 @@ def heatmap_figure(scores: pd.DataFrame, output_dir: Path) -> None:
   save_all(fig, output_dir / "Figure_empirical_5_cross_cancer_heatmap")
 
 
+def microniche_figure(scores: pd.DataFrame, output_dir: Path, top_n: int = 30) -> None:
+  domains = [
+    "microniche_expression_context",
+    "microniche_localization",
+    "microniche_biochemical_structural",
+    "microniche_genetic_phenotype",
+    "microniche_interaction_network",
+    "microniche_regulatory_network",
+  ]
+  available = [column for column in domains if column in scores.columns]
+  if not available:
+    return
+  pair_level = (
+    scores.sort_values("functional_microniche_adjusted", ascending=False)
+      .drop_duplicates("pair_id")
+      .head(top_n)
+      .copy()
+  )
+  if pair_level.empty:
+    return
+  matrix = pair_level[available].astype(float)
+  labels = pair_label(pair_level).tolist()
+  domain_labels = [
+    column.removeprefix("microniche_").replace("_", " ").title()
+    for column in available
+  ]
+  fig, axis = plt.subplots(figsize=(11, max(8, 0.34 * len(pair_level) + 2)))
+  image = axis.imshow(matrix.to_numpy(), aspect="auto", vmin=0, vmax=1)
+  axis.set_xticks(np.arange(len(available)), domain_labels, rotation=35, ha="right")
+  axis.set_yticks(np.arange(len(labels)), labels)
+  axis.tick_params(axis="y", labelsize=8)
+  axis.set_title("Human functional-microniche evidence domains")
+  colorbar = fig.colorbar(image, ax=axis)
+  colorbar.set_label("Normalized divergence / specialization evidence")
+  for row_index in range(matrix.shape[0]):
+    for column_index in range(matrix.shape[1]):
+      value = matrix.iloc[row_index, column_index]
+      if pd.notna(value):
+        axis.text(column_index, row_index, f"{value:.2f}", ha="center", va="center", fontsize=7)
+  fig.tight_layout()
+  save_all(fig, output_dir / "Figure_empirical_6_functional_microniche_domains")
+
+
 def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument(
     "--input",
     default="results/empirical_26Q1/full/empirical_rses_onco_by_cancer.tsv",
   )
-  parser.add_argument(
-    "--output-dir",
-    default="figures/empirical_26Q1",
-  )
+  parser.add_argument("--output-dir", default="figures/empirical_26Q1")
   parser.add_argument("--top-n", type=int, default=15)
   args = parser.parse_args()
 
   input_path = resolve_path(args.input)
   output_dir = resolve_path(args.output_dir)
   scores = pd.read_csv(input_path, sep="\t")
-  dependency = read_optional(input_path.with_name("dependency_contrasts.tsv"))
-  expression = read_optional(input_path.with_name("expression_contrasts.tsv"))
+  dependency = read_first(input_path.parent, [
+    "dependency_contrasts.tsv",
+    "expanded_dependency_contrasts.tsv",
+  ])
+  expression = read_first(input_path.parent, [
+    "expression_contrasts.tsv",
+    "expanded_expression_compensation.tsv",
+  ])
 
   ranking_figure(scores, output_dir, args.top_n)
   dependency_figure(dependency, output_dir)
   expression_figure(expression, output_dir)
   event_dependency_figure(scores, output_dir)
   heatmap_figure(scores, output_dir)
+  microniche_figure(scores, output_dir)
   print(f"Wrote empirical figures to {output_dir}", flush=True)
 
 
