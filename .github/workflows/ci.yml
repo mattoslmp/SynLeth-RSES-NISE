@@ -20,6 +20,7 @@ jobs:
       - run: bash -n scripts/run_expanded_pipeline.sh
       - run: bash -n scripts/run_publication_pipeline.sh
       - run: bash -n scripts/run_structural_pipeline.sh
+      - run: bash -n scripts/verify_complete_article_run.sh
       - name: Figure triplet smoke test
         run: python -m pytest -q -p no:cacheprovider tests/test_publication.py::test_scripted_figure_exports_png_pdf_svg
       - name: Axes overlap detection test

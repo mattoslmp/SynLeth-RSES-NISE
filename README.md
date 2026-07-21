@@ -1,6 +1,6 @@
 # SynLeth-RSES-Onco / RSES-Onco
 
-**RSES-Onco v0.10** is a coverage-aware framework for discovering and
+**RSES-Onco v0.10.1** is a coverage-aware framework for discovering and
 prioritizing cancer-selective dependencies created by non-homologous
 isofunctional enzymes (NISEs), homologous paralogs, pathway backups, collateral
 deletions and downstream vulnerabilities. The initial disease scope is
@@ -34,6 +34,25 @@ that a ligand binds in a displayed pose. Only exact UniProt-numbered residues ar
 projected by default. Missing evidence is not converted to zero and reduces
 explicit coverage.
 
+## Canonical end-to-end protocol
+
+The complete, command-by-command protocol from DepMap/GDC acquisition through all
+analyses, all 40 figures, all tables, checksums and post-run validation is:
+
+- [`docs/END_TO_END_ARTICLE_PROTOCOL.md`](docs/END_TO_END_ARTICLE_PROTOCOL.md)
+
+The canonical post-run verification command is:
+
+```bash
+MPLBACKEND=Agg \
+GDC_DIR=/absolute/path/to/data/raw/gdc \
+PIPELINE_EXITCODE_FILE=logs/run_expanded_after_download_v0101.exitcode \
+bash scripts/verify_complete_article_run.sh
+```
+
+Automated validation does not replace manual inspection of every figure at 100%
+zoom.
+
 ## Installation
 
 ```bash
@@ -53,14 +72,14 @@ python -m pip install -e .
 
 ## Complete workflow after an existing GDC download
 
-Do not restart an active GDC download. After all 1,997 files finish and validate:
+Do not restart an active GDC download. After all reviewed files finish and validate:
 
 ```bash
-cd /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-NISE
-conda activate rses-onco
+OLD="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-NISE"
+NEW="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010"
 
-git remote set-url origin \
-  https://github.com/mattoslmp/SynLeth-RSES-Onco.git
+cd "$NEW" || exit 1
+conda activate rses-onco
 
 git fetch origin
 git checkout main
@@ -69,21 +88,40 @@ git pull --ff-only origin main
 python -m pip install -e .
 python -m pytest -q -p no:cacheprovider
 
+export DEPMAP_DIR="$OLD/data/raw/depmap"
+export GDC_DIR="$OLD/data/raw/gdc"
+
+mkdir -p logs
 set -o pipefail
+
 MPLBACKEND=Agg \
 PYTHONUNBUFFERED=1 \
+DEPMAP_DIR="$DEPMAP_DIR" \
+GDC_DIR="$GDC_DIR" \
 bash scripts/run_expanded_pipeline.sh after-download \
-  2>&1 | tee logs/run_expanded_after_download_v010.log
+  2>&1 | tee logs/run_expanded_after_download_v0101.log
 
 status=${PIPESTATUS[0]}
+echo "$status" > logs/run_expanded_after_download_v0101.exitcode
 echo "Exit code: $status"
 test "$status" -eq 0
 ```
 
-This command performs all-NISE construction, paralog expansion, all-target
-DepMap discovery, human network evidence, TCGA integration, pharmacology,
-AlphaFold structure acquisition, functional-residue annotation, PyMOL rendering,
-all tables, all figures, workbook creation, manifests, checksums and tests.
+This command performs all-NISE construction, composite-target normalization,
+paralog expansion, all-target DepMap discovery, human network evidence, TCGA
+integration, pharmacology, AlphaFold structure acquisition, functional-residue
+annotation, PyMOL rendering, all tables, all figures, workbook creation, manifests,
+checksums and tests.
+
+After it finishes, execute:
+
+```bash
+MPLBACKEND=Agg \
+GDC_DIR="$GDC_DIR" \
+PIPELINE_EXITCODE_FILE=logs/run_expanded_after_download_v0101.exitcode \
+bash scripts/verify_complete_article_run.sh \
+  2>&1 | tee logs/verify_complete_article_run.log
+```
 
 ## Structural atlas only
 
@@ -196,6 +234,7 @@ article_outputs/
 
 ## Documentation
 
+- [`docs/END_TO_END_ARTICLE_PROTOCOL.md`](docs/END_TO_END_ARTICLE_PROTOCOL.md)
 - [`docs/REAL_DATA_WORKFLOW.md`](docs/REAL_DATA_WORKFLOW.md)
 - [`docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md`](docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md)
 - [`docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md`](docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md)
