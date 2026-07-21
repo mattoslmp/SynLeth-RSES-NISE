@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import pandas as pd
 
@@ -12,6 +13,8 @@ from rses_onco.expanded import (
 )
 from rses_onco.networks import set_metrics, string_pair_metrics
 from rses_onco.utils import canonical_gene_name
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_missing_gene_symbols_remain_empty() -> None:
@@ -43,6 +46,19 @@ def test_directed_nise_universe_contains_both_directions() -> None:
   assert set(result["source_class"]) == {"NISE"}
 
 
+def test_complete_curated_nise_catalogue_is_included() -> None:
+  source = pd.read_csv(
+    ROOT / "data/processed/human_nise_all_within_activity_pairs_2017.tsv",
+    sep="\t",
+  )
+  result = build_directed_nise_candidates(source)
+  genes = set(result["lost_gene"]) | set(result["target_gene"])
+  assert len(source) == 101
+  assert len(result) == 202
+  assert len(genes) == 70
+  assert result["group_id"].nunique() == 15
+
+
 def test_functional_microniche_preserves_missingness() -> None:
   result = functional_microniche_score({
     "expression_context": 0.8,
@@ -61,7 +77,9 @@ def test_expression_and_phenotype_profiles_are_cancer_specific() -> None:
   models = pd.DataFrame({
     "ModelID": ["ACH-1", "ACH-2", "ACH-3", "ACH-4"],
     "OncotreeLineage": ["Lung", "Lung", "Lung", "Bowel"],
-    "OncotreePrimaryDisease": ["Lung Cancer", "Lung Cancer", "Lung Cancer", "Colorectal Adenocarcinoma"],
+    "OncotreePrimaryDisease": [
+      "Lung Cancer", "Lung Cancer", "Lung Cancer", "Colorectal Adenocarcinoma"
+    ],
     "OncotreeSubtype": ["LUAD", "LUAD", "LUSC", "COAD"],
   })
   expression = pd.DataFrame({
