@@ -15,17 +15,34 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from pandas.errors import EmptyDataError
 from scipy.stats import mannwhitneyu
 
 from rses_onco.depmap import cancer_model_ids, read_depmap_inputs
 from rses_onco.utils import bh_adjust, canonical_gene_name
 
 ROOT = Path(__file__).resolve().parents[1]
+OUTPUT_COLUMNS = [
+  "source", "cancer", "pair_id", "lost_gene", "target_gene", "drug_name",
+  "drug_id", "drug_key", "pharmacology_source", "interaction_type",
+  "action_type", "n_loss", "n_intact", "median_response_loss",
+  "median_response_intact", "delta_response", "supportive_delta", "p_value",
+  "q_value_bh", "lower_is_more_sensitive",
+]
 
 
 def resolve_path(value: str) -> Path:
   path = Path(value)
   return path if path.is_absolute() else ROOT / path
+
+
+def read_optional(path: Path) -> pd.DataFrame:
+  if not path.exists():
+    return pd.DataFrame()
+  try:
+    return pd.read_csv(path, sep="\t")
+  except EmptyDataError:
+    return pd.DataFrame()
 
 
 def drug_key(value: object) -> str:
@@ -35,20 +52,33 @@ def drug_key(value: object) -> str:
 
 
 def candidate_drugs(evidence: pd.DataFrame) -> pd.DataFrame:
+  columns = [
+    "target_gene", "drug_name", "drug_id", "drug_key",
+    "pharmacology_source", "interaction_type", "action_type",
+  ]
   if evidence.empty:
-    return pd.DataFrame(columns=["target_gene", "drug_name", "drug_id", "drug_key"])
+    return pd.DataFrame(columns=columns)
+  target_series = evidence.get(
+    "target_gene", pd.Series(index=evidence.index, dtype=object)
+  )
+  drug_name_series = evidence.get(
+    "drug_name", pd.Series(index=evidence.index, dtype=object)
+  )
+  drug_id_series = evidence.get(
+    "drug_id", pd.Series(index=evidence.index, dtype=object)
+  )
   rows = evidence.loc[
-    evidence.get("target_gene", pd.Series(index=evidence.index, dtype=object)).notna()
-    & (
-      evidence.get("drug_name", pd.Series(index=evidence.index, dtype=object)).notna()
-      | evidence.get("drug_id", pd.Series(index=evidence.index, dtype=object)).notna()
-    )
+    target_series.notna() & (drug_name_series.notna() | drug_id_series.notna())
   ].copy()
   if rows.empty:
-    return pd.DataFrame(columns=["target_gene", "drug_name", "drug_id", "drug_key"])
+    return pd.DataFrame(columns=columns)
   rows["target_gene"] = rows["target_gene"].map(canonical_gene_name)
-  rows["drug_key_name"] = rows.get("drug_name", "").map(drug_key)
-  rows["drug_key_id"] = rows.get("drug_id", "").map(drug_key)
+  rows["drug_key_name"] = rows.get(
+    "drug_name", pd.Series(index=rows.index, dtype=object)
+  ).map(drug_key)
+  rows["drug_key_id"] = rows.get(
+    "drug_id", pd.Series(index=rows.index, dtype=object)
+  ).map(drug_key)
   expanded = []
   for record in rows.to_dict("records"):
     for key in {record.get("drug_key_name"), record.get("drug_key_id")}:
@@ -63,7 +93,7 @@ def candidate_drugs(evidence: pd.DataFrame) -> pd.DataFrame:
         "interaction_type": record.get("interaction_type"),
         "action_type": record.get("action_type"),
       })
-  return pd.DataFrame(expanded).drop_duplicates()
+  return pd.DataFrame(expanded, columns=columns).drop_duplicates()
 
 
 def response_test(
@@ -101,6 +131,19 @@ def response_test(
   }
 
 
+def write_empty_outputs(output: Path, evidence_output: Path, message: str) -> None:
+  output.parent.mkdir(parents=True, exist_ok=True)
+  evidence_output.parent.mkdir(parents=True, exist_ok=True)
+  empty = pd.DataFrame(columns=OUTPUT_COLUMNS)
+  empty.to_csv(output, sep="\t", index=False)
+  pd.DataFrame(columns=[*OUTPUT_COLUMNS, "raw_record"]).to_csv(
+    evidence_output, sep="\t", index=False
+  )
+  print(message)
+  print(f"Wrote {output}")
+  print(f"Wrote {evidence_output}")
+
+
 def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument("--gene-effect", required=True)
@@ -130,44 +173,48 @@ def main() -> None:
   )
   args = parser.parse_args()
 
+  output = resolve_path(args.output)
+  evidence_output = resolve_path(args.evidence_output)
+  ranking = pd.read_csv(resolve_path(args.ranking), sep="\t")
+  evidence = read_optional(resolve_path(args.pharmacology_evidence))
+  sensitivity = read_optional(resolve_path(args.sensitivity))
+  if sensitivity.empty:
+    write_empty_outputs(
+      output,
+      evidence_output,
+      "No standardized PRISM/GDSC/CTRP rows were available; wrote empty outputs.",
+    )
+    return
+  drugs = candidate_drugs(evidence)
+  if drugs.empty:
+    write_empty_outputs(
+      output,
+      evidence_output,
+      "No target-linked candidate compounds were available; wrote empty outputs.",
+    )
+    return
+
   _, copy_number, models, _ = read_depmap_inputs(
     resolve_path(args.gene_effect),
     resolve_path(args.copy_number),
     resolve_path(args.models),
     None,
   )
-  ranking = pd.read_csv(resolve_path(args.ranking), sep="\t")
-  evidence = pd.read_csv(resolve_path(args.pharmacology_evidence), sep="\t")
-  sensitivity_path = resolve_path(args.sensitivity)
-  if not sensitivity_path.exists():
-    raise FileNotFoundError(
-      f"Standardized sensitivity table is absent: {sensitivity_path}. "
-      "Run scripts/standardize_drug_sensitivity.py first."
-    )
-  sensitivity = pd.read_csv(sensitivity_path, sep="\t")
-  if sensitivity.empty:
-    output = resolve_path(args.output)
-    evidence_output = resolve_path(args.evidence_output)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    columns = [
-      "source", "cancer", "pair_id", "lost_gene", "target_gene", "drug_name",
-      "drug_id", "n_loss", "n_intact", "median_response_loss",
-      "median_response_intact", "delta_response", "supportive_delta", "p_value",
-      "q_value_bh", "lower_is_more_sensitive",
-    ]
-    pd.DataFrame(columns=columns).to_csv(output, sep="\t", index=False)
-    pd.DataFrame(columns=columns).to_csv(evidence_output, sep="\t", index=False)
-    print("No standardized drug-sensitivity rows were available; wrote empty outputs.")
-    return
-
-  drugs = candidate_drugs(evidence)
-  sensitivity["drug_key_name"] = sensitivity["drug_name"].map(drug_key)
-  sensitivity["drug_key_id"] = sensitivity.get("drug_id", "").map(drug_key)
+  drug_name_series = sensitivity.get(
+    "drug_name", pd.Series(index=sensitivity.index, dtype=object)
+  )
+  drug_id_series = sensitivity.get(
+    "drug_id", pd.Series(index=sensitivity.index, dtype=object)
+  )
+  sensitivity["drug_key_name"] = drug_name_series.map(drug_key)
+  sensitivity["drug_key_id"] = drug_id_series.map(drug_key)
   sensitivity_long = pd.concat([
     sensitivity.assign(drug_key=sensitivity["drug_key_name"]),
     sensitivity.assign(drug_key=sensitivity["drug_key_id"]),
   ], ignore_index=True)
-  sensitivity_long = sensitivity_long.loc[sensitivity_long["drug_key"].ne("")].drop_duplicates()
+  sensitivity_long = sensitivity_long.loc[
+    sensitivity_long["drug_key"].ne("")
+  ].drop_duplicates()
   response_groups = {
     (str(source), str(key)): group
     for (source, key), group in sensitivity_long.groupby(["source", "drug_key"])
@@ -178,28 +225,37 @@ def main() -> None:
 
   copy_number = copy_number.set_index("ModelID")
   rows: list[dict[str, Any]] = []
+  sources = sorted(set(sensitivity_long["source"].astype(str)))
   for record in ranking.to_dict("records"):
     cancer = str(record.get("cancer") or "")
     if cancer not in {"colon", "stomach", "lung"}:
       continue
-    lost = canonical_gene_name(record.get("analysis_lost_gene") or record.get("lost_gene"))
-    target = canonical_gene_name(record.get("analysis_target_gene") or record.get("target_gene"))
+    lost = canonical_gene_name(
+      record.get("analysis_lost_gene") or record.get("lost_gene")
+    )
+    target = canonical_gene_name(
+      record.get("analysis_target_gene") or record.get("target_gene")
+    )
     if not lost or not target or lost not in copy_number.columns:
       continue
     cohort_ids = set(cancer_model_ids(models, cancer))
-    available_ids = cohort_ids & set(copy_number.index.astype(str))
-    cn = pd.to_numeric(copy_number.loc[list(available_ids), lost], errors="coerce")
+    available_ids = sorted(cohort_ids & set(copy_number.index.astype(str)))
+    if not available_ids:
+      continue
+    cn = pd.to_numeric(copy_number.loc[available_ids, lost], errors="coerce")
     loss_ids = set(cn.index[cn < args.loss_threshold].astype(str))
     intact_ids = set(cn.index[cn >= args.loss_threshold].astype(str))
     if len(loss_ids) < args.min_group_size or len(intact_ids) < args.min_group_size:
       continue
     for drug in drug_map.get(target, []):
-      for source in sorted(set(sensitivity_long["source"].astype(str))):
+      for source in sources:
         values = response_groups.get((source, drug["drug_key"]))
         if values is None or values.empty:
           continue
         lower_values = values["lower_is_more_sensitive"].dropna()
-        lower_is_more_sensitive = bool(lower_values.iloc[0]) if not lower_values.empty else True
+        lower_is_more_sensitive = (
+          bool(lower_values.iloc[0]) if not lower_values.empty else True
+        )
         tested = response_test(
           values,
           loss_ids,
@@ -224,32 +280,35 @@ def main() -> None:
           **tested,
         })
 
-  result = pd.DataFrame(rows)
+  result = pd.DataFrame(rows, columns=[
+    column for column in OUTPUT_COLUMNS if column != "q_value_bh"
+  ])
   if not result.empty:
     result["q_value_bh"] = np.nan
-    for (_, _), indices in result.groupby(["source", "cancer"]).groups.items():
-      result.loc[indices, "q_value_bh"] = bh_adjust(result.loc[indices, "p_value"])
-    result = result.sort_values(
-      ["q_value_bh", "supportive_delta"],
-      ascending=[True, False],
+    for _, indices in result.groupby(["source", "cancer"]).groups.items():
+      result.loc[indices, "q_value_bh"] = bh_adjust(
+        result.loc[indices, "p_value"]
+      )
+    result = result[OUTPUT_COLUMNS].sort_values(
+      ["q_value_bh", "supportive_delta"], ascending=[True, False]
     )
-  output = resolve_path(args.output)
-  evidence_output = resolve_path(args.evidence_output)
+  else:
+    result = pd.DataFrame(columns=OUTPUT_COLUMNS)
   output.parent.mkdir(parents=True, exist_ok=True)
   evidence_output.parent.mkdir(parents=True, exist_ok=True)
   result.to_csv(output, sep="\t", index=False)
-
-  if result.empty:
-    sensitivity_evidence = result.copy()
-  else:
-    sensitivity_evidence = result.copy()
-    sensitivity_evidence["raw_record"] = sensitivity_evidence.apply(
-      lambda row: row.to_json(), axis=1
-    )
+  sensitivity_evidence = result.copy()
+  sensitivity_evidence["raw_record"] = sensitivity_evidence.apply(
+    lambda row: row.to_json(), axis=1
+  ) if not sensitivity_evidence.empty else pd.Series(dtype=object)
   sensitivity_evidence.to_csv(evidence_output, sep="\t", index=False)
   print(f"Drug-response selectivity contrasts: {len(result):,}")
   if not result.empty:
-    print(f"FDR < 0.05 and supportive direction: {int(((result['q_value_bh'] < 0.05) & (result['supportive_delta'] > 0)).sum()):,}")
+    supported = (
+      (result["q_value_bh"] < 0.05)
+      & (result["supportive_delta"] > 0)
+    )
+    print(f"FDR < 0.05 and supportive direction: {int(supported.sum()):,}")
   print(f"Wrote {output}")
   print(f"Wrote {evidence_output}")
 
