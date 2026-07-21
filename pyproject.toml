@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rses-onco"
-version = "0.9.0"
-description = "Coverage-aware all-NISE cancer vulnerability, pharmacology and scripted publication asset framework"
+version = "0.10.0"
+description = "Coverage-aware all-NISE cancer vulnerability, pharmacology, AlphaFold structural atlas and scripted publication framework"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{name = "Leandro de Mattos Pereira"}]
@@ -18,6 +18,7 @@ dependencies = [
   "requests>=2.31",
   "pyyaml>=6.0",
   "openpyxl>=3.1",
+  "pillow>=10.0",
 ]
 
 [project.scripts]
