@@ -14,9 +14,11 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
 import time
 import zipfile
 from pathlib import Path
+from typing import Callable
 
 import pandas as pd
 import requests
@@ -56,7 +58,7 @@ def request_with_retries(
       response = session.request(method, url, timeout=timeout, **kwargs)
       response.raise_for_status()
       return response
-    except Exception as exc:  # requests exposes multiple transport exceptions
+    except Exception as exc:
       error = exc
       if attempt == retries:
         break
@@ -103,23 +105,49 @@ def download_string(
 
 
 def download_dorothea(output: Path) -> pd.DataFrame:
+  """Download high/medium-confidence human DoRothEA interactions.
+
+  OmniPath deployments have accepted both ``organisms`` and ``organism`` in
+  different client generations. The downloader tries the plural documented web
+  service parameter first, validates the returned schema, and falls back to the
+  singular spelling without silently accepting an HTML error page.
+  """
   output.parent.mkdir(parents=True, exist_ok=True)
   session = requests.Session()
-  response = request_with_retries(
-    session,
-    "GET",
-    OMNIPATH_ENDPOINT,
-    params={
-      "datasets": "dorothea",
-      "organisms": 9606,
-      "genesymbols": 1,
-      "format": "tsv",
-      "dorothea_levels": "A,B,C",
-      "fields": "sources,references,dorothea_level",
-    },
-  )
-  output.write_bytes(response.content)
-  return pd.read_csv(output, sep="\t")
+  common = {
+    "datasets": "dorothea",
+    "genesymbols": 1,
+    "format": "tsv",
+    "dorothea_levels": "A,B,C",
+    "fields": "sources,references,dorothea_level",
+  }
+  errors: list[str] = []
+  for organism_key in ("organisms", "organism"):
+    params = {**common, organism_key: 9606}
+    try:
+      response = request_with_retries(
+        session,
+        "GET",
+        OMNIPATH_ENDPOINT,
+        params=params,
+      )
+      text = response.text.strip()
+      frame = pd.read_csv(io.StringIO(text), sep="\t")
+      source_present = any(
+        column in frame.columns for column in ("source_genesymbol", "source", "tf")
+      )
+      target_present = any(
+        column in frame.columns for column in ("target_genesymbol", "target", "gene")
+      )
+      if frame.empty or not source_present or not target_present:
+        raise ValueError(
+          f"unexpected OmniPath schema: rows={len(frame)}, columns={frame.columns.tolist()[:12]}"
+        )
+      output.write_text(text + "\n", encoding="utf-8")
+      return frame
+    except Exception as exc:
+      errors.append(f"{organism_key}: {exc}")
+  raise RuntimeError("DoRothEA acquisition failed; " + " | ".join(errors))
 
 
 def download_hpa(output: Path) -> pd.DataFrame:
@@ -127,7 +155,10 @@ def download_hpa(output: Path) -> pd.DataFrame:
   session = requests.Session()
   response = request_with_retries(session, "GET", HPA_URL)
   with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-    members = [name for name in archive.namelist() if name.lower().endswith(('.tsv', '.txt'))]
+    members = [
+      name for name in archive.namelist()
+      if name.lower().endswith((".tsv", ".txt"))
+    ]
     if not members:
       raise RuntimeError("HPA archive does not contain a TSV file")
     content = archive.read(members[0])
@@ -176,7 +207,7 @@ def download_uniprot(genes: list[str], output: Path, chunk_size: int = 40) -> pd
 
 def load_or_download(
   path: Path,
-  downloader: object,
+  downloader: Callable[[], pd.DataFrame],
   skip_download: bool,
 ) -> pd.DataFrame:
   if skip_download:
@@ -225,6 +256,7 @@ def main() -> None:
   dorothea_path = raw_dir / "omnipath_dorothea.tsv"
   hpa_path = raw_dir / "hpa_subcellular_location.tsv"
   uniprot_path = raw_dir / "uniprot_reviewed_annotations.tsv"
+  metadata_path = raw_dir / "source_metadata.json"
 
   string_edges = load_or_download(
     string_path,
@@ -248,7 +280,7 @@ def main() -> None:
     lambda: download_hpa(hpa_path),
     args.skip_download,
   )
-  _ = load_or_download(
+  uniprot = load_or_download(
     uniprot_path,
     lambda: download_uniprot(genes, uniprot_path),
     args.skip_download,
@@ -291,11 +323,36 @@ def main() -> None:
   output = resolve_path(args.output)
   output.parent.mkdir(parents=True, exist_ok=True)
   result.to_csv(output, sep="\t", index=False)
+  metadata_path.write_text(
+    json.dumps(
+      {
+        "string_endpoint": STRING_ENDPOINT,
+        "string_species": 9606,
+        "string_required_score": args.string_required_score,
+        "string_limit_per_query": args.string_limit,
+        "omnipath_endpoint": OMNIPATH_ENDPOINT,
+        "omnipath_dataset": "dorothea",
+        "omnipath_confidence_levels": ["A", "B", "C"],
+        "hpa_url": HPA_URL,
+        "uniprot_endpoint": UNIPROT_ENDPOINT,
+        "candidate_gene_count": len(genes),
+        "string_edge_rows": len(string_edges),
+        "dorothea_rows": len(dorothea),
+        "hpa_rows": len(hpa),
+        "uniprot_rows": len(uniprot),
+      },
+      indent=2,
+      sort_keys=True,
+    ),
+    encoding="utf-8",
+  )
   print(f"Candidate genes: {len(genes):,}")
   print(f"STRING edges: {len(string_edges):,}")
   print(f"DoRothEA interactions: {len(dorothea):,}")
   print(f"HPA localization records: {len(hpa):,}")
+  print(f"UniProt reviewed records: {len(uniprot):,}")
   print(f"Wrote {len(result):,} pair evidence rows to {output}")
+  print(f"Wrote {metadata_path}")
 
 
 if __name__ == "__main__":
