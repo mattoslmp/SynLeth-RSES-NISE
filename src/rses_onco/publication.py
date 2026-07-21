@@ -5,7 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import textwrap
-from typing import Iterable, Mapping, Sequence
+from typing import Iterable, Sequence
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -70,10 +70,17 @@ def set_publication_style() -> None:
 
 def wrap_label(value: object, width: int = 28) -> str:
   text = str(value)
-  return "\n".join(textwrap.wrap(text, width=width, break_long_words=False)) or text
+  return "\n".join(
+    textwrap.wrap(text, width=width, break_long_words=False)
+  ) or text
 
 
-def dynamic_height(rows: int, minimum: float = 5.5, per_row: float = 0.34, maximum: float = 24.0) -> float:
+def dynamic_height(
+  rows: int,
+  minimum: float = 5.5,
+  per_row: float = 0.34,
+  maximum: float = 24.0,
+) -> float:
   return max(minimum, min(maximum, 2.0 + per_row * max(rows, 1)))
 
 
@@ -102,7 +109,11 @@ def placeholder(axis: plt.Axes, title: str, message: str) -> None:
     ha="center",
     va="center",
     fontsize=10.5,
-    bbox={"boxstyle": "round,pad=0.6", "facecolor": "white", "edgecolor": "0.65"},
+    bbox={
+      "boxstyle": "round,pad=0.6",
+      "facecolor": "white",
+      "edgecolor": "0.65",
+    },
   )
 
 
@@ -129,9 +140,38 @@ def _bbox_intersection_area(first: Bbox, second: Bbox) -> float:
   return max(0.0, x1 - x0) * max(0.0, y1 - y0)
 
 
-def _visible_tick_bboxes(labels: Iterable[mpl.text.Text], renderer: object) -> list[Bbox]:
-  bboxes = []
-  for label in labels:
+def _in_view_tick_bboxes(
+  axis: plt.Axes,
+  orientation: str,
+  renderer: object,
+) -> list[Bbox]:
+  """Return rendered tick-label boxes only for ticks inside current view limits.
+
+  Matplotlib may create major ticks just outside an axis view range. Those labels
+  are normally clipped and not part of the visible figure, so treating them as
+  canvas overflow creates false layout failures. The audit therefore filters by
+  tick location before checking clipping and collisions.
+  """
+  if orientation == "x":
+    locations = axis.get_xticks()
+    labels = axis.get_xticklabels()
+    low, high = sorted(axis.get_xlim())
+  elif orientation == "y":
+    locations = axis.get_yticks()
+    labels = axis.get_yticklabels()
+    low, high = sorted(axis.get_ylim())
+  else:
+    raise ValueError(f"Unsupported tick orientation: {orientation}")
+
+  tolerance = max(abs(high - low), 1.0) * 1e-10
+  bboxes: list[Bbox] = []
+  for location, label in zip(locations, labels):
+    try:
+      numeric_location = float(location)
+    except (TypeError, ValueError):
+      continue
+    if numeric_location < low - tolerance or numeric_location > high + tolerance:
+      continue
     if not label.get_visible() or not label.get_text().strip():
       continue
     bbox = label.get_window_extent(renderer=renderer)
@@ -140,8 +180,25 @@ def _visible_tick_bboxes(labels: Iterable[mpl.text.Text], renderer: object) -> l
   return bboxes
 
 
-def audit_figure_layout(fig: plt.Figure, figure_id: str, tolerance_pixels: float = 2.0) -> FigureAudit:
-  """Audit panel overlap, clipping and tick-label collisions after rendering.
+def _outside_figure(
+  bbox: Bbox,
+  figure_bbox: Bbox,
+  tolerance_pixels: float,
+) -> bool:
+  return bool(
+    bbox.x0 < figure_bbox.x0 - tolerance_pixels
+    or bbox.y0 < figure_bbox.y0 - tolerance_pixels
+    or bbox.x1 > figure_bbox.x1 + tolerance_pixels
+    or bbox.y1 > figure_bbox.y1 + tolerance_pixels
+  )
+
+
+def audit_figure_layout(
+  fig: plt.Figure,
+  figure_id: str,
+  tolerance_pixels: float = 2.0,
+) -> FigureAudit:
+  """Audit panel overlap, clipping and visible tick-label collisions.
 
   This is a conservative automated safeguard. It does not replace scientific
   review, but it converts common publication defects into machine-detectable
@@ -160,55 +217,54 @@ def audit_figure_layout(fig: plt.Figure, figure_id: str, tolerance_pixels: float
       area = _bbox_intersection_area(first_box, second_box)
       if area > 1e-5:
         warnings.append(
-          f"axes_overlap:{first.get_label() or index}:{second.get_label() or axes.index(second)}"
+          "axes_overlap:"
+          f"{first.get_label() or index}:"
+          f"{second.get_label() or axes.index(second)}"
         )
 
+  # Deliberately exclude tick labels here. They are audited separately after
+  # filtering out Matplotlib ticks that lie outside the current data view.
   text_objects: list[mpl.text.Text] = list(fig.texts)
   for axis in axes:
     text_objects.extend([
       axis.title,
       axis.xaxis.label,
       axis.yaxis.label,
-      *axis.get_xticklabels(),
-      *axis.get_yticklabels(),
       *axis.texts,
     ])
     legend = axis.get_legend()
     if legend is not None:
       text_objects.extend(legend.get_texts())
       legend_bbox = legend.get_window_extent(renderer=renderer)
-      if (
-        legend_bbox.x0 < figure_bbox.x0 - tolerance_pixels
-        or legend_bbox.y0 < figure_bbox.y0 - tolerance_pixels
-        or legend_bbox.x1 > figure_bbox.x1 + tolerance_pixels
-        or legend_bbox.y1 > figure_bbox.y1 + tolerance_pixels
-      ):
-        warnings.append(f"legend_outside_figure:{axis.get_label() or axes.index(axis)}")
+      if _outside_figure(legend_bbox, figure_bbox, tolerance_pixels):
+        warnings.append(
+          f"legend_outside_figure:{axis.get_label() or axes.index(axis)}"
+        )
 
   for text in text_objects:
     if not text.get_visible() or not text.get_text().strip():
       continue
     bbox = text.get_window_extent(renderer=renderer)
-    if (
-      bbox.x0 < figure_bbox.x0 - tolerance_pixels
-      or bbox.y0 < figure_bbox.y0 - tolerance_pixels
-      or bbox.x1 > figure_bbox.x1 + tolerance_pixels
-      or bbox.y1 > figure_bbox.y1 + tolerance_pixels
-    ):
+    if _outside_figure(bbox, figure_bbox, tolerance_pixels):
       warnings.append(f"text_outside_figure:{text.get_text()[:60]}")
 
+  visible_tick_count = 0
   for axis_index, axis in enumerate(axes):
-    for orientation, labels in (
-      ("x", axis.get_xticklabels()),
-      ("y", axis.get_yticklabels()),
-    ):
-      bboxes = _visible_tick_bboxes(labels, renderer)
+    for orientation in ("x", "y"):
+      bboxes = _in_view_tick_bboxes(axis, orientation, renderer)
+      visible_tick_count += len(bboxes)
+      for bbox in bboxes:
+        if _outside_figure(bbox, figure_bbox, tolerance_pixels):
+          warnings.append(f"tick_outside_figure:{axis_index}:{orientation}")
+          break
       for index, first in enumerate(bboxes):
         for second in bboxes[index + 1:]:
           if _bbox_intersection_area(first, second) > 1.0:
             warnings.append(f"tick_overlap:{axis_index}:{orientation}")
             break
-        if warnings and warnings[-1] == f"tick_overlap:{axis_index}:{orientation}":
+        if warnings and warnings[-1] == (
+          f"tick_overlap:{axis_index}:{orientation}"
+        ):
           break
 
   warnings = sorted(set(warnings))
@@ -219,7 +275,7 @@ def audit_figure_layout(fig: plt.Figure, figure_id: str, tolerance_pixels: float
     warnings=tuple(warnings),
     width_inches=float(width),
     height_inches=float(height),
-    text_objects=len(text_objects),
+    text_objects=len(text_objects) + visible_tick_count,
     axes_count=len(axes),
   )
 
@@ -238,19 +294,24 @@ def save_figure_triplet(
       f"Layout audit failed for {figure_id}: " + "; ".join(audit.warnings)
     )
   for extension in FORMATS:
-    fig.savefig(
-      base_path.with_suffix(f".{extension}"),
-      dpi=600 if extension == "png" else None,
-      bbox_inches="tight",
-      pad_inches=0.08,
-      metadata={
-        "Title": figure_id,
-        "Creator": "RSES-Onco scripted publication pipeline",
-      },
-    )
+    metadata = {
+      "Title": figure_id,
+      "Creator": "RSES-Onco scripted publication pipeline",
+    }
+    save_kwargs = {
+      "dpi": 600 if extension == "png" else None,
+      "bbox_inches": "tight",
+      "pad_inches": 0.08,
+    }
+    # Matplotlib backend support for metadata differs across output formats.
+    if extension in {"png", "pdf", "svg"}:
+      save_kwargs["metadata"] = metadata
+    fig.savefig(base_path.with_suffix(f".{extension}"), **save_kwargs)
   plt.close(fig)
   audit_path = base_path.with_suffix(".layout_audit.json")
-  audit_path.write_text(json.dumps(asdict(audit), indent=2), encoding="utf-8")
+  audit_path.write_text(
+    json.dumps(asdict(audit), indent=2), encoding="utf-8"
+  )
   return audit
 
 
@@ -281,14 +342,22 @@ def figure_record(
   )
 
 
-def write_figure_manifest(records: Sequence[FigureRecord], path: str | Path) -> Path:
+def write_figure_manifest(
+  records: Sequence[FigureRecord],
+  path: str | Path,
+) -> Path:
   path = Path(path)
   path.parent.mkdir(parents=True, exist_ok=True)
-  pd.DataFrame([asdict(record) for record in records]).to_csv(path, sep="\t", index=False)
+  pd.DataFrame([asdict(record) for record in records]).to_csv(
+    path, sep="\t", index=False
+  )
   return path
 
 
-def write_legends_markdown(records: Sequence[FigureRecord], path: str | Path) -> Path:
+def write_legends_markdown(
+  records: Sequence[FigureRecord],
+  path: str | Path,
+) -> Path:
   path = Path(path)
   path.parent.mkdir(parents=True, exist_ok=True)
   lines = ["# Figure legends", ""]
@@ -303,12 +372,17 @@ def write_legends_markdown(records: Sequence[FigureRecord], path: str | Path) ->
   return path
 
 
-def write_sha256_manifest(paths: Iterable[str | Path], output: str | Path) -> Path:
+def write_sha256_manifest(
+  paths: Iterable[str | Path],
+  output: str | Path,
+) -> Path:
   output = Path(output)
   output.parent.mkdir(parents=True, exist_ok=True)
   rows = []
   for path in sorted({Path(item) for item in paths if Path(item).exists()}):
     if path.is_file():
       rows.append(f"{file_sha256(path)}  {path}")
-  output.write_text("\n".join(rows) + ("\n" if rows else ""), encoding="utf-8")
+  output.write_text(
+    "\n".join(rows) + ("\n" if rows else ""), encoding="utf-8"
+  )
   return output
