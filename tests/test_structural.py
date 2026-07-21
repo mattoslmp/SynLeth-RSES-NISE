@@ -7,11 +7,11 @@ import yaml
 
 from rses_onco.structural import (
   build_pymol_script,
-  parse_mcsa_residues,
   parse_pdbe_binding_sites,
   parse_uniprot_features,
   residues_to_frame,
 )
+from rses_onco.structural_mapping import parse_mcsa_uniprot_residues
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -41,21 +41,26 @@ def test_uniprot_exact_residue_features() -> None:
   }
 
 
-def test_mcsa_parser_requires_residue_number_fields() -> None:
+def test_mcsa_parser_rejects_pdb_only_numbering() -> None:
   payload = {
     "results": [
       {
         "residue_number": 17,
         "residue_name": "HIS",
-        "role": "general acid/base",
+        "role": "PDB-numbered reference residue",
       },
-      {"mcsa_id": 999, "description": "not a residue record"},
+      {
+        "uniprot_residue_number": 42,
+        "residue_name": "ASP",
+        "role": "explicitly mapped catalytic residue",
+      },
     ]
   }
-  rows = parse_mcsa_residues(payload, "TEST", "P00001")
+  rows = parse_mcsa_uniprot_residues(payload, "TEST", "P00001")
   assert len(rows) == 1
-  assert rows[0].residue_number == 17
+  assert rows[0].residue_number == 42
   assert rows[0].annotation_type == "mcsa_catalytic"
+  assert rows[0].mapping_status == "exact_uniprot_numbering"
 
 
 def test_pdbe_parser_uses_only_uniprot_numbering() -> None:
@@ -81,7 +86,9 @@ def test_pdbe_parser_uses_only_uniprot_numbering() -> None:
 
 def test_pymol_script_highlights_known_residues(tmp_path: Path) -> None:
   structure = tmp_path / "model.pdb"
-  structure.write_text("ATOM      1  CA  ALA A  42      0.000   0.000   0.000  1.00 95.00           C\n")
+  structure.write_text(
+    "ATOM      1  CA  ALA A  42      0.000   0.000   0.000  1.00 95.00           C\n"
+  )
   annotations = pd.DataFrame({
     "residue_number": [42, 105],
     "annotation_type": ["mcsa_catalytic", "uniprot_binding"],
