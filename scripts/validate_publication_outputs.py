@@ -41,12 +41,12 @@ def main() -> None:
 
   figures = pd.read_csv(manifest_path, sep="\t")
   tables = pd.read_csv(table_manifest_path, sep="\t")
-  if len(figures) != 21:
-    errors.append(f"figure_count:{len(figures)}:expected_21")
+  if len(figures) != 40:
+    errors.append(f"figure_count:{len(figures)}:expected_40")
   if figures["figure_id"].duplicated().any():
     errors.append("duplicate_figure_ids")
-  expected_main = {f"Figure_{index}" for index in range(1, 8)}
-  expected_supplementary = {f"Figure_S{index}" for index in range(1, 15)}
+  expected_main = {f"Figure_{index}" for index in range(1, 9)}
+  expected_supplementary = {f"Figure_S{index}" for index in range(1, 33)}
   observed = set(figures["figure_id"].astype(str))
   missing_main = expected_main - observed
   missing_supplementary = expected_supplementary - observed
@@ -78,14 +78,14 @@ def main() -> None:
       source_path = ROOT / source_path
     require(source_path, errors)
 
-  if len(tables) != 19:
-    errors.append(f"table_count:{len(tables)}:expected_19")
+  if len(tables) != 22:
+    errors.append(f"table_count:{len(tables)}:expected_22")
   main_count = int(tables["category"].astype(str).eq("main").sum())
   supplementary_count = int(tables["category"].astype(str).eq("supplementary").sum())
   if main_count != 4:
     errors.append(f"main_table_count:{main_count}:expected_4")
-  if supplementary_count != 15:
-    errors.append(f"supplementary_table_count:{supplementary_count}:expected_15")
+  if supplementary_count != 18:
+    errors.append(f"supplementary_table_count:{supplementary_count}:expected_18")
   for path_value in tables["path"].astype(str):
     path = Path(path_value)
     if not path.is_absolute():
@@ -101,14 +101,15 @@ def main() -> None:
   require(article_root / "manifests" / "publication_provenance.json", errors)
   require(article_root / "manifests" / "SHA256SUMS.txt", errors)
   require(article_root / "manuscript_assets" / "all_figure_legends.md", errors)
+  require(article_root / "structure_atlas" / "individual", errors, minimum_size=0)
 
   if errors:
     raise SystemExit(
       "Publication package validation failed:\n" + "\n".join(f"- {error}" for error in errors)
     )
   print("Publication package validation passed.")
-  print("Main figures: 7; supplementary figures: 14; exported image files: 63")
-  print("Main tables: 4; supplementary tables: 15")
+  print("Main figures: 8; supplementary figures: 32; exported image files: 120")
+  print("Main tables: 4; supplementary tables: 18")
   print("All registered figures passed automated layout audits.")
 
 
