@@ -1,0 +1,29 @@
+weights:
+  target_tractability: 0.18
+  direct_interaction: 0.18
+  compound_potency: 0.18
+  clinical_maturity: 0.14
+  cancer_relevance: 0.12
+  biomarker_selective_response: 0.20
+
+thresholds:
+  minimum_vulnerability_score_for_api_query: 0.15
+  maximum_api_targets: 500
+  strong_pchembl_value: 8.0
+  minimum_loss_models: 3
+  minimum_intact_models: 3
+  drug_response_fdr: 0.05
+  repurposing_minimum_normalized_phase: 0.50
+
+combination:
+  method: geometric_concordance
+  formula: sqrt(coverage_adjusted_vulnerability * coverage_adjusted_pharmacology)
+
+missing_data_rule: >-
+  Missing evidence is omitted from the observed-domain denominator and reduces
+  explicit coverage. API failure, source absence or an unmeasured response is not
+  converted to zero and is not interpreted as negative evidence.
+
+interpretation_boundary: >-
+  Scores prioritize experimental target-compound hypotheses. They do not establish
+  clinical efficacy, patient benefit, safety, treatment suitability or cure.
