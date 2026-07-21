@@ -1,51 +1,47 @@
 # SynLeth-RSES-Onco / RSES-Onco
 
-**RSES-Onco** is a reproducible framework for prioritizing cancer-selective
-synthetic-lethal dependencies created by hidden functional backups, analogous
-enzymes, homologous paralogs, pathway redundancy and collateral deletion. The
-initial disease scope is colorectal, gastric and lung cancer.
+**RSES-Onco v0.9** is a coverage-aware framework for discovering and prioritizing
+cancer-selective dependencies created by non-homologous isofunctional enzymes
+(NISEs), homologous paralogs, pathway backups, collateral deletions and downstream
+vulnerabilities. The initial disease scope is colorectal, gastric and lung cancer.
 
-The framework adapts the coverage-aware Role Specialization Evidence Score
-(RSES): unavailable evidence is omitted from the observed-domain denominator and
-reduces explicit coverage rather than being treated as biological similarity or as
-a negative result. Functional/evolutionary relation confidence remains separate
-from empirical synthetic-lethality evidence.
+The repository now includes a complete scripted publication workflow and a
+pharmacology layer for generating target-compound hypotheses for experimental
+validation. It does **not** make clinical recommendations or claims of treatment
+efficacy or cure.
 
-## Included
+## Core scope
 
-- Curated table of **70 human proteins in 15 bona fide intragenomic analogous-enzyme activities**.
-- **101 cross-cluster human analogue pairs**, evaluated in both directions as **202 loss-to-target hypotheses**.
-- Literature benchmark of **25 validated vulnerabilities and explicitly labelled hypotheses**.
-- Ensembl Compara expansion of homologous paralogs for every analyzed seed gene.
-- DepMap Public 26Q1 readers for CRISPR gene effect, WGS copy number, model metadata and expression.
-- Human CRISPR phenotype-profile divergence analogous to the mutant-phenotype domain used in EcoNISE.
-- Cancer-specific expression-context divergence analogous to the PRECISE expression domain.
-- STRING functional-interaction neighborhoods.
-- OmniPath/DoRothEA transcriptional-regulatory neighborhoods.
-- Human Protein Atlas subcellular localization.
-- UniProt catalytic, cofactor, localization and PDB traceability.
-- Open GDC ASCAT3 primary-tumor gene-level copy-number acquisition with resume, `.part` files, retries, size validation and MD5 validation.
-- Aggregation of TCGA-COAD/READ, TCGA-STAD and TCGA-LUAD/LUSC into deletion-only matrices.
-- Cancer-specific RSES-Onco integration, Benjamini-Hochberg adjusted contrasts, article tables, empirical figures and supplementary workbook generation.
-- Tests, GitHub Actions and documented benchmark and expanded shell workflows.
+- 70 proteins in 15 curated human NISE activities;
+- 101 cross-cluster NISE pairs;
+- 202 directional NISE hypotheses;
+- Ensembl Compara paralog expansion;
+- all-target DepMap conditional-dependency discovery;
+- DepMap CRISPR, expression and WGS copy number;
+- TCGA/GDC ASCAT3 gene-level copy number;
+- STRING functional networks;
+- OmniPath/DoRothEA regulatory networks;
+- Human Protein Atlas localization;
+- UniProt/PDB biochemical and structural traceability;
+- Open Targets, ChEMBL, DGIdb, MyChem, Pharos/TCRD and CIViC pharmacology evidence;
+- optional PRISM, GDSC and CTRP drug-response integration;
+- 7 main and 14 supplementary figures generated only by scripts;
+- 4 main and 15 supplementary tables;
+- source data, figure legends, Excel workbook, provenance and SHA-256 manifests.
 
 ## Scientific boundary
 
-The repository separates three classes of output:
+Unavailable evidence is not converted to zero. It is excluded from the observed-
+domain denominator and lowers explicit coverage. NISE status, paralogy, network
+connectivity, druggability or a statistical dependency does not by itself prove
+synthetic lethality or therapeutic efficacy. High-priority candidates require
+biomarker-matched isogenic perturbation, rescue, orthogonal pharmacology,
+mechanistic assays and in vivo validation.
 
-1. literature-anchored priors;
-2. synthetic software-verification fixtures;
-3. release-specific empirical TCGA/DepMap and human-network results generated locally.
-
-Only the third class may be described as a real cohort analysis. Computational
-candidates still require biomarker-confirmed isogenic, pharmacological, rescue and
-mechanistic validation before therapeutic or clinical interpretation.
-
-“All NISEs” is exhaustive for the bundled curated human NISE catalogue. “All
-paralogs” is source-bounded to the Ensembl release and the analyzed seed genes.
-There is no canonical resource that exhaustively defines every possible pathway
-backup, downstream dependency or collateral vulnerability in the human proteome;
-those classes must retain explicit source and release provenance.
+“All NISEs” is exhaustive relative to the bundled curated human NISE catalogue.
+Other classes are exhaustive only relative to an explicit source and release.
+There is no canonical database containing every possible biological backup or
+downstream dependency in the human proteome.
 
 ## Installation
 
@@ -56,169 +52,192 @@ python -m pip install -e .
 python -m pytest -q -p no:cacheprovider
 ```
 
-## Reproduce the bundled literature pilot
-
-```bash
-rses-onco score-literature \
-  --input data/curated/synthetic_lethality_reference_pairs.tsv \
-  --output results/literature_anchored_candidates.tsv
-```
-
-## Real-data documentation
+## Documentation
 
 - [`docs/REAL_DATA_WORKFLOW.md`](docs/REAL_DATA_WORKFLOW.md)
-- [`docs/ARTICLE_ANALYSIS_OUTPUTS.md`](docs/ARTICLE_ANALYSIS_OUTPUTS.md)
 - [`docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md`](docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md)
+- [`docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md`](docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md)
+- [`docs/PUBLICATION_PHARMACOLOGY_WORKFLOW.md`](docs/PUBLICATION_PHARMACOLOGY_WORKFLOW.md)
+- [`docs/ARTICLE_ANALYSIS_OUTPUTS.md`](docs/ARTICLE_ANALYSIS_OUTPUTS.md)
 
-## Benchmark workflow
+## Complete workflow after an existing GDC download
 
-```bash
-bash scripts/run_real_data_pipeline.sh all
-```
-
-When the GDC download already exists:
-
-```bash
-bash scripts/run_real_data_pipeline.sh after-download
-```
-
-## Expanded all-NISE workflow
-
-Run the complete workflow, including all NISE directions, Ensembl paralogs,
-STRING, DoRothEA, HPA, UniProt, DepMap and TCGA:
+Do not restart a GDC download that is already active. After it finishes and
+returns exit code zero:
 
 ```bash
-bash scripts/run_real_data_pipeline.sh expanded-all
+cd /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-NISE
+conda activate rses-onco
+
+git remote set-url origin \
+  https://github.com/mattoslmp/SynLeth-RSES-Onco.git
+
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+
+python -m pip install -e .
+python -m pytest -q -p no:cacheprovider
+
+set -o pipefail
+PYTHONUNBUFFERED=1 \
+bash scripts/run_expanded_pipeline.sh after-download \
+  2>&1 | tee logs/run_expanded_after_download_v09.log
+
+status=${PIPESTATUS[0]}
+echo "Exit code: $status"
+test "$status" -eq 0
 ```
 
-When the GDC download is already running or complete, do not restart it. Continue
-with:
+This command runs all-NISE construction, paralog expansion, all-target discovery,
+human network evidence, DepMap, GDC validation and aggregation, TCGA integration,
+pharmacology, all article tables, all figures, workbook, manifests and tests.
+
+## Full workflow including GDC acquisition
 
 ```bash
-bash scripts/run_real_data_pipeline.sh expanded-after-download
+bash scripts/run_expanded_pipeline.sh all
 ```
 
-The expanded setup before TCGA can be run independently:
+## Rebuild pharmacology and publication assets only
+
+When the integrated score already exists:
 
 ```bash
-bash scripts/run_real_data_pipeline.sh expanded-setup
+bash scripts/run_publication_pipeline.sh all
 ```
 
-Expanded stages:
+Generate only all figures:
 
 ```bash
-bash scripts/run_real_data_pipeline.sh build-universe
-bash scripts/run_real_data_pipeline.sh expand-paralogs
-bash scripts/run_real_data_pipeline.sh functional-evidence
-bash scripts/run_real_data_pipeline.sh run-expanded-depmap
-bash scripts/run_real_data_pipeline.sh run-expanded-full
-bash scripts/run_real_data_pipeline.sh summarize-expanded
-bash scripts/run_real_data_pipeline.sh figures-expanded
-bash scripts/run_real_data_pipeline.sh workbook-expanded
+bash scripts/run_publication_pipeline.sh figures
 ```
 
-## Expected DepMap files
+The figure orchestrator is:
 
-Place these under `data/raw/depmap/`:
+```bash
+python -u scripts/make_all_article_figures.py \
+  --ranking results/expanded_26Q1/full/expanded_rses_onco.tsv \
+  --candidates data/processed/expanded_candidate_universe.tsv \
+  --discovery results/expanded_26Q1/discovery/all_target_dependency_screen.tsv \
+  --pharmacology results/expanded_26Q1/pharmacology/pharmacology_ranked_hypotheses.tsv \
+  --output-root article_outputs \
+  --strict-layout
+```
+
+## Figure generation and quality control
+
+Every registered figure is written as:
 
 ```text
-CRISPRGeneEffect.csv
-OmicsCNGeneWGS.csv
-Model.csv
-OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv
-OmicsGlobalSignatures.csv                         # recommended
-OmicsInferredMolecularSubtypes.csv                # recommended
-README_26Q1.txt                                   # recommended
+PNG: 600 dpi
+PDF: vector-compatible
+SVG: editable text
 ```
 
-Validate them with:
+Each figure also receives a `*.layout_audit.json` file. Strict mode fails on:
 
-```bash
-python -u scripts/download_depmap.py \
-  --input-dir data/raw/depmap \
-  --write-checksums
+- panel/axes overlap;
+- tick-label collision;
+- clipped text;
+- legends outside the figure;
+- missing PNG, PDF or SVG;
+- missing figure source-data table.
 
-python -u scripts/validate_real_inputs.py \
-  --gene-effect data/raw/depmap/CRISPRGeneEffect.csv \
-  --copy-number data/raw/depmap/OmicsCNGeneWGS.csv \
-  --models data/raw/depmap/Model.csv \
-  --expression data/raw/depmap/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv
-```
+Final visual inspection at 100% zoom remains mandatory before submission.
 
-## Build the expanded candidate universe
+## Main figures
 
-```bash
-python -u scripts/build_expanded_candidate_universe.py \
-  --output data/processed/expanded_candidate_universe.tsv \
-  --members-output data/processed/expanded_class_member_inventory.tsv
-```
+1. expanded RSES-Onco framework;
+2. candidate universe by mechanistic class;
+3. colorectal, gastric and lung rankings;
+4. TCGA event versus DepMap selectivity;
+5. human functional-microniche map;
+6. class-specific and all-target discoveries;
+7. pharmacological actionability and target-compound hypotheses.
 
-This includes every direction of every curated cross-cluster NISE pair plus all
-benchmark classes. Add Ensembl paralogs:
+## Supplementary figures
 
-```bash
-python -u scripts/download_ensembl_paralogs.py \
-  --candidates data/processed/expanded_candidate_universe.tsv \
-  --output data/raw/ensembl/human_seed_paralogs.tsv
+Figures S1–S14 cover evidence availability, all NISE activities, the complete
+all-target screen, dependency and expression heatmaps, CRISPR phenotype profiles,
+expression context, STRING, regulation, localization, TCGA events, pharmacology
+source coverage, PRISM/GDSC/CTRP selectivity and layout/reproducibility quality
+control.
 
-python -u scripts/build_expanded_candidate_universe.py \
-  --additional data/raw/ensembl/human_seed_paralogs.tsv \
-  --output data/processed/expanded_candidate_universe.tsv \
-  --members-output data/processed/expanded_class_member_inventory.tsv
-```
+## Pharmacology sources
 
-Additional source-bounded classes can be included with repeated `--additional`
-arguments.
-
-## Acquire human functional evidence
-
-```bash
-python -u scripts/download_human_functional_evidence.py \
-  --candidates data/processed/expanded_candidate_universe.tsv \
-  --raw-dir data/raw/human_functional_evidence \
-  --output data/processed/expanded_pair_functional_evidence.tsv
-```
-
-The acquisition stage records:
+### Live/cached evidence
 
 ```text
-STRING functional interaction partners
-OmniPath/DoRothEA TF-target interactions
-Human Protein Atlas localization
-UniProt reviewed annotations and PDB cross-references
+Open Targets GraphQL
+ChEMBL REST
+DGIdb GraphQL
+MyChem.info REST
+Pharos/TCRD GraphQL
+CIViC gene record resolver
 ```
 
-## GDC acquisition
+Cached API responses are stored under:
 
-Create and review the manifest:
+```text
+data/raw/pharmacology/api_cache/
+```
+
+### Optional drug-response releases
+
+Place release files under:
+
+```text
+data/raw/pharmacology/prism/
+data/raw/pharmacology/gdsc/
+data/raw/pharmacology/ctrp/
+```
+
+Column mappings are configured in:
+
+```text
+config/drug_sensitivity_sources.yaml
+```
+
+If these files are absent, the pipeline records the missing sources and continues
+with reduced pharmacology coverage.
+
+## Publication output structure
+
+```text
+article_outputs/
+├── figures/main/
+├── figures/supplementary/
+├── tables/main/
+├── tables/supplementary/
+├── source_data/
+├── manuscript_assets/
+├── workbooks/
+└── manifests/
+```
+
+The package includes exactly:
+
+```text
+7 main figures × PNG/PDF/SVG
+14 supplementary figures × PNG/PDF/SVG
+4 main tables
+15 supplementary tables
+```
+
+## Validate the final package
 
 ```bash
-python -u scripts/download_gdc.py \
-  --manifest-only \
-  --workflow ASCAT3 \
-  --output-dir data/raw/gdc
+python -u scripts/validate_publication_outputs.py \
+  --article-root article_outputs
+
+(
+  cd article_outputs
+  sha256sum -c manifests/SHA256SUMS.txt
+)
 ```
 
-Download or resume from the reviewed manifest:
-
-```bash
-python -u scripts/download_gdc.py \
-  --use-existing-manifest \
-  --manifest data/raw/gdc/gdc_gene_level_copy_number_manifest.json \
-  --output-dir data/raw/gdc \
-  --retries 3
-```
-
-Validate every file:
-
-```bash
-python -u scripts/download_gdc.py \
-  --validate-only \
-  --manifest data/raw/gdc/gdc_gene_level_copy_number_manifest.json \
-  --output-dir data/raw/gdc
-```
-
-## Two-level scoring
+## Main scoring layers
 
 ### Human functional-microniche RSES
 
@@ -226,7 +245,7 @@ python -u scripts/download_gdc.py \
 Expression/context       0.20
 Localization             0.15
 Biochemical/structural   0.15
-Genetic/phenotype        0.20
+Genetic/CRISPR phenotype 0.20
 STRING network           0.15
 Regulatory network       0.15
 ```
@@ -243,66 +262,21 @@ Functional microniche    0.16
 Validation/tractability  0.18
 ```
 
-For available domains `d`, weights `w_d`, values `D_d` and availability indicators
-`m_d`:
+### Pharmacology actionability
 
 ```text
-Score = sum(w_d m_d D_d) / sum(w_d m_d)
-Coverage = sum(w_d m_d) / sum(w_d)
-Adjusted score = Score × Coverage
+Target tractability             0.18
+Direct target-drug interaction  0.18
+Compound potency                0.18
+Clinical maturity               0.14
+Cancer relevance                0.12
+Biomarker-selective response    0.20
 ```
 
-## Statistical conventions
-
-- DepMap strong-loss cohort: linear WGS relative copy number `< 0.30`.
-- Minimum group size: three loss and three intact models.
-- Dependency test: one-sided Mann-Whitney, testing more negative target effect in loss models.
-- Expression-compensation test: one-sided Mann-Whitney, testing increased target expression in loss models.
-- Expression-context domain: cancer-specific Spearman decorrelation and median absolute abundance separation.
-- Genetic/phenotype domain: cancer-specific CRISPR profile decorrelation, score separation and dependency-set non-overlap.
-- STRING and regulatory domains: pairwise neighborhood/regulator-set divergence.
-- Multiple testing: Benjamini-Hochberg across eligible contrasts.
-- TCGA homozygous deletion: ASCAT3 integer total copy number equal to zero.
-
-The DepMap threshold is a strong loss/LoF-like grouping and must not be described
-as a universal pure homozygous-deletion definition. The TCGA output is a
-deletion-only event matrix, not a GISTIC call set.
-
-## Expanded outputs
-
-```text
-results/expanded_26Q1/depmap_only/
-results/expanded_26Q1/full/
-results/expanded_26Q1/full/article_tables/
-figures/expanded_26Q1/                    # PDF, PNG and SVG
-supplementary/RSES_Onco_Expanded_All_NISE_26Q1.xlsx
-data/processed/expanded_candidate_universe.tsv
-data/processed/expanded_class_member_inventory.tsv
-data/processed/expanded_pair_functional_evidence.tsv
-```
-
-Raw third-party matrices are intentionally excluded from version control.
-
-## Current known limitation
-
-In the evaluated DepMap Public 26Q1 files, `SOD2` is present in CRISPR gene effect
-but absent from WGS copy number, protein-coding expression and inferred LoF
-annotations. Therefore `SOD2 -> SOD1` remains an exploratory hypothesis with
-missing empirical loss-cohort domains. Missingness is preserved and does not imply
-a negative biological result.
-
-## Main data resources
-
-- Curated human NISE catalogue and cross-cluster pairs.
-- DepMap Public 26Q1.
-- TCGA/GDC ASCAT3 gene-level copy number.
-- STRING functional associations.
-- OmniPath/DoRothEA transcriptional regulation.
-- Human Protein Atlas subcellular localization.
-- UniProtKB reviewed protein annotations.
-- Ensembl Compara human paralogs.
+The final therapeutic-hypothesis score combines coverage-adjusted vulnerability
+and coverage-adjusted pharmacology by geometric concordance.
 
 ## License
 
-MIT for code. Third-party data remain under their original terms and are acquired
-by scripts rather than redistributed.
+MIT for repository code. Third-party data remain under their original terms and
+are acquired or supplied locally rather than redistributed.
