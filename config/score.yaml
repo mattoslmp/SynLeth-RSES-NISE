@@ -1,16 +1,40 @@
-weights:
+legacy_weights:
   tumor_event: 0.18
   dependency: 0.25
   selectivity: 0.17
   expression_compensation: 0.10
   functional_relation: 0.12
   validation_tractability: 0.18
+
+functional_microniche_weights:
+  expression_context: 0.20
+  localization: 0.15
+  biochemical_structural: 0.15
+  genetic_phenotype: 0.20
+  interaction_network: 0.15
+  regulatory_network: 0.15
+
+expanded_onco_weights:
+  tumor_event: 0.16
+  dependency: 0.22
+  selectivity: 0.14
+  expression_compensation: 0.08
+  functional_relation: 0.06
+  functional_microniche: 0.16
+  validation_tractability: 0.18
+
 thresholds:
-  depmap_loss_threshold_linear_copy_number: 0.30
-  legacy_log_ratio_loss_threshold: -1.5
+  depmap_linear_copy_number_loss: 0.30
+  tcga_homozygous_deletion_total_copy_number: 0
   strong_crispr_dependency: -0.5
   minimum_loss_models: 3
   minimum_intact_models: 3
+  string_required_score: 700
   high_priority_observed_score: 0.72
-  high_priority_minimum_coverage: 0.67
-  high_priority_minimum_domains: 4
+  high_priority_minimum_coverage: 0.70
+  high_priority_minimum_domains: 5
+
+missing_data_rule: >-
+  Missing evidence is omitted from the observed-domain denominator and reduces
+  explicit coverage. It is never converted to zero or interpreted as a negative
+  result.
