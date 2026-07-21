@@ -1,0 +1,3 @@
+Current NISE download attempt: failed in the assembly environment because outbound DNS/network access was unavailable. The official acquisition script and source URL are included.
+
+DepMap/GDC release-specific raw matrices were not silently redistributed. Use the acquisition/validation scripts with the official portals and record release identifiers/checksums.

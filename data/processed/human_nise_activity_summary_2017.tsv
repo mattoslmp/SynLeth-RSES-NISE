@@ -1,0 +1,16 @@
+group_id	ec_number	activity	n_proteins	n_structural_clusters	genes
+HNISE01	1.3.1.20	carbonyl reductase activity	3	2	DHDH; AKR1C2; AKR1C1
+HNISE02	1.15.1.1	superoxide dismutase activity	3	2	SOD2; SOD1; SOD3
+HNISE03	2.4.1.22	lactose synthase / beta-1,4-galactosyltransferase activity	3	2	B4GALT2; B4GALT1; LALBA
+HNISE04	2.4.2.31	NAD+-protein ADP-ribosyltransferase activity	5	2	SIRT6; ART1; ART3; ART4; ART5
+HNISE05	2.7.1.67	phosphatidylinositol 4-kinase activity	4	2	PI4KA; PI4KB; PI4K2A; PI4K2B
+HNISE06	2.7.4.21	inositol polyphosphate kinase activity	5	2	PPIP5K2; PPIP5K1; IP6K1; IP6K3; IP6K2
+HNISE07	3.1.1.3	triacylglycerol lipase activity	10	4	AADAC; CEL; LIPC; PNLIP; PNLIPRP1; PNLIPRP3; LIPG; PNLIPRP2; LIPF; PNPLA3
+HNISE08	3.1.1.29	aminoacyl-tRNA hydrolase activity	3	3	PTRH2; PTRH1; ICT1
+HNISE09	3.1.2.2	palmitoyl-CoA hydrolase activity	5	2	ACOT2; BAAT; ACOT1; ACOT4; ACOT7
+HNISE10	3.1.3.2	acid phosphatase activity	6	3	ACP5; ACP2; ACPP; ACPT; ACP6; ACP1
+HNISE11	3.1.3.5	5'-nucleotidase activity	7	5	NT5C1B; NT5C1A; NT5E; NT5C; NT5M; NT5C3A; NT5C2
+HNISE12	3.1.4.12	sphingomyelin phosphodiesterase activity	5	4	SMPD2; SMPD3; SMPD1; SMPD4; ENPP7
+HNISE13	4.2.99.18	DNA N-glycosylase / AP-lyase-related repair activity	7	2	NTHL1; OGG1; NEIL2; NEIL1; APEX1; APEX2; APLF
+HNISE14	5.3.99.2	prostaglandin-D synthase activity	2	2	PTGDS; HPGDS
+HNISE15	5.3.99.3	prostaglandin-E synthase activity	2	2	PTGES2; PTGES
