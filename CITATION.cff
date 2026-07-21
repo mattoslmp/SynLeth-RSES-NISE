@@ -5,7 +5,7 @@ type: software
 authors:
   - family-names: "Pereira"
     given-names: "Leandro de Mattos"
-version: 0.10.0
+version: 0.10.1
 date-released: 2026-07-21
 repository-code: "https://github.com/mattoslmp/SynLeth-RSES-Onco"
 license: MIT

@@ -13,7 +13,8 @@ from rses_onco.expanded import (
   phenotype_profile_metrics,
 )
 from rses_onco.networks import set_metrics, string_pair_metrics
-from rses_onco.utils import canonical_gene_name
+from rses_onco.utils import atomic_gene_symbols, canonical_gene_name
+from scripts.build_expanded_candidate_universe import expand_explicit_target_gene_lists
 from scripts.discover_conditional_dependencies import vectorized_target_tests
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +24,42 @@ def test_missing_gene_symbols_remain_empty() -> None:
   assert canonical_gene_name(None) == ""
   assert canonical_gene_name(float("nan")) == ""
   assert canonical_gene_name("SOD2 (6648)") == "SOD2"
+
+
+def test_atomic_gene_list_parser_is_strict() -> None:
+  assert atomic_gene_symbols("CDK4/CDK6") == ["CDK4", "CDK6"]
+  assert atomic_gene_symbols("BRCA1 + BRCA2") == ["BRCA1", "BRCA2"]
+  assert atomic_gene_symbols("SOD2 (6648)") == ["SOD2"]
+  assert atomic_gene_symbols("BRCA1/BRCA2 or HRD") == []
+
+
+def test_composite_target_is_expanded_without_splitting_loss_state() -> None:
+  source = pd.DataFrame([
+    {
+      "pair_id": "SL011",
+      "lost_feature": "SMARCA4 loss",
+      "lost_gene": "SMARCA4",
+      "target_gene": "CDK4/CDK6",
+      "source_class": "downstream_synthetic_lethality",
+    },
+    {
+      "pair_id": "SL025",
+      "lost_feature": "SMARCA4/SMARCA2 dual loss",
+      "lost_gene": None,
+      "target_gene": "MCL1",
+      "source_class": "downstream_apoptotic_dependency",
+    },
+  ])
+  expanded = expand_explicit_target_gene_lists(source)
+  sl011 = expanded.loc[expanded["target_group_id"].eq("SL011")]
+  assert set(sl011["target_gene"]) == {"CDK4", "CDK6"}
+  assert set(sl011["pair_id"]) == {"SL011__TARGET_CDK4", "SL011__TARGET_CDK6"}
+  assert set(sl011["target_feature"]) == {"CDK4/CDK6"}
+  assert set(sl011["lost_gene"]) == {"SMARCA4"}
+  sl025 = expanded.loc[expanded["pair_id"].eq("SL025")].iloc[0]
+  assert pd.isna(sl025["lost_gene"])
+  assert sl025["lost_feature"] == "SMARCA4/SMARCA2 dual loss"
+  assert sl025["target_gene"] == "MCL1"
 
 
 def test_directed_nise_universe_contains_both_directions() -> None:
