@@ -19,6 +19,7 @@ jobs:
       - run: bash -n scripts/run_real_data_pipeline.sh
       - run: bash -n scripts/run_expanded_pipeline.sh
       - run: bash -n scripts/run_publication_pipeline.sh
+      - run: bash -n scripts/run_structural_pipeline.sh
       - name: Figure triplet smoke test
         run: python -m pytest -q -p no:cacheprovider tests/test_publication.py::test_scripted_figure_exports_png_pdf_svg
       - name: Axes overlap detection test
@@ -29,6 +30,8 @@ jobs:
         run: python -m pytest -q -p no:cacheprovider tests/test_publication.py::test_strict_layout_rejects_overlap
       - name: Pharmacology tests
         run: python -m pytest -q -p no:cacheprovider tests/test_pharmacology.py
+      - name: Structural annotation and PML tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_structural.py
       - name: Complete test suite
         run: python -m pytest -q -p no:cacheprovider
       - name: Build complete directed NISE universe

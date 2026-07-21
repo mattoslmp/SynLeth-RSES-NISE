@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Generate pharmacology priorities and every article asset after expanded scoring.
+# Generate pharmacology priorities, human NISE structural atlas and every article asset.
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,8 +23,17 @@ MIN_GROUP_SIZE="${MIN_GROUP_SIZE:-3}"
 PHARMACOLOGY_MINIMUM_SCORE="${PHARMACOLOGY_MINIMUM_SCORE:-0.15}"
 PHARMACOLOGY_MAX_TARGETS="${PHARMACOLOGY_MAX_TARGETS:-500}"
 STRICT_LAYOUT="${STRICT_LAYOUT:-1}"
+PYMOL_EXECUTABLE="${PYMOL_EXECUTABLE:-pymol}"
 
-mkdir -p "$PHARMACOLOGY_DATA" "$PHARMACOLOGY_RESULTS" "$ARTICLE_ROOT" "$LOG_DIR"
+PROTEINS="${PROTEINS:-data/curated/human_nise_bonafide_2017.tsv}"
+STRUCTURE_MANIFEST="${STRUCTURE_MANIFEST:-data/processed/structures/alphafold_structure_manifest.tsv}"
+STRUCTURAL_ANNOTATIONS="${STRUCTURAL_ANNOTATIONS:-data/processed/structures/nise_structural_residue_annotations.tsv}"
+STRUCTURAL_COVERAGE="${STRUCTURAL_COVERAGE:-data/processed/structures/nise_structural_annotation_coverage.tsv}"
+STRUCTURE_RENDER_MANIFEST="${STRUCTURE_RENDER_MANIFEST:-data/processed/structures/nise_structure_render_manifest.tsv}"
+STRUCTURE_LOG_DIR="${STRUCTURE_LOG_DIR:-logs/structures_26Q1}"
+
+mkdir -p "$PHARMACOLOGY_DATA" "$PHARMACOLOGY_RESULTS" "$ARTICLE_ROOT" \
+  "$LOG_DIR" "$STRUCTURE_LOG_DIR" data/processed/structures data/raw/structures
 
 log_stage() {
   printf '\n[%s] %s\n' "$(date -Iseconds)" "$*"
@@ -99,6 +108,33 @@ prioritize_pharmacology() {
       --output-dir "$PHARMACOLOGY_RESULTS"
 }
 
+prepare_structures() {
+  require_ranking
+  log_stage "Download every curated human NISE AlphaFold DB structure"
+  run_logged "$STRUCTURE_LOG_DIR/01_download_alphafold.log" \
+    python -u scripts/download_alphafold_nise_structures.py \
+      --proteins "$PROTEINS" \
+      --output-dir data/raw/structures/alphafold \
+      --manifest "$STRUCTURE_MANIFEST"
+
+  log_stage "Collect exact-numbered M-CSA, UniProt and PDBe residue annotations"
+  run_logged "$STRUCTURE_LOG_DIR/02_collect_structural_annotations.log" \
+    python -u scripts/collect_nise_structural_annotations.py \
+      --proteins "$PROTEINS" \
+      --output "$STRUCTURAL_ANNOTATIONS" \
+      --coverage-output "$STRUCTURAL_COVERAGE" \
+      --cache-dir data/raw/structures/annotation_cache
+
+  log_stage "Render whole structures and enlarged functional-site views with PyMOL"
+  run_logged "$STRUCTURE_LOG_DIR/03_render_structures.log" \
+    python -u scripts/render_nise_structures.py \
+      --structure-manifest "$STRUCTURE_MANIFEST" \
+      --annotations "$STRUCTURAL_ANNOTATIONS" \
+      --output-dir "$ARTICLE_ROOT/structure_atlas/individual" \
+      --render-manifest "$STRUCTURE_RENDER_MANIFEST" \
+      --pymol "$PYMOL_EXECUTABLE"
+}
+
 export_tables() {
   require_ranking
   log_stage "Export all main and supplementary article tables"
@@ -114,12 +150,15 @@ export_tables() {
       --drug-sensitivity "$PHARMACOLOGY_DATA/drug_response_selectivity.tsv" \
       --pharmacology-source-status "$PHARMACOLOGY_DATA/pharmacology_source_status.tsv" \
       --pharmacology-source-coverage "$PHARMACOLOGY_RESULTS/pharmacology_source_coverage.tsv" \
+      --structure-manifest "$STRUCTURE_MANIFEST" \
+      --structural-annotations "$STRUCTURAL_ANNOTATIONS" \
+      --structure-render-manifest "$STRUCTURE_RENDER_MANIFEST" \
       --output-root "$ARTICLE_ROOT"
 }
 
 generate_figures() {
   require_ranking
-  log_stage "Generate every main and supplementary figure from scripts"
+  log_stage "Generate every main, supplementary and structural figure from scripts"
   local layout_flag="--strict-layout"
   if [[ "$STRICT_LAYOUT" != "1" ]]; then
     layout_flag="--no-strict-layout"
@@ -130,6 +169,11 @@ generate_figures() {
       --candidates "$CANDIDATES" \
       --discovery "$DISCOVERY" \
       --pharmacology "$PHARMACOLOGY_RESULTS/pharmacology_ranked_hypotheses.tsv" \
+      --proteins "$PROTEINS" \
+      --structure-manifest "$STRUCTURE_MANIFEST" \
+      --render-manifest "$STRUCTURE_RENDER_MANIFEST" \
+      --structural-annotations "$STRUCTURAL_ANNOTATIONS" \
+      --structural-coverage "$STRUCTURAL_COVERAGE" \
       --output-root "$ARTICLE_ROOT" \
       "$layout_flag"
 }
@@ -152,7 +196,10 @@ build_manifests() {
       --input "$DISCOVERY" \
       --input "$FUNCTIONAL_EVIDENCE" \
       --input "$PHARMACOLOGY_DATA/pharmacology_evidence_long.tsv" \
-      --input "$PHARMACOLOGY_RESULTS/pharmacology_ranked_hypotheses.tsv"
+      --input "$PHARMACOLOGY_RESULTS/pharmacology_ranked_hypotheses.tsv" \
+      --input "$STRUCTURE_MANIFEST" \
+      --input "$STRUCTURAL_ANNOTATIONS" \
+      --input "$STRUCTURE_RENDER_MANIFEST"
 }
 
 validate_outputs() {
@@ -169,6 +216,7 @@ all() {
   standardize_sensitivity
   analyze_sensitivity
   prioritize_pharmacology
+  prepare_structures
   export_tables
   generate_figures
   build_workbook
@@ -190,26 +238,21 @@ usage() {
 Usage: bash scripts/run_publication_pipeline.sh STAGE
 
 Stages:
-  acquire-pharmacology    Query/cached pharmacology evidence APIs
+  acquire-pharmacology     Query/cached pharmacology evidence APIs
   standardize-sensitivity Standardize local PRISM, GDSC and CTRP releases
   analyze-sensitivity     Test biomarker-matched drug response
   prioritize              Build target-drug actionability priorities
-  tables                  Export main and supplementary tables
-  figures                 Generate all 7 main and 14 supplementary figures
+  structures              Download, annotate and render all human NISE structures
+  tables                  Export 4 main and 18 supplementary tables
+  figures                 Generate all 8 main and 32 supplementary figures
   workbook                Build organized Excel workbook
   manifests               Build file inventory, provenance and SHA-256 checksums
   validate                Validate figure triplets, layout audits, tables and tests
-  assets-only             Rebuild priorities and all publication assets from cached data
-  all                     Run the complete pharmacology and publication workflow
+  assets-only             Rebuild assets from cached pharmacology and structures
+  all                     Run complete pharmacology, structural and publication workflow
 
-Optional sensitivity files are discovered under:
-  data/raw/pharmacology/prism/
-  data/raw/pharmacology/gdsc/
-  data/raw/pharmacology/ctrp/
-
-If no local drug-sensitivity releases are present, the pipeline records them as
-not found and continues with API-based target/compound evidence. Missing evidence
-remains missing and lowers coverage.
+PyMOL is required for the structural atlas:
+  conda install -c conda-forge pymol-open-source
 EOF
 }
 
@@ -219,6 +262,7 @@ case "$stage" in
   standardize-sensitivity) standardize_sensitivity ;;
   analyze-sensitivity) analyze_sensitivity ;;
   prioritize) prioritize_pharmacology ;;
+  structures) prepare_structures ;;
   tables) export_tables ;;
   figures) generate_figures ;;
   workbook) build_workbook ;;

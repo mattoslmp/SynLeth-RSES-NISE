@@ -1,47 +1,38 @@
 # SynLeth-RSES-Onco / RSES-Onco
 
-**RSES-Onco v0.9** is a coverage-aware framework for discovering and prioritizing
-cancer-selective dependencies created by non-homologous isofunctional enzymes
-(NISEs), homologous paralogs, pathway backups, collateral deletions and downstream
-vulnerabilities. The initial disease scope is colorectal, gastric and lung cancer.
+**RSES-Onco v0.10** is a coverage-aware framework for discovering and
+prioritizing cancer-selective dependencies created by non-homologous
+isofunctional enzymes (NISEs), homologous paralogs, pathway backups, collateral
+deletions and downstream vulnerabilities. The initial disease scope is
+colorectal, gastric and lung cancer.
 
-The repository now includes a complete scripted publication workflow and a
-pharmacology layer for generating target-compound hypotheses for experimental
-validation. It does **not** make clinical recommendations or claims of treatment
-efficacy or cure.
+The repository combines:
 
-## Core scope
-
-- 70 proteins in 15 curated human NISE activities;
-- 101 cross-cluster NISE pairs;
-- 202 directional NISE hypotheses;
+- all 70 proteins in 15 curated human NISE activities;
+- all 101 cross-cluster NISE pairs in both directions (202 hypotheses);
 - Ensembl Compara paralog expansion;
-- all-target DepMap conditional-dependency discovery;
-- DepMap CRISPR, expression and WGS copy number;
-- TCGA/GDC ASCAT3 gene-level copy number;
-- STRING functional networks;
-- OmniPath/DoRothEA regulatory networks;
+- DepMap CRISPR, expression and WGS copy-number evidence;
+- TCGA/GDC ASCAT3 homozygous-deletion events;
+- STRING functional and DoRothEA regulatory networks;
 - Human Protein Atlas localization;
 - UniProt/PDB biochemical and structural traceability;
-- Open Targets, ChEMBL, DGIdb, MyChem, Pharos/TCRD and CIViC pharmacology evidence;
-- optional PRISM, GDSC and CTRP drug-response integration;
-- 7 main and 14 supplementary figures generated only by scripts;
-- 4 main and 15 supplementary tables;
-- source data, figure legends, Excel workbook, provenance and SHA-256 manifests.
+- all-target conditional-dependency discovery;
+- Open Targets, ChEMBL, DGIdb, MyChem, Pharos/TCRD and CIViC evidence;
+- optional PRISM, GDSC and CTRP drug-response analysis;
+- a complete AlphaFold DB human NISE structural atlas;
+- exact-numbered M-CSA, UniProt and PDBe functional-residue highlighting;
+- a fully scripted publication package.
 
 ## Scientific boundary
 
-Unavailable evidence is not converted to zero. It is excluded from the observed-
-domain denominator and lowers explicit coverage. NISE status, paralogy, network
-connectivity, druggability or a statistical dependency does not by itself prove
-synthetic lethality or therapeutic efficacy. High-priority candidates require
-biomarker-matched isogenic perturbation, rescue, orthogonal pharmacology,
-mechanistic assays and in vivo validation.
+The software prioritizes experimental hypotheses. It does not establish clinical
+efficacy, patient benefit, safety, treatment suitability or cure.
 
-“All NISEs” is exhaustive relative to the bundled curated human NISE catalogue.
-Other classes are exhaustive only relative to an explicit source and release.
-There is no canonical database containing every possible biological backup or
-downstream dependency in the human proteome.
+AlphaFold DB models do not contain experimental substrates, cofactors or drug
+poses. RSES-Onco highlights known residues on AlphaFold models but does not infer
+that a ligand binds in a displayed pose. Only exact UniProt-numbered residues are
+projected by default. Missing evidence is not converted to zero and reduces
+explicit coverage.
 
 ## Installation
 
@@ -52,18 +43,17 @@ python -m pip install -e .
 python -m pytest -q -p no:cacheprovider
 ```
 
-## Documentation
+For an existing environment, install structural rendering support:
 
-- [`docs/REAL_DATA_WORKFLOW.md`](docs/REAL_DATA_WORKFLOW.md)
-- [`docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md`](docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md)
-- [`docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md`](docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md)
-- [`docs/PUBLICATION_PHARMACOLOGY_WORKFLOW.md`](docs/PUBLICATION_PHARMACOLOGY_WORKFLOW.md)
-- [`docs/ARTICLE_ANALYSIS_OUTPUTS.md`](docs/ARTICLE_ANALYSIS_OUTPUTS.md)
+```bash
+conda activate rses-onco
+conda install -c conda-forge pymol-open-source pillow
+python -m pip install -e .
+```
 
 ## Complete workflow after an existing GDC download
 
-Do not restart a GDC download that is already active. After it finishes and
-returns exit code zero:
+Do not restart an active GDC download. After all 1,997 files finish and validate:
 
 ```bash
 cd /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-NISE
@@ -80,36 +70,55 @@ python -m pip install -e .
 python -m pytest -q -p no:cacheprovider
 
 set -o pipefail
+MPLBACKEND=Agg \
 PYTHONUNBUFFERED=1 \
 bash scripts/run_expanded_pipeline.sh after-download \
-  2>&1 | tee logs/run_expanded_after_download_v09.log
+  2>&1 | tee logs/run_expanded_after_download_v010.log
 
 status=${PIPESTATUS[0]}
 echo "Exit code: $status"
 test "$status" -eq 0
 ```
 
-This command runs all-NISE construction, paralog expansion, all-target discovery,
-human network evidence, DepMap, GDC validation and aggregation, TCGA integration,
-pharmacology, all article tables, all figures, workbook, manifests and tests.
+This command performs all-NISE construction, paralog expansion, all-target
+DepMap discovery, human network evidence, TCGA integration, pharmacology,
+AlphaFold structure acquisition, functional-residue annotation, PyMOL rendering,
+all tables, all figures, workbook creation, manifests, checksums and tests.
 
-## Full workflow including GDC acquisition
+## Structural atlas only
 
 ```bash
-bash scripts/run_expanded_pipeline.sh all
+set -o pipefail
+MPLBACKEND=Agg \
+PYTHONUNBUFFERED=1 \
+bash scripts/run_structural_pipeline.sh all \
+  2>&1 | tee logs/run_structural_atlas.log
+
+status=${PIPESTATUS[0]}
+test "$status" -eq 0
 ```
 
-## Rebuild pharmacology and publication assets only
+Manual stages:
 
-When the integrated score already exists:
+```bash
+bash scripts/run_structural_pipeline.sh download
+bash scripts/run_structural_pipeline.sh annotations
+bash scripts/run_structural_pipeline.sh render
+bash scripts/run_structural_pipeline.sh figures
+```
+
+## Publication workflow only
+
+When the integrated ranking already exists:
 
 ```bash
 bash scripts/run_publication_pipeline.sh all
 ```
 
-Generate only all figures:
+Regenerate all figures from existing evidence and structural renders:
 
 ```bash
+MPLBACKEND=Agg \
 bash scripts/run_publication_pipeline.sh figures
 ```
 
@@ -121,93 +130,62 @@ python -u scripts/make_all_article_figures.py \
   --candidates data/processed/expanded_candidate_universe.tsv \
   --discovery results/expanded_26Q1/discovery/all_target_dependency_screen.tsv \
   --pharmacology results/expanded_26Q1/pharmacology/pharmacology_ranked_hypotheses.tsv \
+  --structure-manifest data/processed/structures/alphafold_structure_manifest.tsv \
+  --render-manifest data/processed/structures/nise_structure_render_manifest.tsv \
+  --structural-annotations data/processed/structures/nise_structural_residue_annotations.tsv \
+  --structural-coverage data/processed/structures/nise_structural_annotation_coverage.tsv \
   --output-root article_outputs \
   --strict-layout
 ```
 
-## Figure generation and quality control
+## Publication assets
 
-Every registered figure is written as:
+The final package contains:
+
+```text
+8 main figures
+32 supplementary figures
+120 PNG/PDF/SVG files
+4 main tables
+18 supplementary tables
+```
+
+Structural organization:
+
+- **Figure 8** — representative high-priority human NISE structures;
+- **Figures S15-S29** — one legible AlphaFold structural atlas per NISE activity;
+- **Figure S30** — AlphaFold confidence and annotation coverage;
+- **Figure S31** — catalytic/binding/ligand-residue provenance;
+- **Figure S32** — pairwise structural evidence.
+
+Every composite figure is exported as:
 
 ```text
 PNG: 600 dpi
-PDF: vector-compatible
-SVG: editable text
+PDF: vector-compatible layout
+SVG: editable text and layout
 ```
 
-Each figure also receives a `*.layout_audit.json` file. Strict mode fails on:
-
-- panel/axes overlap;
-- tick-label collision;
-- clipped text;
-- legends outside the figure;
-- missing PNG, PDF or SVG;
-- missing figure source-data table.
-
-Final visual inspection at 100% zoom remains mandatory before submission.
-
-## Main figures
-
-1. expanded RSES-Onco framework;
-2. candidate universe by mechanistic class;
-3. colorectal, gastric and lung rankings;
-4. TCGA event versus DepMap selectivity;
-5. human functional-microniche map;
-6. class-specific and all-target discoveries;
-7. pharmacological actionability and target-compound hypotheses.
-
-## Supplementary figures
-
-Figures S1–S14 cover evidence availability, all NISE activities, the complete
-all-target screen, dependency and expression heatmaps, CRISPR phenotype profiles,
-expression context, STRING, regulation, localization, TCGA events, pharmacology
-source coverage, PRISM/GDSC/CTRP selectivity and layout/reproducibility quality
-control.
-
-## Pharmacology sources
-
-### Live/cached evidence
+Every registered figure receives:
 
 ```text
-Open Targets GraphQL
-ChEMBL REST
-DGIdb GraphQL
-MyChem.info REST
-Pharos/TCRD GraphQL
-CIViC gene record resolver
+source-data TSV
+layout-audit JSON
+manifest entry
+script/input/output provenance
 ```
 
-Cached API responses are stored under:
+Strict mode fails on panel overlap, tick collisions, clipped text, legends outside
+the canvas, missing formats or missing source data. Manual inspection at 100% zoom
+remains mandatory before submission.
 
-```text
-data/raw/pharmacology/api_cache/
-```
-
-### Optional drug-response releases
-
-Place release files under:
-
-```text
-data/raw/pharmacology/prism/
-data/raw/pharmacology/gdsc/
-data/raw/pharmacology/ctrp/
-```
-
-Column mappings are configured in:
-
-```text
-config/drug_sensitivity_sources.yaml
-```
-
-If these files are absent, the pipeline records the missing sources and continues
-with reduced pharmacology coverage.
-
-## Publication output structure
+## Final output structure
 
 ```text
 article_outputs/
 ├── figures/main/
 ├── figures/supplementary/
+├── structure_atlas/individual/
 ├── tables/main/
 ├── tables/supplementary/
 ├── source_data/
@@ -216,67 +194,24 @@ article_outputs/
 └── manifests/
 ```
 
-The package includes exactly:
+## Documentation
 
-```text
-7 main figures × PNG/PDF/SVG
-14 supplementary figures × PNG/PDF/SVG
-4 main tables
-15 supplementary tables
-```
+- [`docs/REAL_DATA_WORKFLOW.md`](docs/REAL_DATA_WORKFLOW.md)
+- [`docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md`](docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md)
+- [`docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md`](docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md)
+- [`docs/PUBLICATION_PHARMACOLOGY_WORKFLOW.md`](docs/PUBLICATION_PHARMACOLOGY_WORKFLOW.md)
+- [`docs/STRUCTURAL_ATLAS_WORKFLOW.md`](docs/STRUCTURAL_ATLAS_WORKFLOW.md)
 
-## Validate the final package
+## Key structural data resources
 
-```bash
-python -u scripts/validate_publication_outputs.py \
-  --article-root article_outputs
-
-(
-  cd article_outputs
-  sha256sum -c manifests/SHA256SUMS.txt
-)
-```
-
-## Main scoring layers
-
-### Human functional-microniche RSES
-
-```text
-Expression/context       0.20
-Localization             0.15
-Biochemical/structural   0.15
-Genetic/CRISPR phenotype 0.20
-STRING network           0.15
-Regulatory network       0.15
-```
-
-### Expanded RSES-Onco
-
-```text
-Tumor event              0.16
-Conditional dependency   0.22
-Loss selectivity         0.14
-Expression compensation  0.08
-Functional relation      0.06
-Functional microniche    0.16
-Validation/tractability  0.18
-```
-
-### Pharmacology actionability
-
-```text
-Target tractability             0.18
-Direct target-drug interaction  0.18
-Compound potency                0.18
-Clinical maturity               0.14
-Cancer relevance                0.12
-Biomarker-selective response    0.20
-```
-
-The final therapeutic-hypothesis score combines coverage-adjusted vulnerability
-and coverage-adjusted pharmacology by geometric concordance.
+- AlphaFold Protein Structure Database;
+- M-CSA Mechanism and Catalytic Site Atlas;
+- UniProtKB reviewed residue features;
+- PDBe/SIFTS/Arpeggio experimental ligand-binding evidence;
+- optional user-curated exact UniProt residue mappings.
 
 ## License
 
-MIT for repository code. Third-party data remain under their original terms and
-are acquired or supplied locally rather than redistributed.
+MIT for code. Third-party data and structures retain their original licenses and
+terms. The repository downloads them through source APIs rather than
+redistributing the raw datasets.

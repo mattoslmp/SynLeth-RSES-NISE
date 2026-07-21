@@ -12,9 +12,11 @@ dependencies:
   - requests
   - pyyaml
   - openpyxl
+  - pillow
   - pytest
   - mafft
   - fasttree
+  - pymol-open-source
   - pip
   - pip:
       - -e .

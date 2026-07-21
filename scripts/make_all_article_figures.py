@@ -29,6 +29,11 @@ def main() -> None:
   parser.add_argument("--candidates", default="data/processed/expanded_candidate_universe.tsv")
   parser.add_argument("--discovery", default="results/expanded_26Q1/discovery/all_target_dependency_screen.tsv")
   parser.add_argument("--pharmacology", default="results/expanded_26Q1/pharmacology/pharmacology_ranked_hypotheses.tsv")
+  parser.add_argument("--proteins", default="data/curated/human_nise_bonafide_2017.tsv")
+  parser.add_argument("--structure-manifest", default="data/processed/structures/alphafold_structure_manifest.tsv")
+  parser.add_argument("--render-manifest", default="data/processed/structures/nise_structure_render_manifest.tsv")
+  parser.add_argument("--structural-annotations", default="data/processed/structures/nise_structural_residue_annotations.tsv")
+  parser.add_argument("--structural-coverage", default="data/processed/structures/nise_structural_annotation_coverage.tsv")
   parser.add_argument("--output-root", default="article_outputs")
   parser.add_argument("--strict-layout", action=argparse.BooleanOptionalAction, default=True)
   parser.add_argument("--top-n", type=int, default=15)
@@ -59,16 +64,38 @@ def main() -> None:
     "scripts/make_supplementary_figures.py",
     *common,
   ])
+  run([
+    sys.executable,
+    "-u",
+    "scripts/make_nise_structure_figures.py",
+    "--ranking", args.ranking,
+    "--proteins", args.proteins,
+    "--structure-manifest", args.structure_manifest,
+    "--render-manifest", args.render_manifest,
+    "--annotations", args.structural_annotations,
+    "--coverage", args.structural_coverage,
+    "--output-root", args.output_root,
+    strict_flag,
+  ])
 
   output_root = resolve_path(args.output_root)
-  main_manifest = output_root / "manifests/main_figure_manifest.tsv"
-  supplementary_manifest = output_root / "manifests/supplementary_figure_manifest.tsv"
-  main = pd.read_csv(main_manifest, sep="\t")
-  supplementary = pd.read_csv(supplementary_manifest, sep="\t")
-  combined = pd.concat([main, supplementary], ignore_index=True)
-  expected = 21
+  manifest_names = [
+    "main_figure_manifest.tsv",
+    "supplementary_figure_manifest.tsv",
+    "structural_main_figure_manifest.tsv",
+    "structural_supplementary_figure_manifest.tsv",
+  ]
+  manifests = [
+    pd.read_csv(output_root / "manifests" / name, sep="\t")
+    for name in manifest_names
+  ]
+  combined = pd.concat(manifests, ignore_index=True)
+  expected = 40
   if len(combined) != expected:
     raise RuntimeError(f"Expected {expected} registered figures; observed {len(combined)}")
+  if combined["figure_id"].duplicated().any():
+    duplicated = combined.loc[combined["figure_id"].duplicated(keep=False), "figure_id"]
+    raise RuntimeError("Duplicated figure identifiers: " + ", ".join(sorted(set(duplicated))))
   if args.strict_layout and not combined["layout_status"].eq("pass").all():
     failed = combined.loc[~combined["layout_status"].eq("pass"), ["figure_id", "layout_warnings"]]
     raise RuntimeError("Figure layout audit did not pass:\n" + failed.to_string(index=False))
@@ -86,8 +113,14 @@ def main() -> None:
   if missing:
     raise RuntimeError("Missing or empty figure files:\n" + "\n".join(missing))
 
+  legend_names = [
+    "main_figure_legends.md",
+    "supplementary_figure_legends.md",
+    "structural_main_figure_legends.md",
+    "structural_supplementary_figure_legends.md",
+  ]
   legends = []
-  for name in ("main_figure_legends.md", "supplementary_figure_legends.md"):
+  for name in legend_names:
     path = output_root / "manuscript_assets" / name
     if path.exists():
       legends.append(path.read_text(encoding="utf-8"))

@@ -39,6 +39,11 @@ main_figures:
     title: Pharmacological actionability and experimental treatment hypotheses
     caption: >-
       Target-drug actionability, compound evidence, clinical maturity and biomarker-matched sensitivity integrated with vulnerability strength.
+  - id: Figure_8
+    file: Figure_8_human_nise_structures
+    title: Structural basis of representative human NISE vulnerabilities
+    caption: >-
+      AlphaFold DB models for representative ranked human NISE directions, with known catalytic, binding, metal and experimental ligand-contact residues highlighted using exact UniProt numbering.
 
 supplementary_figures:
   - id: Figure_S1
@@ -83,6 +88,60 @@ supplementary_figures:
   - id: Figure_S14
     file: Figure_S14_layout_and_reproducibility_qc
     title: Figure-layout, source-data and reproducibility quality control
+  - id: Figure_S15
+    file: Figure_S15_HNISE01_structure_atlas
+    title: HNISE01 activity-specific AlphaFold structural atlas
+  - id: Figure_S16
+    file: Figure_S16_HNISE02_structure_atlas
+    title: HNISE02 activity-specific AlphaFold structural atlas
+  - id: Figure_S17
+    file: Figure_S17_HNISE03_structure_atlas
+    title: HNISE03 activity-specific AlphaFold structural atlas
+  - id: Figure_S18
+    file: Figure_S18_HNISE04_structure_atlas
+    title: HNISE04 activity-specific AlphaFold structural atlas
+  - id: Figure_S19
+    file: Figure_S19_HNISE05_structure_atlas
+    title: HNISE05 activity-specific AlphaFold structural atlas
+  - id: Figure_S20
+    file: Figure_S20_HNISE06_structure_atlas
+    title: HNISE06 activity-specific AlphaFold structural atlas
+  - id: Figure_S21
+    file: Figure_S21_HNISE07_structure_atlas
+    title: HNISE07 activity-specific AlphaFold structural atlas
+  - id: Figure_S22
+    file: Figure_S22_HNISE08_structure_atlas
+    title: HNISE08 activity-specific AlphaFold structural atlas
+  - id: Figure_S23
+    file: Figure_S23_HNISE09_structure_atlas
+    title: HNISE09 activity-specific AlphaFold structural atlas
+  - id: Figure_S24
+    file: Figure_S24_HNISE10_structure_atlas
+    title: HNISE10 activity-specific AlphaFold structural atlas
+  - id: Figure_S25
+    file: Figure_S25_HNISE11_structure_atlas
+    title: HNISE11 activity-specific AlphaFold structural atlas
+  - id: Figure_S26
+    file: Figure_S26_HNISE12_structure_atlas
+    title: HNISE12 activity-specific AlphaFold structural atlas
+  - id: Figure_S27
+    file: Figure_S27_HNISE13_structure_atlas
+    title: HNISE13 activity-specific AlphaFold structural atlas
+  - id: Figure_S28
+    file: Figure_S28_HNISE14_structure_atlas
+    title: HNISE14 activity-specific AlphaFold structural atlas
+  - id: Figure_S29
+    file: Figure_S29_HNISE15_structure_atlas
+    title: HNISE15 activity-specific AlphaFold structural atlas
+  - id: Figure_S30
+    file: Figure_S30_structure_confidence_coverage
+    title: AlphaFold confidence and functional-residue coverage
+  - id: Figure_S31
+    file: Figure_S31_structural_residue_provenance
+    title: Provenance of catalytic, binding and ligand-contact residue annotations
+  - id: Figure_S32
+    file: Figure_S32_pairwise_structural_evidence
+    title: Pairwise structural evidence across directed human NISE hypotheses
 
 main_tables:
   - Table_1_candidate_class_summary.tsv
@@ -106,3 +165,6 @@ supplementary_tables:
   - Table_S13_pharmacology_ranked_hypotheses.tsv
   - Table_S14_drug_response_selectivity.tsv
   - Table_S15_source_status_and_coverage.tsv
+  - Table_S16_alphafold_structure_manifest.tsv
+  - Table_S17_structural_residue_annotations.tsv
+  - Table_S18_structure_render_manifest.tsv
