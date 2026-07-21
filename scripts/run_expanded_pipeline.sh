@@ -48,6 +48,15 @@ run_logged() {
   fi
 }
 
+require_file() {
+  local path="$1"
+  local description="$2"
+  if [[ ! -s "$path" ]]; then
+    echo "Required resume input is absent or empty: $description: $path" >&2
+    exit 1
+  fi
+}
+
 validate_depmap() {
   log_stage "Validate DepMap files, checksums and cancer cohorts"
   run_logged "$LOG_DIR/01_validate_depmap_files.log" \
@@ -119,7 +128,8 @@ acquire_functional_evidence() {
     python -u scripts/download_human_functional_evidence.py \
       --candidates "$CANDIDATES" \
       --raw-dir data/raw/human_functional_evidence \
-      --output "$FUNCTIONAL_EVIDENCE"
+      --output "$FUNCTIONAL_EVIDENCE" \
+      --strict-string-requests
 }
 
 run_depmap_expanded() {
@@ -217,6 +227,21 @@ setup() {
   run_depmap_expanded
 }
 
+resume_functional() {
+  require_file "$CANDIDATES" "expanded candidate universe"
+  require_file "$MEMBERS" "class-member inventory"
+  require_file "$PARALOGS" "Ensembl paralog catalogue"
+  require_file \
+    "$DISCOVERY_RESULTS/all_target_dependency_screen.tsv" \
+    "all-target dependency screen"
+  acquire_functional_evidence
+  run_depmap_expanded
+  validate_and_aggregate_gdc
+  run_full_expanded
+  run_publication
+  finalize
+}
+
 after_download() {
   setup
   validate_and_aggregate_gdc
@@ -252,17 +277,19 @@ usage() {
 Usage: bash scripts/run_expanded_pipeline.sh STAGE
 
 Stages:
-  setup           Build all NISEs/paralogs, all-target discoveries and DepMap scores
-  after-download  Continue after the current GDC download and generate every article asset
-  all             Complete workflow including GDC acquisition
-  publication     Rebuild pharmacology, main/supplementary figures and tables from existing scores
-  discover-all-cn Optional broad screen with every eligible copy-number loss gene
+  setup             Build all NISEs/paralogs, all-target discoveries and DepMap scores
+  resume-functional Resume after a completed all-target discovery at functional evidence
+  after-download    Continue after the current GDC download and generate every article asset
+  all               Complete workflow including GDC acquisition
+  publication       Rebuild pharmacology, main/supplementary figures and tables from existing scores
+  discover-all-cn   Optional broad screen with every eligible copy-number loss gene
 EOF
 }
 
 stage="${1:-}"
 case "$stage" in
   setup) setup ;;
+  resume-functional) resume_functional ;;
   after-download) after_download ;;
   all) all ;;
   publication) run_publication ;;
