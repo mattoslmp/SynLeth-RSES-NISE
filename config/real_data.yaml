@@ -1,0 +1,33 @@
+release:
+  depmap: "Public 26Q1"
+  gdc_access_date: "set at runtime"
+
+paths:
+  depmap_dir: data/raw/depmap
+  gdc_dir: data/raw/gdc
+  processed_dir: data/processed
+  depmap_results_dir: results/empirical_26Q1/depmap_only
+  full_results_dir: results/empirical_26Q1/full
+  empirical_figures_dir: figures/empirical_26Q1
+
+files:
+  gene_effect: CRISPRGeneEffect.csv
+  copy_number: OmicsCNGeneWGS.csv
+  model: Model.csv
+  expression: OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv
+  molecular_subtypes: OmicsInferredMolecularSubtypes.csv
+  global_signatures: OmicsGlobalSignatures.csv
+
+analysis:
+  depmap_loss_threshold_linear_cn: 0.30
+  minimum_group_size: 3
+  expression_saturation_log2: 2.0
+  dependency_fdr: 0.05
+  expression_fdr: 0.05
+  gdc_workflow: ASCAT3
+  gdc_projects:
+    - TCGA-COAD
+    - TCGA-READ
+    - TCGA-STAD
+    - TCGA-LUAD
+    - TCGA-LUSC

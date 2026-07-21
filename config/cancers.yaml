@@ -1,13 +1,16 @@
 projects:
   colon:
     gdc_projects: [TCGA-COAD, TCGA-READ]
-    depmap_lineage: Colorectal
+    depmap_context: colon
+    depmap_definition: "OncotreePrimaryDisease == Colorectal Adenocarcinoma; fallback Bowel lineage with colon/rectal/colorectal subtype"
     primary_biomarkers: [MSI, MMR_deficiency, MTAP_loss, HRD, NTHL1_loss]
   stomach:
     gdc_projects: [TCGA-STAD]
-    depmap_lineage: Gastric
+    depmap_context: stomach
+    depmap_definition: "Esophagus/Stomach lineage restricted to stomach/gastric subtype or STAD code"
     primary_biomarkers: [MSI, MMR_deficiency, ARID1A_loss, MTAP_loss, HRD]
   lung:
     gdc_projects: [TCGA-LUAD, TCGA-LUSC]
-    depmap_lineage: Lung
+    depmap_context: lung
+    depmap_definition: "OncotreeLineage == Lung"
     primary_biomarkers: [SMARCA4_loss, MTAP_loss, ATM_loss, HRD]

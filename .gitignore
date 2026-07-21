@@ -5,7 +5,22 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+
+# Local backups and logs
+backup_*/
+_backup_*/
+logs/
+*.part
+
+# Large third-party raw data
 data/raw/depmap/
 data/raw/gdc/
 data/raw/SwissProt_NISE.tsv.gz
-results/empirical_*.tsv
+
+# Large processed cohort matrices
+data/processed/TCGA_*_homdel_discrete.tsv
+
+# Release-specific empirical outputs generated locally
+results/empirical_26Q1/
+figures/empirical_26Q1/
+supplementary/RSES_Onco_Empirical_*.xlsx

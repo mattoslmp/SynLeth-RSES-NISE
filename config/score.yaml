@@ -6,7 +6,8 @@ weights:
   functional_relation: 0.12
   validation_tractability: 0.18
 thresholds:
-  homozygous_deletion_copy_number: -1.5
+  depmap_loss_threshold_linear_copy_number: 0.30
+  legacy_log_ratio_loss_threshold: -1.5
   strong_crispr_dependency: -0.5
   minimum_loss_models: 3
   minimum_intact_models: 3
