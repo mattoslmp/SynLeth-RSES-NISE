@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from rses_onco.expanded import (
@@ -13,6 +14,7 @@ from rses_onco.expanded import (
 )
 from rses_onco.networks import set_metrics, string_pair_metrics
 from rses_onco.utils import canonical_gene_name
+from scripts.discover_conditional_dependencies import vectorized_target_tests
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -113,3 +115,24 @@ def test_string_neighborhood_divergence() -> None:
   assert math.isclose(metrics.jaccard or 0, 0.5)
   direct = set_metrics("A", "B", {"X", "Y"}, {"X"})
   assert math.isclose(direct.divergence or 0, 0.5)
+
+
+def test_all_target_tests_adjust_complete_target_family() -> None:
+  loss = pd.DataFrame({
+    "TARGET_A": [-1.2, -1.1, -1.0, -0.9],
+    "TARGET_B": [-0.2, -0.1, -0.1, -0.2],
+    "TARGET_C": [np.nan, -0.8, -0.7, -0.9],
+  })
+  intact = pd.DataFrame({
+    "TARGET_A": [-0.1, 0.0, -0.2, -0.1],
+    "TARGET_B": [-0.2, -0.2, -0.1, -0.1],
+    "TARGET_C": [-0.1, -0.2, -0.1, -0.2],
+  })
+  tested = vectorized_target_tests(loss, intact, minimum_group_size=3)
+  assert len(tested) == 3
+  assert set(tested["target_gene"]) == {"TARGET_A", "TARGET_B", "TARGET_C"}
+  assert tested["target_family_size"].nunique() == 1
+  assert int(tested["target_family_size"].iloc[0]) == 3
+  target_a = tested.set_index("target_gene").loc["TARGET_A"]
+  assert target_a["delta_effect"] < 0
+  assert 0 <= target_a["q_value_bh_within_loss_cancer"] <= 1
