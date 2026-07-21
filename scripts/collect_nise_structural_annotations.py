@@ -3,7 +3,8 @@
 
 Evidence hierarchy:
 1. exact UniProtKB reviewed residue features;
-2. M-CSA residues returned by an exact UniProt-filtered API query;
+2. M-CSA residues returned by an exact UniProt-filtered API query and carrying
+   explicit UniProt/target-sequence numbering;
 3. PDBe/Arpeggio ligand-binding residues only when the API explicitly returns
    UniProt residue numbering;
 4. optional user-curated exact UniProt residue tables.
@@ -26,12 +27,12 @@ import requests
 
 from rses_onco.structural import (
   StructuralResidue,
-  parse_mcsa_residues,
   parse_pdbe_binding_sites,
   parse_uniprot_features,
   residues_to_frame,
   write_json,
 )
+from rses_onco.structural_mapping import parse_mcsa_uniprot_residues
 
 ROOT = Path(__file__).resolve().parents[1]
 UNIPROT = "https://rest.uniprot.org/uniprotkb"
@@ -215,11 +216,12 @@ def main() -> None:
           },
         )
         write_json(mcsa_cache, mcsa_payload)
-      mcsa_rows = parse_mcsa_residues(mcsa_payload, gene, accession)
+      mcsa_rows = parse_mcsa_uniprot_residues(mcsa_payload, gene, accession)
       rows.extend(mcsa_rows)
       status_rows.append({
         "gene_symbol": gene, "uniprot_accession": accession,
         "source": "mcsa", "status": "ok", "residue_rows": len(mcsa_rows),
+        "mapping_policy": "explicit_uniprot_numbering_only",
       })
     except Exception as exc:
       status_rows.append({
@@ -249,6 +251,7 @@ def main() -> None:
       status_rows.append({
         "gene_symbol": gene, "uniprot_accession": accession,
         "source": "pdbe", "status": "ok", "residue_rows": pdbe_count,
+        "mapping_policy": "explicit_uniprot_numbering_only",
       })
 
     print(f"[Structural annotations {index}/{len(proteins)}] {gene} {accession}", flush=True)
