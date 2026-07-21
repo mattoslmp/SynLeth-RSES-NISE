@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -23,6 +24,61 @@ def require(path: Path, errors: list[str], minimum_size: int = 1) -> None:
     errors.append(f"not_file:{path}")
   elif path.stat().st_size < minimum_size:
     errors.append(f"too_small:{path}:{path.stat().st_size}")
+
+
+def validate_structural_atlas(article_root: Path, errors: list[str]) -> None:
+  proteins_path = ROOT / "data/curated/human_nise_bonafide_2017.tsv"
+  structure_manifest_path = ROOT / "data/processed/structures/alphafold_structure_manifest.tsv"
+  render_manifest_path = ROOT / "data/processed/structures/nise_structure_render_manifest.tsv"
+  annotation_path = ROOT / "data/processed/structures/nise_structural_residue_annotations.tsv"
+  for path in (proteins_path, structure_manifest_path, render_manifest_path, annotation_path):
+    require(path, errors)
+  if any(not path.exists() for path in (
+    proteins_path, structure_manifest_path, render_manifest_path
+  )):
+    return
+
+  proteins = pd.read_csv(proteins_path, sep="\t").drop_duplicates("uniprot_accession")
+  structures = pd.read_csv(structure_manifest_path, sep="\t")
+  renders = pd.read_csv(render_manifest_path, sep="\t")
+  expected_accessions = set(proteins["uniprot_accession"].astype(str))
+  observed_structures = set(
+    structures.loc[structures["status"].astype(str).eq("ok"), "uniprot_accession"].astype(str)
+  )
+  if len(expected_accessions) != 70:
+    errors.append(f"curated_nise_protein_count:{len(expected_accessions)}:expected_70")
+  missing_structures = expected_accessions - observed_structures
+  if missing_structures:
+    errors.append(f"missing_alphafold_structures:{sorted(missing_structures)}")
+
+  ok_renders = renders.loc[renders["status"].astype(str).eq("ok")].copy()
+  for accession in sorted(expected_accessions):
+    accession_rows = ok_renders.loc[
+      ok_renders["uniprot_accession"].astype(str).eq(accession)
+    ]
+    views = set(accession_rows["view"].astype(str))
+    missing_views = {"whole", "site"} - views
+    if missing_views:
+      errors.append(f"missing_structural_views:{accession}:{sorted(missing_views)}")
+    for render_path in accession_rows.get("render_path", pd.Series(dtype=object)).dropna():
+      path = resolve_path(str(render_path))
+      require(path, errors, minimum_size=1000)
+      if path.exists():
+        try:
+          with Image.open(path) as image:
+            width, height = image.size
+          if width < 2600 or height < 2000:
+            errors.append(f"structural_render_too_small:{path}:{width}x{height}")
+        except Exception as exc:
+          errors.append(f"invalid_structural_image:{path}:{exc}")
+
+  structure_dir = article_root / "structure_atlas" / "individual"
+  if not structure_dir.is_dir():
+    errors.append(f"missing_structure_directory:{structure_dir}")
+  else:
+    render_count = sum(1 for _ in structure_dir.rglob("*.png"))
+    if render_count < 140:
+      errors.append(f"individual_structure_render_count:{render_count}:expected_at_least_140")
 
 
 def main() -> None:
@@ -101,11 +157,7 @@ def main() -> None:
   require(article_root / "manifests" / "publication_provenance.json", errors)
   require(article_root / "manifests" / "SHA256SUMS.txt", errors)
   require(article_root / "manuscript_assets" / "all_figure_legends.md", errors)
-  structure_dir = article_root / "structure_atlas" / "individual"
-  if not structure_dir.is_dir():
-    errors.append(f"missing_structure_directory:{structure_dir}")
-  elif not any(structure_dir.rglob("*.png")):
-    errors.append(f"no_individual_structure_renders:{structure_dir}")
+  validate_structural_atlas(article_root, errors)
 
   if errors:
     raise SystemExit(
@@ -114,6 +166,7 @@ def main() -> None:
   print("Publication package validation passed.")
   print("Main figures: 8; supplementary figures: 32; exported image files: 120")
   print("Main tables: 4; supplementary tables: 18")
+  print("All 70 curated NISE proteins have whole and site structural renders.")
   print("All registered figures passed automated layout audits.")
 
 
