@@ -3,11 +3,12 @@
 
 Evidence hierarchy:
 1. exact UniProtKB reviewed residue features;
-2. M-CSA residues returned by an exact UniProt-filtered API query and carrying
-   explicit UniProt/target-sequence numbering;
-3. PDBe/Arpeggio ligand-binding residues only when the API explicitly returns
+2. M-CSA residues with explicit UniProt numbering;
+3. curated M-CSA PDB residues mapped exactly to the queried UniProt accession
+   through residue-level SIFTS XML;
+4. PDBe/Arpeggio ligand-binding residues only when the API explicitly returns
    UniProt residue numbering;
-4. optional user-curated exact UniProt residue tables.
+5. optional user-curated exact UniProt residue tables.
 
 The script never transfers PDB residue numbers or homology-derived catalytic
 residues onto AlphaFold models without an explicit mapping. AlphaFold models do
@@ -17,6 +18,7 @@ annotations, not as predicted binding poses.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 from pathlib import Path
 import time
@@ -32,13 +34,18 @@ from rses_onco.structural import (
   residues_to_frame,
   write_json,
 )
-from rses_onco.structural_mapping import parse_mcsa_uniprot_residues
+from rses_onco.structural_mapping import (
+  extract_mcsa_reference_residues,
+  map_mcsa_reference_residues_with_sifts,
+  parse_mcsa_uniprot_residues,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 UNIPROT = "https://rest.uniprot.org/uniprotkb"
 MCSA = "https://www.ebi.ac.uk/thornton-srv/m-csa/api/residues/"
 PDBE_MOLECULES = "https://www.ebi.ac.uk/pdbe/api/pdb/entry/molecules"
 PDBE_BINDING = "https://www.ebi.ac.uk/pdbe/api/pdb/entry/binding_sites"
+SIFTS_XML = "https://ftp.ebi.ac.uk/pub/databases/msd/sifts/xml/{pdb_id}.xml.gz"
 
 
 def resolve_path(value: str | None) -> Path | None:
@@ -46,6 +53,28 @@ def resolve_path(value: str | None) -> Path | None:
     return None
   path = Path(value)
   return path if path.is_absolute() else ROOT / path
+
+
+def request_response(
+  session: requests.Session,
+  url: str,
+  *,
+  params: dict[str, Any] | None = None,
+  retries: int = 3,
+  timeout: int = 180,
+) -> requests.Response:
+  error: Exception | None = None
+  for attempt in range(1, retries + 1):
+    try:
+      response = session.get(url, params=params, timeout=timeout)
+      response.raise_for_status()
+      return response
+    except Exception as exc:
+      error = exc
+      if attempt == retries:
+        break
+      time.sleep(min(15, 2 ** attempt))
+  raise RuntimeError(f"Request failed after {retries} attempts: {url}: {error}")
 
 
 def request_json(
@@ -56,18 +85,9 @@ def request_json(
   retries: int = 3,
   timeout: int = 180,
 ) -> Any:
-  error: Exception | None = None
-  for attempt in range(1, retries + 1):
-    try:
-      response = session.get(url, params=params, timeout=timeout)
-      response.raise_for_status()
-      return response.json()
-    except Exception as exc:
-      error = exc
-      if attempt == retries:
-        break
-      time.sleep(min(15, 2 ** attempt))
-  raise RuntimeError(f"Request failed after {retries} attempts: {url}: {error}")
+  return request_response(
+    session, url, params=params, retries=retries, timeout=timeout
+  ).json()
 
 
 def uniprot_pdb_ids(payload: dict[str, Any]) -> list[str]:
@@ -137,6 +157,29 @@ def load_curated(path: Path | None) -> list[StructuralResidue]:
       mapping_status=str(record.get("mapping_status") or "exact"),
     ))
   return rows
+
+
+def load_sifts_xml(
+  session: requests.Session,
+  cache_dir: Path,
+  pdb_id: str,
+  refresh: bool,
+) -> bytes:
+  cache_path = cache_dir / "sifts" / f"{pdb_id.lower()}.xml.gz"
+  if not cache_path.exists() or refresh:
+    response = request_response(
+      session,
+      SIFTS_XML.format(pdb_id=pdb_id.lower()),
+      timeout=240,
+    )
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    part = cache_path.with_suffix(cache_path.suffix + ".part")
+    part.write_bytes(response.content)
+    if part.stat().st_size < 100:
+      part.unlink(missing_ok=True)
+      raise RuntimeError(f"SIFTS XML archive is unexpectedly small for {pdb_id}")
+    part.replace(cache_path)
+  return gzip.decompress(cache_path.read_bytes())
 
 
 def main() -> None:
@@ -216,12 +259,38 @@ def main() -> None:
           },
         )
         write_json(mcsa_cache, mcsa_payload)
-      mcsa_rows = parse_mcsa_uniprot_residues(mcsa_payload, gene, accession)
+      explicit_rows = parse_mcsa_uniprot_residues(mcsa_payload, gene, accession)
+      references = extract_mcsa_reference_residues(mcsa_payload)
+      sifts_by_pdb: dict[str, bytes] = {}
+      sifts_failures = 0
+      for pdb_id in sorted({reference.pdb_id for reference in references}):
+        try:
+          sifts_by_pdb[pdb_id] = load_sifts_xml(
+            session, cache_dir, pdb_id, args.refresh
+          )
+        except Exception as exc:
+          sifts_failures += 1
+          status_rows.append({
+            "gene_symbol": gene, "uniprot_accession": accession,
+            "source": "sifts", "pdb_id": pdb_id,
+            "status": "failed", "message": str(exc),
+          })
+      sifts_rows = map_mcsa_reference_residues_with_sifts(
+        references, sifts_by_pdb, gene, accession
+      )
+      mcsa_rows = explicit_rows + sifts_rows
       rows.extend(mcsa_rows)
       status_rows.append({
-        "gene_symbol": gene, "uniprot_accession": accession,
-        "source": "mcsa", "status": "ok", "residue_rows": len(mcsa_rows),
-        "mapping_policy": "explicit_uniprot_numbering_only",
+        "gene_symbol": gene,
+        "uniprot_accession": accession,
+        "source": "mcsa",
+        "status": "ok",
+        "residue_rows": len(mcsa_rows),
+        "explicit_uniprot_rows": len(explicit_rows),
+        "sifts_mapped_rows": len(sifts_rows),
+        "reference_pdb_residues": len(references),
+        "sifts_failures": sifts_failures,
+        "mapping_policy": "explicit_uniprot_or_exact_sifts_only",
       })
     except Exception as exc:
       status_rows.append({
@@ -291,7 +360,7 @@ def main() -> None:
     "proteins_with_residue_annotations": int((coverage["annotated_residues"] > 0).sum()),
     "unique_annotated_residues": int(frame[["uniprot_accession", "residue_number"]].drop_duplicates().shape[0]) if not frame.empty else 0,
     "annotation_rows": int(len(frame)),
-    "policy": "Only exact UniProt-numbered residues are projected onto AlphaFold models.",
+    "policy": "Only exact UniProt-numbered or exact SIFTS-mapped residues are projected onto AlphaFold models.",
   }
   write_json(output.with_suffix(".summary.json"), summary)
   print(json.dumps(summary, indent=2, sort_keys=True))
