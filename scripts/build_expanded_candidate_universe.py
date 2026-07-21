@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 
 import pandas as pd
+from pandas.errors import EmptyDataError
 
 from rses_onco.expanded import (
   build_directed_nise_candidates,
@@ -87,8 +88,11 @@ def main() -> None:
   nise_candidates = build_directed_nise_candidates(nise_pairs)
   additional = []
   for value in args.additional:
-    table = load_optional_table(resolve_path(value))
-    if table is not None:
+    try:
+      table = load_optional_table(resolve_path(value))
+    except EmptyDataError:
+      table = None
+    if table is not None and not table.empty:
       additional.append(table)
 
   universe = merge_candidate_sources(nise_candidates, benchmarks, additional)
@@ -111,6 +115,7 @@ def main() -> None:
   print(f"Directed NISE candidates: {directed_nise:,}")
   print(f"Unique NISE genes represented: {len(nise_genes):,}")
   print(f"Complex benchmark biomarkers retained without fake lost genes: {complex_benchmarks:,}")
+  print(f"Additional non-empty source catalogs: {len(additional):,}")
   print(f"Wrote class-member inventory to {members_output}")
 
 
