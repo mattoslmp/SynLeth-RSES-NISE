@@ -19,6 +19,7 @@ from rses_onco.utils import canonical_gene_name
 
 ROOT = Path(__file__).resolve().parents[1]
 ENSEMBL = "https://rest.ensembl.org"
+SPECIES = "homo_sapiens"
 
 
 def resolve_path(value: str) -> Path:
@@ -26,11 +27,21 @@ def resolve_path(value: str) -> Path:
   return path if path.is_absolute() else ROOT / path
 
 
-def get_json(session: requests.Session, url: str, retries: int = 3) -> dict:
+def get_json(
+  session: requests.Session,
+  url: str,
+  retries: int = 3,
+  params: dict[str, object] | None = None,
+) -> dict:
   error: Exception | None = None
   for attempt in range(1, retries + 1):
     try:
-      response = session.get(url, headers={"Content-Type": "application/json"}, timeout=120)
+      response = session.get(
+        url,
+        headers={"Content-Type": "application/json"},
+        params=params,
+        timeout=120,
+      )
       response.raise_for_status()
       return response.json()
     except Exception as exc:
@@ -44,7 +55,7 @@ def get_json(session: requests.Session, url: str, retries: int = 3) -> dict:
 def lookup_symbol(session: requests.Session, ensembl_id: str, cache: dict[str, str]) -> str | None:
   if ensembl_id in cache:
     return cache[ensembl_id]
-  payload = get_json(session, f"{ENSEMBL}/lookup/id/{ensembl_id}?expand=0")
+  payload = get_json(session, f"{ENSEMBL}/lookup/id/{ensembl_id}", params={"expand": 0})
   symbol = canonical_gene_name(payload.get("display_name"))
   if symbol:
     cache[ensembl_id] = symbol
@@ -65,6 +76,10 @@ def main() -> None:
     "--cache",
     default="data/raw/ensembl/ensembl_symbol_cache.json",
   )
+  parser.add_argument(
+    "--metadata-output",
+    default="data/raw/ensembl/ensembl_acquisition_metadata.json",
+  )
   parser.add_argument("--sleep", type=float, default=0.15)
   args = parser.parse_args()
 
@@ -78,19 +93,27 @@ def main() -> None:
   })
   output = resolve_path(args.output)
   cache_path = resolve_path(args.cache)
+  metadata_path = resolve_path(args.metadata_output)
   output.parent.mkdir(parents=True, exist_ok=True)
   cache_path.parent.mkdir(parents=True, exist_ok=True)
+  metadata_path.parent.mkdir(parents=True, exist_ok=True)
   if cache_path.exists():
     cache = json.loads(cache_path.read_text(encoding="utf-8"))
   else:
     cache = {}
 
   session = requests.Session()
+  info = get_json(session, f"{ENSEMBL}/info/data")
   rows: list[dict[str, object]] = []
   for index, seed in enumerate(genes, start=1):
     payload = get_json(
       session,
-      f"{ENSEMBL}/homology/symbol/human/{seed}?type=paralogues;target_species=human;sequence=none",
+      f"{ENSEMBL}/homology/symbol/{SPECIES}/{seed}",
+      params={
+        "type": "paralogues",
+        "target_species": SPECIES,
+        "sequence": "none",
+      },
     )
     homologies = []
     for item in payload.get("data", []):
@@ -140,9 +163,24 @@ def main() -> None:
     result = result.drop_duplicates(["lost_gene", "target_gene", "source_class"])
     result = result.sort_values(["lost_gene", "target_gene"])
   result.to_csv(output, sep="\t", index=False)
+  metadata_path.write_text(
+    json.dumps(
+      {
+        "endpoint": ENSEMBL,
+        "species": SPECIES,
+        "release_information": info,
+        "seed_gene_count": len(genes),
+        "directed_paralog_count": len(result),
+      },
+      indent=2,
+      sort_keys=True,
+    ),
+    encoding="utf-8",
+  )
   print(f"Seed genes: {len(genes):,}")
   print(f"Directed Ensembl paralog candidates: {len(result):,}")
   print(f"Wrote {output}")
+  print(f"Wrote {metadata_path}")
 
 
 if __name__ == "__main__":
