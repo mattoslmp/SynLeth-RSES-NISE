@@ -101,7 +101,11 @@ def main() -> None:
   require(article_root / "manifests" / "publication_provenance.json", errors)
   require(article_root / "manifests" / "SHA256SUMS.txt", errors)
   require(article_root / "manuscript_assets" / "all_figure_legends.md", errors)
-  require(article_root / "structure_atlas" / "individual", errors, minimum_size=0)
+  structure_dir = article_root / "structure_atlas" / "individual"
+  if not structure_dir.is_dir():
+    errors.append(f"missing_structure_directory:{structure_dir}")
+  elif not any(structure_dir.rglob("*.png")):
+    errors.append(f"no_individual_structure_renders:{structure_dir}")
 
   if errors:
     raise SystemExit(
