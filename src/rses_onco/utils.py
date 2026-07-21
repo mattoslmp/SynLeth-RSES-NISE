@@ -7,13 +7,21 @@ from typing import Iterable
 import numpy as np
 
 
-def canonical_gene_name(value: str) -> str:
+def canonical_gene_name(value: object) -> str:
   """Return a DepMap/TCGA-compatible HGNC-like gene symbol.
 
   DepMap columns are commonly encoded as ``GENE (EntrezID)``. This helper
   strips the parenthesized identifier while preserving ordinary symbols.
+  Missing values remain empty and are never converted to the strings ``NAN``
+  or ``NONE``.
   """
+  if value is None:
+    return ""
+  if isinstance(value, float) and not math.isfinite(value):
+    return ""
   text = str(value).strip()
+  if text.casefold() in {"", "nan", "none", "<na>"}:
+    return ""
   return re.sub(r"\s*\([^)]*\)\s*$", "", text).upper()
 
 
