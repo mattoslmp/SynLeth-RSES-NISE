@@ -18,6 +18,7 @@ data/raw/gdc/
 data/raw/ensembl/
 data/raw/human_functional_evidence/
 data/raw/pharmacology/
+data/raw/structures/
 data/raw/SwissProt_NISE.tsv.gz
 
 # Large processed cohort and release-specific evidence matrices
@@ -26,6 +27,7 @@ data/processed/expanded_candidate_universe.tsv
 data/processed/expanded_class_member_inventory.tsv
 data/processed/expanded_pair_functional_evidence.tsv
 data/processed/pharmacology/
+data/processed/structures/
 
 # Release-specific empirical and publication outputs generated locally
 results/empirical_26Q1/
