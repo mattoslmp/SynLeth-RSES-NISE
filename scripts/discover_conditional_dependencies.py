@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Discover cancer-specific conditional dependencies across all DepMap CRISPR targets.
 
-For each analyzable loss gene, the script compares every measured CRISPR target
-between copy-number-loss and intact models. Vectorized median effects are used as
-a transparent prefilter; one-sided Mann-Whitney tests and global
-Benjamini-Hochberg adjustment are then applied to retained targets.
+For each analyzable loss gene, every measured CRISPR target is tested between
+copy-number-loss and intact models. One-sided Mann-Whitney tests are vectorized
+across targets, and Benjamini-Hochberg correction is applied across the complete
+target family for each loss-gene/cancer analysis before effect-size filtering.
 
 This discovery layer can identify downstream, pathway-backup and other hidden
 conditional dependencies not present in the curated benchmark. It does not assign
-mechanistic class without independent relation evidence.
+a mechanistic class without independent relation evidence.
 """
 from __future__ import annotations
 
@@ -70,30 +70,59 @@ def known_class_map(candidates: pd.DataFrame) -> dict[tuple[str, str], str]:
   for record in candidates.to_dict("records"):
     lost = canonical_gene_name(record.get("lost_gene"))
     target = canonical_gene_name(record.get("target_gene"))
-    source_class = str(record.get("source_class") or record.get("relation_type") or "curated")
+    raw_class = record.get("source_class")
+    if raw_class is None or (isinstance(raw_class, float) and not np.isfinite(raw_class)):
+      raw_class = record.get("relation_type") or "curated"
+    source_class = str(raw_class)
     if not lost or not target:
       continue
     result.setdefault((lost, target), set()).add(source_class)
   return {key: ";".join(sorted(values)) for key, values in result.items()}
 
 
-def test_one_target(
-  effect: pd.DataFrame,
-  loss_ids: list[str],
-  intact_ids: list[str],
-  target: str,
-) -> tuple[int, int, float, float, float, float] | None:
-  series = effect[["ModelID", target]].copy()
-  series[target] = pd.to_numeric(series[target], errors="coerce")
-  loss = series.loc[series["ModelID"].astype(str).isin(loss_ids), target].dropna().astype(float)
-  intact = series.loc[series["ModelID"].astype(str).isin(intact_ids), target].dropna().astype(float)
-  if len(loss) < 3 or len(intact) < 3:
-    return None
-  median_loss = float(np.median(loss))
-  median_intact = float(np.median(intact))
+def vectorized_target_tests(
+  loss_matrix: pd.DataFrame,
+  intact_matrix: pd.DataFrame,
+  minimum_group_size: int,
+) -> pd.DataFrame:
+  """Test every target and adjust across the whole target family.
+
+  The target family is defined by one loss gene in one cancer cohort. Effect-size
+  filters are applied only after P values and within-family BH Q values have been
+  computed, avoiding a data-dependent P-value prefilter.
+  """
+  targets = list(loss_matrix.columns)
+  loss_values = loss_matrix.to_numpy(dtype=float)
+  intact_values = intact_matrix.to_numpy(dtype=float)
+  n_loss = np.sum(np.isfinite(loss_values), axis=0)
+  n_intact = np.sum(np.isfinite(intact_values), axis=0)
+  eligible = (n_loss >= minimum_group_size) & (n_intact >= minimum_group_size)
+  median_loss = np.nanmedian(loss_values, axis=0)
+  median_intact = np.nanmedian(intact_values, axis=0)
   delta = median_loss - median_intact
-  p_value = float(mannwhitneyu(loss, intact, alternative="less").pvalue)
-  return len(loss), len(intact), median_loss, median_intact, delta, p_value
+  p_values = np.full(len(targets), np.nan, dtype=float)
+  if eligible.any():
+    tested = mannwhitneyu(
+      loss_values[:, eligible],
+      intact_values[:, eligible],
+      alternative="less",
+      axis=0,
+      method="auto",
+      nan_policy="omit",
+    )
+    p_values[eligible] = np.asarray(tested.pvalue, dtype=float)
+  q_values = bh_adjust(p_values)
+  return pd.DataFrame({
+    "target_gene": [canonical_gene_name(target) for target in targets],
+    "n_loss": n_loss,
+    "n_intact": n_intact,
+    "median_effect_loss": median_loss,
+    "median_effect_intact": median_intact,
+    "delta_effect": delta,
+    "p_value": p_values,
+    "q_value_bh_within_loss_cancer": q_values,
+    "target_family_size": int(eligible.sum()),
+  })
 
 
 def main() -> None:
@@ -114,7 +143,6 @@ def main() -> None:
   parser.add_argument("--min-group-size", type=int, default=3)
   parser.add_argument("--minimum-delta", type=float, default=0.15)
   parser.add_argument("--maximum-median-loss-effect", type=float, default=-0.25)
-  parser.add_argument("--prefilter-targets", type=int, default=250)
   parser.add_argument(
     "--max-loss-genes",
     type=int,
@@ -146,11 +174,15 @@ def main() -> None:
   ]
   effect_by_id = effect.set_index("ModelID")
   copy_by_id = copy_number.set_index("ModelID")
-  rows: list[dict[str, object]] = []
+  rows: list[pd.DataFrame] = []
 
   for cancer in CANCERS:
     cohort_ids = set(cancer_model_ids(models, cancer))
-    common_ids = sorted(cohort_ids & set(effect_by_id.index.astype(str)) & set(copy_by_id.index.astype(str)))
+    common_ids = sorted(
+      cohort_ids
+      & set(effect_by_id.index.astype(str))
+      & set(copy_by_id.index.astype(str))
+    )
     if args.loss_universe == "candidates":
       lost_genes = candidate_loss_genes(candidates)
     else:
@@ -177,113 +209,99 @@ def main() -> None:
       intact_matrix = effect_by_id.loc[
         effect_by_id.index.astype(str).isin(intact_ids), target_genes
       ].apply(pd.to_numeric, errors="coerce")
-      median_loss = loss_matrix.median(axis=0, skipna=True)
-      median_intact = intact_matrix.median(axis=0, skipna=True)
-      delta = median_loss - median_intact
-      prefilter = pd.DataFrame({
-        "target_gene": delta.index,
-        "median_effect_loss": median_loss.values,
-        "median_effect_intact": median_intact.values,
-        "delta_effect": delta.values,
-      })
-      prefilter = prefilter.loc[
-        (prefilter["target_gene"].astype(str) != lost_gene)
-        & (prefilter["delta_effect"] <= -abs(args.minimum_delta))
-        & (prefilter["median_effect_loss"] <= args.maximum_median_loss_effect)
-      ].sort_values("delta_effect").head(args.prefilter_targets)
-
-      for target in prefilter["target_gene"].astype(str):
-        tested = test_one_target(effect, loss_ids, intact_ids, target)
-        if tested is None:
-          continue
-        n_loss, n_intact, med_loss, med_intact, effect_delta, p_value = tested
-        target = canonical_gene_name(target)
-        relation = class_map.get((lost_gene, target))
-        rows.append({
-          "cancer": cancer,
-          "lost_gene": lost_gene,
-          "target_gene": target,
-          "n_loss": n_loss,
-          "n_intact": n_intact,
-          "median_effect_loss": med_loss,
-          "median_effect_intact": med_intact,
-          "delta_effect": effect_delta,
-          "p_value": p_value,
-          "known_relation_class": relation,
-          "is_preexisting_candidate": relation is not None,
-          "loss_universe": args.loss_universe,
-        })
+      tested = vectorized_target_tests(
+        loss_matrix,
+        intact_matrix,
+        args.min_group_size,
+      )
+      tested = tested.loc[
+        (tested["target_gene"] != lost_gene)
+        & (tested["q_value_bh_within_loss_cancer"] < args.fdr)
+        & (tested["delta_effect"] <= -abs(args.minimum_delta))
+        & (tested["median_effect_loss"] <= args.maximum_median_loss_effect)
+      ].copy()
+      if not tested.empty:
+        tested.insert(0, "lost_gene", lost_gene)
+        tested.insert(0, "cancer", cancer)
+        tested["known_relation_class"] = [
+          class_map.get((lost_gene, target))
+          for target in tested["target_gene"]
+        ]
+        tested["is_preexisting_candidate"] = tested["known_relation_class"].notna()
+        tested["loss_universe"] = args.loss_universe
+        rows.append(tested)
       print(
         f"[{cancer} {index}/{len(lost_genes)}] {lost_gene}: "
-        f"loss={len(loss_ids)}, intact={len(intact_ids)}, prefiltered={len(prefilter)}",
+        f"loss={len(loss_ids)}, intact={len(intact_ids)}, "
+        f"all_targets={len(target_genes)}, supported={len(tested)}",
         flush=True,
       )
 
-  result = pd.DataFrame(rows)
+  result = pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
   if not result.empty:
-    result["q_value_bh"] = bh_adjust(result["p_value"])
-    result = result.sort_values(["q_value_bh", "delta_effect"], ascending=[True, True])
+    result = result.sort_values(
+      ["q_value_bh_within_loss_cancer", "delta_effect"],
+      ascending=[True, True],
+    )
   output = resolve_path(args.output)
   output.parent.mkdir(parents=True, exist_ok=True)
   result.to_csv(output, sep="\t", index=False)
 
-  if result.empty:
-    discovered = pd.DataFrame()
-  else:
-    supported = result.loc[
-      (result["q_value_bh"] < args.fdr)
-      & (result["delta_effect"] < 0)
-    ].copy()
-    discovered_rows: list[dict[str, object]] = []
-    for record in supported.to_dict("records"):
-      cancer = str(record["cancer"])
-      lost = canonical_gene_name(record["lost_gene"])
-      target = canonical_gene_name(record["target_gene"])
-      known_class = record.get("known_relation_class")
-      source_class = (
-        str(known_class)
-        if known_class is not None and pd.notna(known_class)
-        else "empirical_conditional_dependency"
-      )
-      discovered_rows.append({
-        "pair_id": f"DEPMAP_DISC_{cancer}_{lost}_TO_{target}",
-        "lost_feature": f"{lost} loss",
-        "lost_gene": lost,
-        "target_gene": target,
-        "source_class": source_class,
-        "relation_type": "depmap_all_target_conditional_dependency",
-        "mechanism": (
-          f"DepMap {cancer} models with {lost} copy-number loss show stronger "
-          f"dependency on {target}; mechanism requires independent network and experimental annotation."
-        ),
-        "colon": int(cancer == "colon"),
-        "stomach": int(cancer == "stomach"),
-        "lung": int(cancer == "lung"),
-        "relation_confidence": 0.0,
-        "genetic_screen": 0.0,
-        "isogenic_validation": 0.0,
-        "in_vivo": 0.0,
-        "clinical_tractability": 0.0,
-        "lineage_relevance": 0.0,
-        "evidence_stage": "DepMap discovery screen",
-        "primary_doi": "",
-        "supporting_doi": "",
-        "status": "unvalidated empirical discovery",
-        "discovery_n_loss": record["n_loss"],
-        "discovery_n_intact": record["n_intact"],
-        "discovery_delta_effect": record["delta_effect"],
-        "discovery_p_value": record["p_value"],
-        "discovery_q_value_bh": record["q_value_bh"],
-      })
-    discovered = pd.DataFrame(discovered_rows).drop_duplicates(
+  discovered_rows: list[dict[str, object]] = []
+  for record in result.to_dict("records"):
+    cancer = str(record["cancer"])
+    lost = canonical_gene_name(record["lost_gene"])
+    target = canonical_gene_name(record["target_gene"])
+    known_class = record.get("known_relation_class")
+    source_class = (
+      str(known_class)
+      if known_class is not None and pd.notna(known_class)
+      else "empirical_conditional_dependency"
+    )
+    discovered_rows.append({
+      "pair_id": f"DEPMAP_DISC_{cancer}_{lost}_TO_{target}",
+      "lost_feature": f"{lost} loss",
+      "lost_gene": lost,
+      "target_gene": target,
+      "source_class": source_class,
+      "relation_type": "depmap_all_target_conditional_dependency",
+      "mechanism": (
+        f"DepMap {cancer} models with {lost} copy-number loss show stronger "
+        f"dependency on {target}; mechanism requires independent network and experimental annotation."
+      ),
+      "colon": int(cancer == "colon"),
+      "stomach": int(cancer == "stomach"),
+      "lung": int(cancer == "lung"),
+      "relation_confidence": 0.0,
+      "genetic_screen": 0.0,
+      "isogenic_validation": 0.0,
+      "in_vivo": 0.0,
+      "clinical_tractability": 0.0,
+      "lineage_relevance": 0.0,
+      "evidence_stage": "DepMap all-target discovery screen",
+      "primary_doi": "",
+      "supporting_doi": "",
+      "status": "unvalidated empirical discovery",
+      "discovery_n_loss": record["n_loss"],
+      "discovery_n_intact": record["n_intact"],
+      "discovery_delta_effect": record["delta_effect"],
+      "discovery_p_value": record["p_value"],
+      "discovery_q_value_bh_within_loss_cancer": record[
+        "q_value_bh_within_loss_cancer"
+      ],
+      "discovery_target_family_size": record["target_family_size"],
+    })
+  discovered = pd.DataFrame(discovered_rows)
+  if not discovered.empty:
+    discovered = discovered.drop_duplicates(
       ["lost_gene", "target_gene", "source_class", "colon", "stomach", "lung"]
     )
 
   candidate_output = resolve_path(args.candidate_output)
   candidate_output.parent.mkdir(parents=True, exist_ok=True)
   discovered.to_csv(candidate_output, sep="\t", index=False)
-  print(f"Tested/prefiltered contrasts: {len(result):,}")
-  print(f"FDR-supported candidate rows: {len(discovered):,}")
+  print(f"FDR- and effect-supported all-target contrasts: {len(result):,}")
+  print(f"Standardized discovered candidate rows: {len(discovered):,}")
   print(f"Wrote {output}")
   print(f"Wrote {candidate_output}")
 
