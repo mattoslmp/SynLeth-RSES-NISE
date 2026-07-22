@@ -51,7 +51,7 @@ def main() -> None:
   run([
     sys.executable,
     "-u",
-    "scripts/make_main_figures.py",
+    "scripts/make_main_figures_resilient.py",
     *common,
     "--pharmacology",
     args.pharmacology,
@@ -61,7 +61,7 @@ def main() -> None:
   run([
     sys.executable,
     "-u",
-    "scripts/make_supplementary_figures.py",
+    "scripts/make_supplementary_figures_resilient.py",
     *common,
   ])
   run([
