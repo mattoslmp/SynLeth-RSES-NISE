@@ -44,6 +44,20 @@ jobs:
         run: python -m pytest -q -p no:cacheprovider tests/test_eligibility_aware_scoring.py
       - name: Scoring semantics contract tests
         run: python -m pytest -q -p no:cacheprovider tests/test_scoring_semantics_contract.py
+      - name: WGCNA helper and interpretation tests
+        run: |
+          python -m pytest -q -p no:cacheprovider \
+            tests/test_wgcna_regulatory_layer.py::test_wgcna_subscore_preserves_missingness \
+            tests/test_wgcna_regulatory_layer.py::test_regulatory_sublayer_weights_sum_to_one \
+            tests/test_wgcna_regulatory_layer.py::test_set_and_profile_divergence_are_bounded \
+            tests/test_wgcna_regulatory_layer.py::test_expression_pairwise_and_wgcna_share_one_domain_weight \
+            tests/test_wgcna_regulatory_layer.py::test_promoter_motifs_are_not_direct_binding_claims
+      - name: WGCNA resume contract test
+        run: python -m pytest -q -p no:cacheprovider tests/test_wgcna_regulatory_layer.py::test_resume_pipeline_requires_actual_wgcna_and_fimo
+      - name: WGCNA consensus aggregation test
+        run: python -m pytest -q -p no:cacheprovider tests/test_wgcna_regulatory_layer.py::test_consensus_aggregation_prevents_cancer_triplication
+      - name: WGCNA cancer-specific score matching test
+        run: python -m pytest -q -p no:cacheprovider tests/test_wgcna_regulatory_layer.py::test_recompute_matches_cancer_specific_network_evidence
       - name: WGCNA and promoter regulatory tests
         run: python -m pytest -q -p no:cacheprovider tests/test_wgcna_regulatory_layer.py
       - name: Extended supporting-evidence output tests
