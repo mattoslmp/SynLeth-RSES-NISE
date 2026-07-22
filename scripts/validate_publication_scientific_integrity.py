@@ -35,8 +35,7 @@ def invalid_text(series: pd.Series) -> pd.Series:
 
 
 def validate_audit(article_root: Path) -> None:
-  path = article_root / "tables/qc/candidate_domain_evidence_audit.tsv"
-  frame = read_tsv(path)
+  frame = read_tsv(article_root / "tables/qc/candidate_domain_evidence_audit.tsv")
   require_columns(frame, {
     "candidate_id", "cancer", "domain", "eligible", "evidence_state",
     "component_normalized", "final_score_contribution", "absence_reason",
@@ -62,8 +61,7 @@ def validate_audit(article_root: Path) -> None:
 
 
 def validate_scores(article_root: Path) -> None:
-  path = article_root / "tables/score_components/rses_onco_score_decomposition.tsv"
-  frame = read_tsv(path)
+  frame = read_tsv(article_root / "tables/score_components/rses_onco_score_decomposition.tsv")
   pairs = [
     ("pipeline_observed_score", "recomputed_observed_score"),
     ("pipeline_coverage", "recomputed_coverage"),
@@ -74,13 +72,13 @@ def validate_scores(article_root: Path) -> None:
     valid = frame[[pipeline, recomputed]].dropna()
     if not valid.empty and not np.allclose(valid[pipeline], valid[recomputed], atol=1e-10, rtol=1e-8):
       raise ValueError(f"Score formula mismatch: {pipeline} versus {recomputed}")
-  if ((pd.to_numeric(frame["pipeline_coverage"], errors="coerce") < 0) | (pd.to_numeric(frame["pipeline_coverage"], errors="coerce") > 1)).any():
+  coverage = pd.to_numeric(frame["pipeline_coverage"], errors="coerce")
+  if ((coverage < 0) | (coverage > 1)).any():
     raise ValueError("Evidence coverage outside [0,1]")
 
 
 def validate_overlap(article_root: Path) -> None:
-  path = article_root / "tables/qc/evidence_overlap_summary.tsv"
-  frame = read_tsv(path)
+  frame = read_tsv(article_root / "tables/qc/evidence_overlap_summary.tsv")
   require_columns(frame, {"overlap_class", "assigned_total_weight", "roles"}, "evidence overlap summary")
   if (pd.to_numeric(frame["assigned_total_weight"], errors="coerce") > 1.0 + 1e-12).any():
     raise ValueError("Overlapping evidence exceeds one combined evidence unit")
@@ -173,21 +171,47 @@ def validate_run_freshness(article_root: Path, marker: Path | None) -> None:
   if not marker.exists():
     raise FileNotFoundError(f"Run marker not found: {marker}")
   threshold = marker.stat().st_mtime
-  mandatory_roots = [
-    article_root / "figures", article_root / "tables/qc",
-    article_root / "tables/score_components", article_root / "tables/robustness",
-    article_root / "tables/figure_data", article_root / "manifests",
-  ]
+  mandatory: list[Path] = []
+  figure_manifest = article_root / "manifests/figure_manifest.tsv"
+  table_manifest = article_root / "manifests/table_manifest.tsv"
+  mandatory.extend([figure_manifest, table_manifest])
+  if figure_manifest.exists():
+    figures = pd.read_csv(figure_manifest, sep="\t")
+    for record in figures.to_dict("records"):
+      base = Path(str(record["base_path"]))
+      if not base.is_absolute():
+        base = ROOT / base
+      source = Path(str(record["source_data_path"]))
+      if not source.is_absolute():
+        source = ROOT / source
+      mandatory.extend([
+        source, base.with_suffix(".png"), base.with_suffix(".pdf"),
+        base.with_suffix(".svg"), base.with_suffix(".layout_audit.json"),
+      ])
+  if table_manifest.exists():
+    tables = pd.read_csv(table_manifest, sep="\t")
+    for value in tables["path"].astype(str):
+      path = Path(value)
+      mandatory.append(path if path.is_absolute() else ROOT / path)
+  mandatory.extend([
+    article_root / "tables/qc/candidate_domain_evidence_audit.tsv",
+    article_root / "tables/qc/evidence_overlap_registry.tsv",
+    article_root / "tables/score_components/rses_onco_score_decomposition.tsv",
+    article_root / "tables/robustness/leave_one_domain_out.tsv",
+    article_root / "tables/figure_data/figure_source_data_inventory.tsv",
+    article_root / "tables/supporting_evidence/supporting_evidence_manifest.tsv",
+  ])
   stale = []
-  for root in mandatory_roots:
-    if not root.exists():
-      stale.append(str(root))
-      continue
-    for path in root.rglob("*"):
-      if path.is_file() and path.stat().st_mtime + 1e-6 < threshold:
-        stale.append(str(path))
+  for path in mandatory:
+    if not path.exists() or path.stat().st_size == 0:
+      stale.append(f"missing_or_empty:{path}")
+    elif path.stat().st_mtime + 1e-6 < threshold:
+      stale.append(f"stale:{path}")
   if stale:
-    raise RuntimeError("Stale mandatory publication outputs predate this assets-only run:\n" + "\n".join(stale[:100]))
+    raise RuntimeError(
+      "Mandatory registered publication outputs were not regenerated in this assets-only run:\n"
+      + "\n".join(stale[:150])
+    )
 
 
 def main() -> None:
@@ -197,7 +221,6 @@ def main() -> None:
   args = parser.parse_args()
   article_root = resolve_path(args.article_root)
   marker = resolve_path(args.run_marker) if args.run_marker else None
-
   validate_audit(article_root)
   validate_scores(article_root)
   validate_overlap(article_root)
@@ -205,7 +228,6 @@ def main() -> None:
   validate_tables(article_root)
   validate_figure_catalog(article_root)
   validate_run_freshness(article_root, marker)
-
   report = {
     "status": "passed",
     "missing_values_preserved": True,
@@ -217,6 +239,7 @@ def main() -> None:
     "clinical_efficacy_claimed": False,
   }
   report_path = article_root / "manifests/scientific_integrity_validation.json"
+  report_path.parent.mkdir(parents=True, exist_ok=True)
   report_path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
   print("Publication scientific-integrity validation passed.")
   print(f"Report: {report_path}")
