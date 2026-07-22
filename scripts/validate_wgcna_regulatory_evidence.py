@@ -8,7 +8,10 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_SEMANTICS = "eligibility-aware-wgcna-regulatory-v2"
+EXPECTED_ELIGIBILITY_SEMANTICS = "eligibility-aware-v1"
+EXPECTED_EXPRESSION_REGULATORY_SEMANTICS = (
+  "eligibility-aware-wgcna-regulatory-v2"
+)
 
 
 def resolve_path(value: str) -> Path:
@@ -56,6 +59,7 @@ def main() -> None:
     ranking,
     {
       "scoring_semantics_version",
+      "expression_regulatory_semantics_version",
       "pairwise_expression_context",
       "wgcna_expression_network",
       "expression_context_subcoverage",
@@ -67,13 +71,26 @@ def main() -> None:
     },
     "ranking",
   )
-  versions = set(
+  eligibility_versions = set(
     ranking["scoring_semantics_version"].dropna().astype(str)
   )
-  if versions != {EXPECTED_SEMANTICS}:
+  if eligibility_versions != {EXPECTED_ELIGIBILITY_SEMANTICS}:
     raise ValueError(
-      f"Unexpected scoring semantics {sorted(versions)}; "
-      f"expected {EXPECTED_SEMANTICS}"
+      f"Unexpected eligibility semantics {sorted(eligibility_versions)}; "
+      f"expected {EXPECTED_ELIGIBILITY_SEMANTICS}"
+    )
+  expression_regulatory_versions = set(
+    ranking["expression_regulatory_semantics_version"]
+      .dropna()
+      .astype(str)
+  )
+  if expression_regulatory_versions != {
+    EXPECTED_EXPRESSION_REGULATORY_SEMANTICS
+  }:
+    raise ValueError(
+      "Unexpected expression/regulatory semantics "
+      f"{sorted(expression_regulatory_versions)}; expected "
+      f"{EXPECTED_EXPRESSION_REGULATORY_SEMANTICS}"
     )
   if ranking["direct_promoter_binding_claim"].astype(str).str.casefold().isin(
     {"1", "true", "yes"}
@@ -116,11 +133,15 @@ def main() -> None:
     ),
     "functional evidence",
   )
-  invalid_promoter = ~functional["promoter_evidence_type"].fillna("").astype(str).eq(
+  invalid_promoter = ~functional[
+    "promoter_evidence_type"
+  ].fillna("").astype(str).eq(
     "JASPAR_motif_prediction_not_direct_binding"
   )
   if invalid_promoter.any():
-    raise ValueError("Promoter evidence is not explicitly labelled as motif prediction")
+    raise ValueError(
+      "Promoter evidence is not explicitly labelled as motif prediction"
+    )
 
   root = resolve_path(args.article_root)
   manifest = read(
