@@ -44,19 +44,11 @@ def test_publication_registry_matches_expanded_contract() -> None:
   config = yaml.safe_load(
     (ROOT / "config/article_assets.yaml").read_text(encoding="utf-8")
   )
-  assert len(config["main_figures"]) == 7
-  assert len(config["supplementary_figures"]) == 20
-  assert len(config["structural_main_figures"]) == 1
-  assert len(config["structural_supplementary_figures"]) == 18
+  main_ids = {str(record["id"]) for record in config["main_figures"]}
+  supplementary_ids = {
+    str(record["id"]) for record in config["supplementary_figures"]
+  }
+  assert main_ids == {f"Figure_{index}" for index in range(1, 9)}
+  assert supplementary_ids == {f"Figure_S{index}" for index in range(1, 39)}
   assert len(config["main_tables"]) == 4
   assert len(config["supplementary_tables"]) == 25
-  expected_supplementary = {f"Figure_S{index}" for index in range(1, 39)}
-  observed_supplementary = {
-    str(record["id"])
-    for section in (
-      "supplementary_figures",
-      "structural_supplementary_figures",
-    )
-    for record in config[section]
-  }
-  assert observed_supplementary == expected_supplementary
