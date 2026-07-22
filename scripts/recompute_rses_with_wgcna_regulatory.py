@@ -23,7 +23,10 @@ from rses_onco.expanded import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-SCORING_SEMANTICS_VERSION = "eligibility-aware-wgcna-regulatory-v2"
+ELIGIBILITY_SEMANTICS_VERSION = "eligibility-aware-v1"
+EXPRESSION_REGULATORY_SEMANTICS_VERSION = (
+  "eligibility-aware-wgcna-regulatory-v2"
+)
 EXPRESSION_SUBWEIGHTS = {
   "pairwise_expression_context": 0.50,
   "wgcna_expression_network": 0.50,
@@ -200,7 +203,10 @@ def main() -> None:
         onco.n_domains,
         onco.eligible_domains,
       ),
-      "scoring_semantics_version": SCORING_SEMANTICS_VERSION,
+      "scoring_semantics_version": ELIGIBILITY_SEMANTICS_VERSION,
+      "expression_regulatory_semantics_version": (
+        EXPRESSION_REGULATORY_SEMANTICS_VERSION
+      ),
       "score_version": "RSES-Onco-expanded-v0.10.8",
       "expression_context_formula": (
         "0.5*pairwise_expression_context + 0.5*WGCNA_context, "
@@ -234,7 +240,11 @@ def main() -> None:
     f"Recomputed WGCNA/promoter-aware RSES-Onco: {output} "
     f"({len(result):,} rows)"
   )
-  print(f"Scoring semantics: {SCORING_SEMANTICS_VERSION}")
+  print(f"Eligibility semantics: {ELIGIBILITY_SEMANTICS_VERSION}")
+  print(
+    "Expression/regulatory semantics: "
+    f"{EXPRESSION_REGULATORY_SEMANTICS_VERSION}"
+  )
 
 
 if __name__ == "__main__":
