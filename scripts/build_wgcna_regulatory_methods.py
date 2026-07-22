@@ -35,32 +35,55 @@ For each cancer context, DepMap log2(TPM+1) expression is restricted to compatib
 
 A signed WGCNA network is built with biweight midcorrelation. The soft-thresholding power is the first power with signed scale-free topology R2 at least 0.80 and negative slope; otherwise the finite power with the highest available R2 is selected. Signed adjacency, signed topological overlap, average-linkage clustering, dynamic tree cutting, module merging at eigengene dissimilarity 0.25, module membership and intramodular connectivity are calculated.
 
-For each directed pair, the WGCNA subcomponent combines TOM divergence (0.40), module divergence (0.30) and absolute kME divergence (0.30). Cancer-specific values are retained in source tables and summarized by the median across cancers for the functional prior, preventing three cancer networks from being counted as independent evidence units.
+For each directed pair, the WGCNA subcomponent combines TOM divergence (0.40), module divergence (0.30) and absolute kME divergence (0.30). Each cancer-specific RSES-Onco row receives only the WGCNA network calculated for the same cancer context. Cancer-specific source tables are retained, and a separate median consensus table is produced only for pair-level source compatibility and descriptive reporting; it is not counted as an additional evidence unit.
 
 ## Expression-context integration
 
-The expression-context domain uses equal internal weights for the pre-existing cancer-specific pairwise expression divergence and the consensus WGCNA subcomponent. Missing subcomponents remain missing and reduce internal coverage. The total expression-context weight in the functional microniche remains unchanged.
+The expression-context domain uses equal internal weights for the pre-existing cancer-specific pairwise expression divergence and the cancer-matched WGCNA subcomponent. Missing subcomponents remain missing and reduce internal coverage. The total expression-context weight in the functional microniche remains unchanged.
 
 ## Regulatory-network integration
 
-The regulatory subcomponent combines DoRothEA regulator-set divergence (0.40), cancer-specific TF-target expression-profile divergence (0.35) and JASPAR promoter motif divergence (0.25). Ensembl canonical-transcript TSS windows are defined as 2,000 bp upstream and 500 bp downstream on the transcript strand. JASPAR 2026 CORE vertebrate non-redundant motifs are scanned with FIMO. Motif occurrence is a predicted cis-regulatory feature and is not direct TF binding, promoter occupancy, causal regulation or experimental validation.
+The cancer-matched regulatory subcomponent combines DoRothEA regulator-set divergence (0.40), cancer-specific TF-target expression-profile divergence (0.35) and JASPAR promoter motif divergence (0.25). Ensembl canonical-transcript TSS windows are defined as 2,000 bp upstream and 500 bp downstream on the transcript strand. JASPAR 2026 CORE vertebrate non-redundant motifs are scanned with FIMO. Motif occurrence is a predicted cis-regulatory feature and is not direct TF binding, promoter occupancy, causal regulation or experimental validation.
 
 No direct promoter-binding claim is generated unless a separate traceable ChIP-based source is added. Missing source evidence is not converted to zero. The total regulatory-network weight in the functional microniche remains unchanged.
+
+## Sensitivity analyses
+
+The workflow recomputes ranking stability after removing WGCNA, pairwise expression, DoRothEA regulator sets, TF-expression consistency, promoter motifs or the complete regulatory domain. These analyses are stored under the robustness outputs and do not create additional registered article tables.
 
 ## Interpretation boundary
 
 WGCNA modules, coexpression, TF-target associations and promoter motifs are network-context evidence. They do not by themselves establish synthetic lethality, transcriptional compensation, direct TF binding, drug efficacy or clinical relevance.
 """
-  (output_dir / "WGCNA_promoter_regulatory_layer.md").write_text(
-    text,
-    encoding="utf-8",
-  )
+  (
+    output_dir / "WGCNA_promoter_regulatory_layer.md"
+  ).write_text(text, encoding="utf-8")
   weights = pd.DataFrame([
-    {"parent_domain": "expression_context", "subcomponent": "pairwise_expression_context", "internal_weight": 0.50},
-    {"parent_domain": "expression_context", "subcomponent": "wgcna_expression_network", "internal_weight": 0.50},
-    {"parent_domain": "regulatory_network", "subcomponent": "dorothea_regulator_divergence", "internal_weight": 0.40},
-    {"parent_domain": "regulatory_network", "subcomponent": "tf_expression_profile_divergence", "internal_weight": 0.35},
-    {"parent_domain": "regulatory_network", "subcomponent": "jaspar_promoter_motif_divergence", "internal_weight": 0.25},
+    {
+      "parent_domain": "expression_context",
+      "subcomponent": "pairwise_expression_context",
+      "internal_weight": 0.50,
+    },
+    {
+      "parent_domain": "expression_context",
+      "subcomponent": "wgcna_expression_network",
+      "internal_weight": 0.50,
+    },
+    {
+      "parent_domain": "regulatory_network",
+      "subcomponent": "dorothea_regulator_divergence",
+      "internal_weight": 0.40,
+    },
+    {
+      "parent_domain": "regulatory_network",
+      "subcomponent": "tf_expression_profile_divergence",
+      "internal_weight": 0.35,
+    },
+    {
+      "parent_domain": "regulatory_network",
+      "subcomponent": "jaspar_promoter_motif_divergence",
+      "internal_weight": 0.25,
+    },
   ])
   weights.to_csv(
     output_dir / "WGCNA_regulatory_internal_weights.tsv",
