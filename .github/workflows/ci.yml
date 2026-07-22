@@ -46,6 +46,23 @@ jobs:
         run: python -m pytest -q -p no:cacheprovider tests/test_extended_supporting_evidence_real_outputs.py
       - name: Manual inspection checklist output tests
         run: python -m pytest -q -p no:cacheprovider tests/test_manual_inspection_checklist_real_outputs.py
+      - name: Capture complete-suite diagnostics
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -vv -p no:cacheprovider > ci_full_suite.log 2>&1
+          status=$?
+          printf '%s\n' "$status" > ci_full_suite.exitcode
+          exit 0
+      - name: Upload complete-suite diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-full-suite-diagnostics
+          path: |
+            ci_full_suite.log
+            ci_full_suite.exitcode
+          if-no-files-found: error
+          retention-days: 3
       - name: Complete test suite
         run: python -m pytest -q -p no:cacheprovider
       - name: Build complete directed NISE universe
