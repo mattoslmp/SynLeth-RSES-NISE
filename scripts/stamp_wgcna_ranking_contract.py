@@ -27,6 +27,13 @@ def main() -> None:
   args = parser.parse_args()
   path = resolve_path(args.ranking)
   frame = pd.read_csv(path, sep="\t", low_memory=False)
+  if (
+    "component_wgcna_expression_network" not in frame
+    and "wgcna_expression_network" in frame
+  ):
+    frame["component_wgcna_expression_network"] = frame[
+      "wgcna_expression_network"
+    ]
   required = {
     "component_wgcna_expression_network",
     "regulatory_promoter_motif_divergence",
