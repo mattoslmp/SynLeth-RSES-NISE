@@ -17,6 +17,11 @@ dependencies:
   - mafft
   - fasttree
   - pymol-open-source
+  - r-base>=4.3
+  - r-wgcna>=1.74
+  - r-dynamictreecut
+  - r-fastcluster
+  - meme
   - pip
   - pip:
       - -e .
