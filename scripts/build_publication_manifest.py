@@ -9,7 +9,6 @@ import platform
 from pathlib import Path
 import subprocess
 import sys
-from typing import Iterable
 
 import matplotlib
 import numpy
@@ -48,7 +47,8 @@ def inventory_files(article_root: Path) -> list[Path]:
     "publication_provenance.json",
   }
   return sorted(
-    path for path in article_root.rglob("*")
+    path
+    for path in article_root.rglob("*")
     if path.is_file() and path.name not in excluded_names
   )
 
@@ -60,10 +60,18 @@ def classify(path: Path, article_root: Path) -> str:
     return "main_figure"
   if parts[:2] == ("figures", "supplementary"):
     return "supplementary_figure"
-  if parts[:2] == ("tables", "main"):
-    return "main_table"
-  if parts[:2] == ("tables", "supplementary"):
-    return "supplementary_table"
+  table_categories = {
+    ("tables", "main"): "main_table",
+    ("tables", "supplementary"): "supplementary_table",
+    ("tables", "qc"): "quality_control_table",
+    ("tables", "score_components"): "score_component_table",
+    ("tables", "robustness"): "robustness_table",
+    ("tables", "figure_data"): "exact_figure_source_table",
+    ("tables", "supporting_evidence"): "supporting_evidence_table",
+  }
+  for prefix, category in table_categories.items():
+    if parts[:2] == prefix:
+      return category
   if parts and parts[0] == "source_data":
     return "source_data"
   if parts and parts[0] == "workbooks":
@@ -72,6 +80,8 @@ def classify(path: Path, article_root: Path) -> str:
     return "manifest"
   if parts and parts[0] == "manuscript_assets":
     return "manuscript_asset"
+  if parts and parts[0] == "structure_atlas":
+    return "structure_render"
   return "other"
 
 
@@ -85,7 +95,6 @@ def main() -> None:
     help="Important analysis input to fingerprint; repeatable.",
   )
   args = parser.parse_args()
-
   article_root = resolve_path(args.article_root)
   manifest_dir = article_root / "manifests"
   manifest_dir.mkdir(parents=True, exist_ok=True)
@@ -98,6 +107,7 @@ def main() -> None:
       "category": classify(path, article_root),
       "size_bytes": path.stat().st_size,
       "sha256": sha256(path),
+      "modified_at_epoch": path.stat().st_mtime,
     })
   inventory = pandas.DataFrame(inventory_rows)
   inventory_path = manifest_dir / "publication_file_inventory.tsv"
@@ -116,6 +126,10 @@ def main() -> None:
     manifest_dir / "analysis_input_fingerprints.tsv", sep="\t", index=False
   )
 
+  category_counts = (
+    inventory.groupby("category").size().astype(int).to_dict()
+    if not inventory.empty else {}
+  )
   provenance = {
     "repository_root": str(ROOT),
     "git_commit": git_value(["rev-parse", "HEAD"]),
@@ -131,13 +145,14 @@ def main() -> None:
     },
     "article_root": str(article_root),
     "asset_count": len(files),
-    "main_figure_triplets": int(
+    "category_counts": category_counts,
+    "main_figure_files": int(
       inventory.loc[
         inventory["category"].eq("main_figure")
         & inventory["path"].str.endswith((".png", ".pdf", ".svg")),
       ].shape[0]
     ) if not inventory.empty else 0,
-    "supplementary_figure_triplets": int(
+    "supplementary_figure_files": int(
       inventory.loc[
         inventory["category"].eq("supplementary_figure")
         & inventory["path"].str.endswith((".png", ".pdf", ".svg")),
@@ -166,17 +181,23 @@ This directory was generated entirely by repository scripts.
 - Supplementary figures: `figures/supplementary/`
 - Main tables: `tables/main/`
 - Supplementary tables: `tables/supplementary/`
-- Figure/table source data: `source_data/`
-- Figure legends and manuscript assets: `manuscript_assets/`
+- Candidate-domain coverage and missingness audits: `tables/qc/`
+- Score decomposition: `tables/score_components/`
+- Robustness analyses: `tables/robustness/`
+- Exact source table used by each figure: `tables/figure_data/`
+- Expression, network, phenotype, tumor-event, structural and pharmacology support: `tables/supporting_evidence/`
+- Original figure/table source data: `source_data/`
+- Figure legends, score formulas and reproduction methods: `manuscript_assets/`
 - Workbooks: `workbooks/`
 - Provenance, manifests and SHA-256 checksums: `manifests/`
 
-Automated layout audits are stored beside every figure. A passing audit checks
-for axes overlap, text clipping, legend clipping and tick-label collisions after
-rendering. Scientific and editorial review at 100% zoom remains mandatory.
+Automated layout audits are stored beside every figure. Scientific-integrity validation
+checks missingness semantics, formula reproduction, overlap control, FDR boundaries,
+biologically valid event frequencies and exact figure-source correspondence. These
+checks do not replace manual inspection of every rendered page at 100% zoom.
 
-The pharmacology outputs are computational experimental-priority hypotheses, not
-medical advice, clinical efficacy evidence or claims of cure.
+Pharmacology outputs are computational experimental-priority hypotheses, not medical
+advice, clinical efficacy evidence or claims of cure.
 
 Git commit: `{provenance.get('git_commit')}`
 Assets inventoried: `{len(files)}`
