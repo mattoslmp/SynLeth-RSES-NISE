@@ -60,20 +60,25 @@ require_file() {
   fi
 }
 
-preflight_assets() {
-  log_stage "Validate mandatory publication inputs"
+preflight_common() {
+  log_stage "Validate mandatory analysis inputs and code syntax"
   require_file "$RANKING"
   require_file "$CANDIDATES"
   require_file "$DISCOVERY"
   require_file "$FUNCTIONAL_EVIDENCE"
+  python -m compileall -q src scripts tests
+  bash -n scripts/run_publication_pipeline.sh
+  printf '%s\n' "$(date -Iseconds)" > "$RUN_MARKER"
+  echo "Publication run marker: $RUN_MARKER"
+}
+
+preflight_assets_only() {
+  preflight_common
+  log_stage "Validate cached evidence and structural inputs required by assets-only"
   require_file "$PHARMACOLOGY_DATA/pharmacology_evidence_long.tsv"
   require_file "$STRUCTURE_MANIFEST"
   require_file "$STRUCTURAL_ANNOTATIONS"
   require_file "$STRUCTURE_RENDER_MANIFEST"
-  python -m compileall -q src scripts tests
-  bash -n scripts/run_publication_pipeline.sh
-  printf '%s\n' "$(date -Iseconds)" > "$RUN_MARKER"
-  echo "Assets-only run marker: $RUN_MARKER"
 }
 
 require_ranking() {
@@ -164,18 +169,24 @@ prepare_structures() {
   log_stage "Download every curated human NISE AlphaFold DB structure"
   run_logged "$STRUCTURE_LOG_DIR/01_download_alphafold.log" \
     python -u scripts/download_alphafold_nise_structures.py \
-      --proteins "$PROTEINS" --output-dir data/raw/structures/alphafold --manifest "$STRUCTURE_MANIFEST"
+      --proteins "$PROTEINS" \
+      --output-dir data/raw/structures/alphafold \
+      --manifest "$STRUCTURE_MANIFEST"
   log_stage "Collect exact-numbered M-CSA, UniProt and PDBe residue annotations"
   run_logged "$STRUCTURE_LOG_DIR/02_collect_structural_annotations.log" \
     python -u scripts/collect_nise_structural_annotations.py \
-      --proteins "$PROTEINS" --output "$STRUCTURAL_ANNOTATIONS" \
-      --coverage-output "$STRUCTURAL_COVERAGE" --cache-dir data/raw/structures/annotation_cache
+      --proteins "$PROTEINS" \
+      --output "$STRUCTURAL_ANNOTATIONS" \
+      --coverage-output "$STRUCTURAL_COVERAGE" \
+      --cache-dir data/raw/structures/annotation_cache
   log_stage "Render whole structures and enlarged functional-site views with PyMOL"
   run_logged "$STRUCTURE_LOG_DIR/03_render_structures.log" \
     python -u scripts/render_nise_structures.py \
-      --structure-manifest "$STRUCTURE_MANIFEST" --annotations "$STRUCTURAL_ANNOTATIONS" \
+      --structure-manifest "$STRUCTURE_MANIFEST" \
+      --annotations "$STRUCTURAL_ANNOTATIONS" \
       --output-dir "$ARTICLE_ROOT/structure_atlas/individual" \
-      --render-manifest "$STRUCTURE_RENDER_MANIFEST" --pymol "$PYMOL_EXECUTABLE"
+      --render-manifest "$STRUCTURE_RENDER_MANIFEST" \
+      --pymol "$PYMOL_EXECUTABLE"
 }
 
 export_tables() {
@@ -183,8 +194,11 @@ export_tables() {
   log_stage "Export all main, supplementary, audit and robustness article tables"
   run_logged "$LOG_DIR/05_export_article_tables.log" \
     python -u scripts/export_article_tables.py \
-      --ranking "$RANKING" --candidates "$CANDIDATES" --members "$MEMBERS" \
-      --functional-evidence "$FUNCTIONAL_EVIDENCE" --discovery "$DISCOVERY" \
+      --ranking "$RANKING" \
+      --candidates "$CANDIDATES" \
+      --members "$MEMBERS" \
+      --functional-evidence "$FUNCTIONAL_EVIDENCE" \
+      --discovery "$DISCOVERY" \
       --pharmacology-evidence "$PHARMACOLOGY_DATA/pharmacology_evidence_long.tsv" \
       --pharmacology-ranking "$PHARMACOLOGY_RESULTS/pharmacology_ranked_hypotheses.tsv" \
       --drug-sensitivity "$PHARMACOLOGY_DATA/drug_response_selectivity.tsv" \
@@ -205,26 +219,32 @@ generate_figures() {
   fi
   run_logged "$LOG_DIR/06_make_all_article_figures.log" \
     python -u scripts/make_all_article_figures.py \
-      --ranking "$RANKING" --candidates "$CANDIDATES" --discovery "$DISCOVERY" \
+      --ranking "$RANKING" \
+      --candidates "$CANDIDATES" \
+      --discovery "$DISCOVERY" \
       --pharmacology "$PHARMACOLOGY_RESULTS/pharmacology_ranked_hypotheses.tsv" \
-      --proteins "$PROTEINS" --structure-manifest "$STRUCTURE_MANIFEST" \
+      --proteins "$PROTEINS" \
+      --structure-manifest "$STRUCTURE_MANIFEST" \
       --render-manifest "$STRUCTURE_RENDER_MANIFEST" \
       --structural-annotations "$STRUCTURAL_ANNOTATIONS" \
       --structural-coverage "$STRUCTURAL_COVERAGE" \
-      --output-root "$ARTICLE_ROOT" "$layout_flag"
+      --output-root "$ARTICLE_ROOT" \
+      "$layout_flag"
 }
 
 catalog_figure_data() {
   log_stage "Catalog exact source tables and reproduction commands for every figure"
   run_logged "$LOG_DIR/06b_catalog_figure_source_data.log" \
-    python -u scripts/catalog_figure_source_data.py --article-root "$ARTICLE_ROOT"
+    python -u scripts/catalog_figure_source_data.py \
+      --article-root "$ARTICLE_ROOT"
 }
 
 validate_scientific_integrity() {
   log_stage "Validate missingness, score formula, overlap control, FDR and figure semantics"
   run_logged "$LOG_DIR/06c_validate_scientific_integrity.log" \
     python -u scripts/validate_publication_scientific_integrity.py \
-      --article-root "$ARTICLE_ROOT" --run-marker "$RUN_MARKER"
+      --article-root "$ARTICLE_ROOT" \
+      --run-marker "$RUN_MARKER"
 }
 
 build_workbook() {
@@ -240,24 +260,28 @@ build_manifests() {
   run_logged "$LOG_DIR/08_build_publication_manifest.log" \
     python -u scripts/build_publication_manifest.py \
       --article-root "$ARTICLE_ROOT" \
-      --input "$RANKING" --input "$CANDIDATES" --input "$DISCOVERY" \
+      --input "$RANKING" \
+      --input "$CANDIDATES" \
+      --input "$DISCOVERY" \
       --input "$FUNCTIONAL_EVIDENCE" \
       --input "$PHARMACOLOGY_DATA/pharmacology_evidence_long.tsv" \
       --input "$PHARMACOLOGY_RESULTS/pharmacology_ranked_hypotheses.tsv" \
-      --input "$STRUCTURE_MANIFEST" --input "$STRUCTURAL_ANNOTATIONS" \
+      --input "$STRUCTURE_MANIFEST" \
+      --input "$STRUCTURAL_ANNOTATIONS" \
       --input "$STRUCTURE_RENDER_MANIFEST"
 }
 
 validate_outputs() {
   log_stage "Validate publication package and software tests"
   run_logged "$LOG_DIR/09_validate_publication_outputs.log" \
-    python -u scripts/validate_publication_outputs.py --article-root "$ARTICLE_ROOT"
+    python -u scripts/validate_publication_outputs.py \
+      --article-root "$ARTICLE_ROOT"
   run_logged "$LOG_DIR/10_pytest.log" \
     python -m pytest -q -p no:cacheprovider
 }
 
 all() {
-  preflight_assets
+  preflight_common
   acquire_pharmacology
   standardize_sensitivity
   analyze_sensitivity
@@ -276,7 +300,7 @@ all() {
 }
 
 assets_only() {
-  preflight_assets
+  preflight_assets_only
   prioritize_pharmacology
   build_evidence_audit
   run_robustness
