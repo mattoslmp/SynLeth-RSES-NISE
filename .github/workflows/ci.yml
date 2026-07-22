@@ -19,6 +19,7 @@ jobs:
       - run: bash -n scripts/run_real_data_pipeline.sh
       - run: bash -n scripts/run_expanded_pipeline.sh
       - run: bash -n scripts/run_publication_pipeline.sh
+      - run: bash -n scripts/publication_pipeline_complete.sh
       - run: bash -n scripts/publication_pipeline_steps.sh
       - run: bash -n scripts/run_structural_pipeline.sh
       - run: bash -n scripts/verify_complete_article_run.sh
