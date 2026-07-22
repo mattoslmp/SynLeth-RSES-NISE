@@ -50,6 +50,7 @@ def first_existing(frame: pd.DataFrame, columns: tuple[str, ...]) -> pd.Series:
 
 
 def source_table(path: Path, label: str) -> pd.DataFrame:
+  """Prepare a raw source whose own `source` column is an entity, not aggregator."""
   frame = read_optional(path)
   if frame.empty:
     return frame
@@ -70,11 +71,7 @@ def source_table(path: Path, label: str) -> pd.DataFrame:
       frame,
       ("source_genesymbol", "query_gene", "preferredName_A", "Gene name"),
     )
-  stable_columns = [
-    column for column in frame.columns
-    if column not in {"evidence_id"}
-  ]
-  normalized = frame[stable_columns].copy()
+  normalized = frame[[column for column in frame.columns if column != "evidence_id"]].copy()
   for column in normalized.columns:
     normalized[column] = normalized[column].astype(str)
   hashes = pd.util.hash_pandas_object(normalized, index=False).astype("uint64")
@@ -124,8 +121,8 @@ def main() -> None:
     )
   )
   named_tables = [
-    ("functional_pair_evidence", source_table(functional_path, "functional_pair_evidence"), functional_path),
-    ("pharmacology_evidence", source_table(pharmacology_path, "pharmacology_evidence"), pharmacology_path),
+    ("functional_pair_evidence", read_optional(functional_path), functional_path),
+    ("pharmacology_evidence", read_optional(pharmacology_path), pharmacology_path),
     (
       "STRING",
       source_table(raw_dir / "string_interaction_partners.tsv", "STRING"),
