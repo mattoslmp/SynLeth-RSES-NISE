@@ -79,7 +79,8 @@ def test_promoter_motifs_are_not_direct_binding_claims() -> None:
   ).read_text(encoding="utf-8")
   assert "direct_binding_claim" in scanner
   assert "= False" in scanner
-  assert "not direct TF binding" in scanner
+  assert "is not direct" in scanner
+  assert "TF binding" in scanner
   validator = (
     ROOT / "scripts/validate_wgcna_regulatory_evidence.py"
   ).read_text(encoding="utf-8")
@@ -228,8 +229,14 @@ def test_recompute_matches_cancer_specific_network_evidence(
     check=True,
   )
   result = pd.read_csv(output_path, sep="\t").set_index("cancer")
-  assert np.isclose(result.loc["colon", "wgcna_expression_network"], 0.2)
-  assert np.isclose(result.loc["lung", "wgcna_expression_network"], 0.8)
+  assert np.isclose(
+    result.loc["colon", "wgcna_expression_network"],
+    0.2,
+  )
+  assert np.isclose(
+    result.loc["lung", "wgcna_expression_network"],
+    0.8,
+  )
   assert (
     result.loc["lung", "coverage_adjusted_rses"]
     > result.loc["colon", "coverage_adjusted_rses"]
@@ -237,6 +244,8 @@ def test_recompute_matches_cancer_specific_network_evidence(
   assert set(result["scoring_semantics_version"]) == {
     "eligibility-aware-v1"
   }
-  assert set(result["expression_regulatory_semantics_version"]) == {
+  assert set(
+    result["expression_regulatory_semantics_version"]
+  ) == {
     "eligibility-aware-wgcna-regulatory-v2"
   }
