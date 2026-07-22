@@ -65,8 +65,22 @@ def explicit_bool(value: object) -> bool:
 def subscore(
   values: dict[str, float | None],
   weights: dict[str, float],
+  excluded: set[str] | None = None,
 ) -> float | None:
-  result = coverage_aware_score(values, weights)
+  excluded = excluded or set()
+  retained_weights = {
+    key: value
+    for key, value in weights.items()
+    if key not in excluded
+  }
+  retained_values = {
+    key: values.get(key)
+    for key in retained_weights
+  }
+  result = coverage_aware_score(
+    retained_values,
+    retained_weights,
+  )
   return (
     result.adjusted_score
     if np.isfinite(result.adjusted_score)
@@ -93,16 +107,18 @@ def score_scenario(
       record.get("regulatory_promoter_motif_divergence")
     ),
   }
+  expression_excluded: set[str] = set()
+  regulatory_excluded: set[str] = set()
   if scenario == "without_wgcna":
-    expression_values["wgcna"] = None
+    expression_excluded.add("wgcna")
   elif scenario == "without_pairwise_expression":
-    expression_values["pairwise"] = None
+    expression_excluded.add("pairwise")
   elif scenario == "without_dorothea_regulator_sets":
-    regulatory_values["dorothea"] = None
+    regulatory_excluded.add("dorothea")
   elif scenario == "without_tf_expression_consistency":
-    regulatory_values["tf_expression"] = None
+    regulatory_excluded.add("tf_expression")
   elif scenario == "without_promoter_motifs":
-    regulatory_values["promoter"] = None
+    regulatory_excluded.add("promoter")
 
   microniche_components = {
     domain: numeric(record.get(f"microniche_{domain}"))
@@ -111,11 +127,16 @@ def score_scenario(
   microniche_components["expression_context"] = subscore(
     expression_values,
     EXPRESSION_WEIGHTS,
+    expression_excluded,
   )
   microniche_components["regulatory_network"] = (
     None
     if scenario == "without_regulatory_domain"
-    else subscore(regulatory_values, REGULATORY_WEIGHTS)
+    else subscore(
+      regulatory_values,
+      REGULATORY_WEIGHTS,
+      regulatory_excluded,
+    )
   )
   eligible_microniche = {
     domain
@@ -230,6 +251,21 @@ def main() -> None:
       on=["cancer", "pair_id"],
       how="inner",
     )
+    if scenario == "baseline":
+      valid_baseline = merged[[
+        "coverage_adjusted_rses",
+        "scenario_adjusted_score",
+      ]].dropna()
+      if not np.allclose(
+        valid_baseline["coverage_adjusted_rses"],
+        valid_baseline["scenario_adjusted_score"],
+        atol=1e-10,
+        rtol=1e-8,
+      ):
+        raise RuntimeError(
+          "WGCNA/regulatory baseline ablation does not reproduce "
+          "the pipeline score"
+        )
     for cancer, group in merged.groupby("cancer", dropna=False):
       valid = group[[
         "coverage_adjusted_rses",
@@ -269,6 +305,11 @@ def main() -> None:
           len(base_top & scenario_top) / len(union)
           if union
           else np.nan
+        ),
+        "ablation_rule": (
+          "Excluded subcomponents are removed from the eligible "
+          "internal denominator and retained subcomponents are "
+          "renormalized; missing retained evidence remains missing."
         ),
       })
 
