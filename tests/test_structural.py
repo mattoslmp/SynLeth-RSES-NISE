@@ -150,13 +150,13 @@ def test_pymol_script_highlights_known_residues(tmp_path: Path) -> None:
   assert "ray=1" in script
 
 
-def test_article_registry_includes_complete_structural_atlas() -> None:
+def test_article_registry_includes_complete_structural_and_audit_atlas() -> None:
   config = yaml.safe_load(
     (ROOT / "config/article_assets.yaml").read_text(encoding="utf-8")
   )
   main_ids = {record["id"] for record in config["main_figures"]}
   supplementary_ids = {record["id"] for record in config["supplementary_figures"]}
   assert main_ids == {f"Figure_{index}" for index in range(1, 9)}
-  assert supplementary_ids == {f"Figure_S{index}" for index in range(1, 33)}
+  assert supplementary_ids == {f"Figure_S{index}" for index in range(1, 39)}
   assert len(config["main_tables"]) == 4
-  assert len(config["supplementary_tables"]) == 18
+  assert len(config["supplementary_tables"]) == 25
