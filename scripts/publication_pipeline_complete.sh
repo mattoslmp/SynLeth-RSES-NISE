@@ -11,6 +11,7 @@ cd "$ROOT"
 
 CORE="$ROOT/scripts/publication_pipeline_steps.sh"
 RANKING="${RANKING:-results/expanded_26Q1/full/expanded_rses_onco.tsv}"
+FUNCTIONAL_EVIDENCE="${FUNCTIONAL_EVIDENCE:-data/processed/expanded_pair_functional_evidence.tsv}"
 ARTICLE_ROOT="${ARTICLE_ROOT:-article_outputs}"
 LOG_DIR="${LOG_DIR:-logs/publication_26Q1}"
 DEPMAP_DIR="${DEPMAP_DIR:-data/raw/depmap}"
@@ -49,6 +50,7 @@ require_file() {
 
 build_extended_supporting_evidence() {
   require_file "$RANKING"
+  require_file "$FUNCTIONAL_EVIDENCE"
   require_file "$GENE_EFFECT"
   require_file "$COPY_NUMBER"
   require_file "$MODELS"
@@ -71,6 +73,18 @@ build_extended_supporting_evidence() {
       --ranking "$RANKING" \
       --raw-dir "$FUNCTIONAL_RAW_DIR" \
       --output-root "$ARTICLE_ROOT"
+
+  log_stage "Export WGCNA, promoter and TF regulatory evidence"
+  run_logged "$LOG_DIR/04g_export_wgcna_regulatory_evidence.log" \
+    python -u scripts/export_wgcna_regulatory_supporting_evidence.py \
+      --article-root "$ARTICLE_ROOT"
+
+  log_stage "Run WGCNA, pairwise-expression, TF and promoter ablations"
+  run_logged "$LOG_DIR/04h_wgcna_regulatory_ablation.log" \
+    python -u scripts/run_wgcna_regulatory_ablation.py \
+      --ranking "$RANKING" \
+      --article-root "$ARTICLE_ROOT" \
+      --top-k 20
 }
 
 finalize_extended_publication_assets() {
@@ -79,19 +93,30 @@ finalize_extended_publication_assets() {
     python -u scripts/validate_extended_supporting_evidence.py \
       --article-root "$ARTICLE_ROOT"
 
+  log_stage "Validate WGCNA and promoter-aware regulatory score integration"
+  run_logged "$LOG_DIR/06e_validate_wgcna_regulatory_evidence.log" \
+    python -u scripts/validate_wgcna_regulatory_evidence.py \
+      --ranking "$RANKING" \
+      --functional-evidence "$FUNCTIONAL_EVIDENCE" \
+      --article-root "$ARTICLE_ROOT"
+
   log_stage "Generate score-formula, evidence-category and reproduction documentation"
-  run_logged "$LOG_DIR/06e_build_publication_methods_documentation.log" \
+  run_logged "$LOG_DIR/06f_build_publication_methods_documentation.log" \
     python -u scripts/build_publication_methods_documentation.py \
       --article-root "$ARTICLE_ROOT"
 
+  log_stage "Generate WGCNA and promoter-aware regulatory supplementary methods"
+  run_logged "$LOG_DIR/06g_build_wgcna_regulatory_methods.log" \
+    python -u scripts/build_wgcna_regulatory_methods.py \
+      --article-root "$ARTICLE_ROOT"
+
   log_stage "Create the mandatory manual 100-percent-zoom inspection checklist"
-  run_logged "$LOG_DIR/06f_create_manual_visual_inspection_checklist.log" \
+  run_logged "$LOG_DIR/06h_create_manual_visual_inspection_checklist.log" \
     python -u scripts/create_manual_visual_inspection_checklist.py \
       --article-root "$ARTICLE_ROOT"
 
-  # The new documentation and review record must be included in the final workbook,
-  # inventory, provenance and checksums. Rebuild only these inexpensive terminal
-  # stages, then rerun the complete output validator and tests.
+  # The added evidence, robustness analyses, documentation and review record must
+  # be included in the final workbook, inventory, provenance and checksums.
   bash "$CORE" workbook
   bash "$CORE" manifests
   bash "$CORE" validate
