@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Resume from completed STRING/DoRothEA/HPA/UniProt acquisition and rebuild
+# Resume after completed STRING/DoRothEA/HPA/UniProt acquisition and rebuild
 # WGCNA/promoter-aware RSES-Onco scores plus all publication assets.
 set -Eeuo pipefail
 
@@ -23,18 +23,21 @@ EXPRESSION="${EXPRESSION:-$DEPMAP_DIR/OmicsExpressionTPMLogp1HumanProteinCodingG
 CANDIDATES="${CANDIDATES:-$PROCESSED_DIR/expanded_candidate_universe.tsv}"
 MEMBERS="${MEMBERS:-$PROCESSED_DIR/expanded_class_member_inventory.tsv}"
 DISCOVERY="${DISCOVERY:-$DISCOVERY_RESULTS/all_target_dependency_screen.tsv}"
+DOROTHEA="${DOROTHEA:-data/raw/human_functional_evidence/omnipath_dorothea.tsv}"
+
 FUNCTIONAL_EVIDENCE="${FUNCTIONAL_EVIDENCE:-$PROCESSED_DIR/expanded_pair_functional_evidence.tsv}"
 FUNCTIONAL_EVIDENCE_BASE="${FUNCTIONAL_EVIDENCE_BASE:-$PROCESSED_DIR/expanded_pair_functional_evidence_base.tsv}"
 FUNCTIONAL_EVIDENCE_CANCER="${FUNCTIONAL_EVIDENCE_CANCER:-$PROCESSED_DIR/regulatory/expanded_pair_functional_evidence_cancer_specific.tsv}"
-DOROTHEA="${DOROTHEA:-data/raw/human_functional_evidence/omnipath_dorothea.tsv}"
-LOSS_THRESHOLD="${LOSS_THRESHOLD:-0.30}"
-MIN_GROUP_SIZE="${MIN_GROUP_SIZE:-3}"
 
 PROMOTER_TABLE="${PROMOTER_TABLE:-data/raw/regulatory/ensembl_promoters.tsv}"
 PROMOTER_FASTA="${PROMOTER_FASTA:-data/raw/regulatory/ensembl_promoters.fa}"
 JASPAR_MEME="${JASPAR_MEME:-data/raw/regulatory/JASPAR2026_CORE_vertebrates_non-redundant.meme}"
 PROMOTER_MOTIF_HITS="${PROMOTER_MOTIF_HITS:-data/processed/regulatory/jaspar_promoter_motif_hits.tsv}"
 PROMOTER_TF_SUMMARY="${PROMOTER_TF_SUMMARY:-data/processed/regulatory/jaspar_promoter_tf_summary.tsv}"
+
+LOSS_THRESHOLD="${LOSS_THRESHOLD:-0.30}"
+MIN_GROUP_SIZE="${MIN_GROUP_SIZE:-3}"
+STRICT_LAYOUT="${STRICT_LAYOUT:-1}"
 
 mkdir -p "$LOG_DIR" "$DEPMAP_RESULTS" "$FULL_RESULTS" \
   "$PROCESSED_DIR/regulatory" "$ARTICLE_ROOT"
@@ -79,12 +82,13 @@ preflight() {
   do
     require_file "$item" "mandatory real-data input"
   done
+
   command -v Rscript >/dev/null 2>&1 || {
-    echo "Rscript is missing. Update the rses-onco Conda environment first." >&2
+    echo "Rscript is missing. Update the rses-onco Conda environment." >&2
     exit 1
   }
   command -v fimo >/dev/null 2>&1 || {
-    echo "FIMO is missing. Install MEME in the rses-onco Conda environment first." >&2
+    echo "FIMO is missing. Install the MEME suite in the rses-onco environment." >&2
     exit 1
   }
   Rscript -e "stopifnot(requireNamespace('WGCNA', quietly=TRUE)); stopifnot(requireNamespace('dynamicTreeCut', quietly=TRUE)); cat('WGCNA R dependencies: OK\n')"
@@ -93,10 +97,10 @@ preflight() {
   bash -n scripts/run_publication_pipeline.sh
 }
 
-preserve_base_functional_evidence() {
-  log_stage "Preserve pre-WGCNA pair evidence as the immutable base table"
+preserve_base_evidence() {
+  log_stage "Preserve immutable pre-WGCNA functional evidence"
   if [[ -s "$FUNCTIONAL_EVIDENCE_BASE" ]]; then
-    echo "Reusing base functional evidence: $FUNCTIONAL_EVIDENCE_BASE"
+    echo "Reusing $FUNCTIONAL_EVIDENCE_BASE"
     return
   fi
   python - "$FUNCTIONAL_EVIDENCE" "$FUNCTIONAL_EVIDENCE_BASE" <<'PY'
@@ -115,18 +119,17 @@ new_columns = {
 if new_columns & set(frame.columns):
   raise SystemExit(
     "The current functional-evidence table is already enriched, but the immutable "
-    "base table is absent. Restore the pre-WGCNA file or delete the enriched file "
-    "and reacquire functional evidence."
+    "base table is absent. Restore or reacquire the pre-WGCNA evidence table."
   )
 output.parent.mkdir(parents=True, exist_ok=True)
 temporary = output.with_suffix(output.suffix + ".tmp")
 frame.to_csv(temporary, sep="\t", index=False)
 temporary.replace(output)
-print(f"Preserved {len(frame):,} base functional-evidence rows: {output}")
+print(f"Preserved {len(frame):,} rows: {output}")
 PY
 }
 
-build_promoter_layer() {
+build_promoter_evidence() {
   log_stage "Acquire canonical Ensembl promoter windows and sequences"
   run_logged "$LOG_DIR/01_download_ensembl_promoters.log" \
     python -u scripts/download_ensembl_promoters.py \
@@ -139,7 +142,7 @@ build_promoter_layer() {
     python -u scripts/download_jaspar_core_vertebrates.py \
       --output "$JASPAR_MEME"
 
-  log_stage "Scan candidate promoters with JASPAR motifs using FIMO"
+  log_stage "Scan promoters with JASPAR motifs using FIMO"
   run_logged "$LOG_DIR/03_scan_promoter_motifs.log" \
     python -u scripts/scan_promoter_motifs.py \
       --motifs "$JASPAR_MEME" \
@@ -148,7 +151,7 @@ build_promoter_layer() {
       --summary-output "$PROMOTER_TF_SUMMARY"
 }
 
-build_wgcna_and_regulatory_evidence() {
+build_network_evidence() {
   log_stage "Build cancer-specific signed WGCNA and promoter-aware TF evidence"
   run_logged "$LOG_DIR/04_build_wgcna_regulatory_layer.log" \
     python -u scripts/build_wgcna_regulatory_layer.py \
@@ -162,7 +165,7 @@ build_wgcna_and_regulatory_evidence() {
       --promoter-motifs "$PROMOTER_TF_SUMMARY" \
       --output "$FUNCTIONAL_EVIDENCE_CANCER"
 
-  log_stage "Collapse cancer-specific network evidence to one consensus pair prior"
+  log_stage "Build consensus pair evidence for non-cancer-specific downstream assets"
   run_logged "$LOG_DIR/05_aggregate_wgcna_regulatory_layer.log" \
     python -u scripts/aggregate_wgcna_regulatory_layer.py \
       --base "$FUNCTIONAL_EVIDENCE_BASE" \
@@ -174,8 +177,10 @@ recompute_one_ranking() {
   local output="$1"
   shift
   local pre_wgcna="${output%.tsv}_pre_wgcna_regulatory.tsv"
+  local stem
+  stem="$(basename "${output%.tsv}")"
 
-  run_logged "$LOG_DIR/$(basename "${output%.tsv}")_base_scoring.log" \
+  run_logged "$LOG_DIR/${stem}_base_scoring.log" \
     python -u scripts/run_expanded_rses_onco.py \
       --gene-effect "$GENE_EFFECT" \
       --copy-number "$COPY_NUMBER" \
@@ -190,33 +195,32 @@ recompute_one_ranking() {
 
   cp -f "$output" "$pre_wgcna"
 
-  run_logged "$LOG_DIR/$(basename "${output%.tsv}")_wgcna_recompute.log" \
+  run_logged "$LOG_DIR/${stem}_wgcna_regulatory_recompute.log" \
     python -u scripts/recompute_rses_with_wgcna_regulatory.py \
       --ranking "$pre_wgcna" \
-      --functional-evidence "$FUNCTIONAL_EVIDENCE" \
+      --functional-evidence "$FUNCTIONAL_EVIDENCE_CANCER" \
       --output "$output"
 
-  run_logged "$LOG_DIR/$(basename "${output%.tsv}")_contract.log" \
+  run_logged "$LOG_DIR/${stem}_ranking_contract.log" \
     python -u scripts/stamp_wgcna_ranking_contract.py \
       --ranking "$output"
 }
 
-ensure_gdc_matrices() {
+ensure_tcga_matrices() {
   local missing=0
   for path in \
     "$PROCESSED_DIR/TCGA_COLON_homdel_discrete.tsv" \
     "$PROCESSED_DIR/TCGA_STOMACH_homdel_discrete.tsv" \
     "$PROCESSED_DIR/TCGA_LUNG_homdel_discrete.tsv"
   do
-    if [[ ! -s "$path" ]]; then
-      missing=1
-    fi
+    [[ -s "$path" ]] || missing=1
   done
   if [[ $missing -eq 0 ]]; then
     echo "Reusing existing TCGA/GDC cancer matrices."
     return
   fi
-  log_stage "Rebuild missing TCGA/GDC cancer matrices from the reviewed manifest"
+
+  log_stage "Rebuild missing TCGA/GDC cancer matrices"
   run_logged "$LOG_DIR/06_validate_gdc.log" \
     python -u scripts/download_gdc.py \
       --validate-only \
@@ -230,10 +234,10 @@ ensure_gdc_matrices() {
 }
 
 recompute_rankings() {
-  log_stage "Recompute DepMap-only RSES-Onco with WGCNA/regulatory sublayers"
+  log_stage "Recompute DepMap-only WGCNA/promoter-aware RSES-Onco"
   recompute_one_ranking "$DEPMAP_RESULTS/expanded_rses_onco.tsv"
 
-  ensure_gdc_matrices
+  ensure_tcga_matrices
 
   log_stage "Recompute integrated TCGA plus DepMap RSES-Onco"
   recompute_one_ranking \
@@ -243,8 +247,8 @@ recompute_rankings() {
     --tcga "lung=$PROCESSED_DIR/TCGA_LUNG_homdel_discrete.tsv"
 }
 
-rebuild_publication_assets() {
-  log_stage "Rebuild cached publication assets from the v0.10.8 ranking"
+rebuild_publication() {
+  log_stage "Rebuild publication assets from cached pharmacology and structures"
   require_file "data/processed/pharmacology/pharmacology_evidence_long.tsv" \
     "cached pharmacology evidence"
   require_file "data/processed/structures/alphafold_structure_manifest.tsv" \
@@ -252,8 +256,9 @@ rebuild_publication_assets() {
   require_file "data/processed/structures/nise_structural_residue_annotations.tsv" \
     "cached structural annotations"
   require_file "data/processed/structures/nise_structure_render_manifest.tsv" \
-    "cached structure render manifest"
+    "cached structure-render manifest"
 
+  set -o pipefail
   RANKING="$FULL_RESULTS/expanded_rses_onco.tsv" \
   CANDIDATES="$CANDIDATES" \
   MEMBERS="$MEMBERS" \
@@ -265,7 +270,7 @@ rebuild_publication_assets() {
   MODELS="$MODELS" \
   EXPRESSION="$EXPRESSION" \
   ARTICLE_ROOT="$ARTICLE_ROOT" \
-  STRICT_LAYOUT="${STRICT_LAYOUT:-1}" \
+  STRICT_LAYOUT="$STRICT_LAYOUT" \
   bash scripts/run_publication_pipeline.sh assets-only \
     2>&1 | tee "$LOG_DIR/08_publication_assets_only.log"
   local status=${PIPESTATUS[0]}
@@ -273,28 +278,22 @@ rebuild_publication_assets() {
     return "$status"
   fi
 
-  run_logged "$LOG_DIR/09_export_wgcna_regulatory_supporting_evidence.log" \
+  run_logged "$LOG_DIR/09_export_wgcna_regulatory_support.log" \
     python -u scripts/export_wgcna_regulatory_supporting_evidence.py \
       --article-root "$ARTICLE_ROOT"
 
-  # Include the late WGCNA/regulatory support tables in the workbook, manifest,
-  # checksums and final validation.
-  ARTICLE_ROOT="$ARTICLE_ROOT" \
-    bash scripts/publication_pipeline_steps.sh workbook
-  ARTICLE_ROOT="$ARTICLE_ROOT" \
-    bash scripts/publication_pipeline_steps.sh manifests
-  ARTICLE_ROOT="$ARTICLE_ROOT" \
-    bash scripts/publication_pipeline_steps.sh validate
+  ARTICLE_ROOT="$ARTICLE_ROOT" bash scripts/publication_pipeline_steps.sh workbook
+  ARTICLE_ROOT="$ARTICLE_ROOT" bash scripts/publication_pipeline_steps.sh manifests
+  ARTICLE_ROOT="$ARTICLE_ROOT" bash scripts/publication_pipeline_steps.sh validate
 }
 
 finalize() {
-  log_stage "Validate WGCNA/regulatory ranking contract and write checksums"
+  log_stage "Validate ranking extension and write final checksums"
   python - "$FULL_RESULTS/expanded_rses_onco.tsv" <<'PY'
 import sys
 import pandas as pd
 
-path = sys.argv[1]
-frame = pd.read_csv(path, sep="\t", low_memory=False)
+frame = pd.read_csv(sys.argv[1], sep="\t", low_memory=False)
 required = {
   "scoring_extension_version",
   "component_wgcna_expression_network",
@@ -314,7 +313,6 @@ print(f"WGCNA/promoter-aware ranking validated: {len(frame):,} rows")
 PY
 
   python -m pytest -q -p no:cacheprovider
-  mkdir -p "$FULL_RESULTS"
   find "$RESULT_ROOT" "$ARTICLE_ROOT" \
     -type f ! -name SHA256SUMS.txt -print0 \
     | sort -z \
@@ -325,11 +323,11 @@ PY
 
 main() {
   preflight
-  preserve_base_functional_evidence
-  build_promoter_layer
-  build_wgcna_and_regulatory_evidence
+  preserve_base_evidence
+  build_promoter_evidence
+  build_network_evidence
   recompute_rankings
-  rebuild_publication_assets
+  rebuild_publication
   finalize
   log_stage "WGCNA/promoter-aware RSES-Onco resume completed"
 }
