@@ -7,17 +7,31 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_assets_only_entrypoint_includes_extended_evidence() -> None:
+def test_canonical_entrypoint_routes_to_complete_workflow() -> None:
   entrypoint = (
     ROOT / "scripts/run_publication_pipeline.sh"
+  ).read_text(encoding="utf-8")
+  assert "publication_pipeline_complete.sh" in entrypoint
+  assert "assets-only" in entrypoint
+
+
+def test_complete_wrapper_executes_extended_evidence_and_finalization() -> None:
+  wrapper = (
+    ROOT / "scripts/publication_pipeline_complete.sh"
   ).read_text(encoding="utf-8")
   required = {
     "build_model_level_supporting_evidence.py",
     "export_raw_functional_network_evidence.py",
-    "assets-only",
+    "validate_extended_supporting_evidence.py",
+    "build_publication_methods_documentation.py",
+    "create_manual_visual_inspection_checklist.py",
+    'bash "$CORE" "$stage"',
+    'bash "$CORE" workbook',
+    'bash "$CORE" manifests',
+    'bash "$CORE" validate',
   }
-  missing = sorted(value for value in required if value not in entrypoint)
-  assert not missing, f"assets-only entrypoint missing: {missing}"
+  missing = sorted(value for value in required if value not in wrapper)
+  assert not missing, f"complete publication wrapper missing: {missing}"
 
 
 def test_assets_only_core_includes_all_publication_stages() -> None:
