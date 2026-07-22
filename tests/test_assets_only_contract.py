@@ -22,16 +22,26 @@ def test_complete_wrapper_executes_extended_evidence_and_finalization() -> None:
   required = {
     "build_model_level_supporting_evidence.py",
     "export_raw_functional_network_evidence.py",
+    "export_wgcna_regulatory_supporting_evidence.py",
+    "run_wgcna_regulatory_ablation.py",
     "validate_extended_supporting_evidence.py",
+    "validate_wgcna_regulatory_evidence.py",
     "build_publication_methods_documentation.py",
+    "build_wgcna_regulatory_methods.py",
     "create_manual_visual_inspection_checklist.py",
     'bash "$CORE" "$stage"',
     'bash "$CORE" workbook',
     'bash "$CORE" manifests',
     'bash "$CORE" validate',
   }
-  missing = sorted(value for value in required if value not in wrapper)
-  assert not missing, f"complete publication wrapper missing: {missing}"
+  missing = sorted(
+    value
+    for value in required
+    if value not in wrapper
+  )
+  assert not missing, (
+    f"complete publication wrapper missing: {missing}"
+  )
 
 
 def test_assets_only_core_includes_all_publication_stages() -> None:
@@ -50,19 +60,37 @@ def test_assets_only_core_includes_all_publication_stages() -> None:
     "build_publication_manifest.py",
     "validate_publication_outputs.py",
   }
-  missing = sorted(value for value in required if value not in core)
-  assert not missing, f"publication core missing stages: {missing}"
+  missing = sorted(
+    value
+    for value in required
+    if value not in core
+  )
+  assert not missing, (
+    f"publication core missing stages: {missing}"
+  )
 
 
 def test_publication_registry_matches_expanded_contract() -> None:
   config = yaml.safe_load(
-    (ROOT / "config/article_assets.yaml").read_text(encoding="utf-8")
+    (ROOT / "config/article_assets.yaml").read_text(
+      encoding="utf-8"
+    )
   )
-  main_ids = {str(record["id"]) for record in config["main_figures"]}
-  supplementary_ids = {
-    str(record["id"]) for record in config["supplementary_figures"]
+  main_ids = {
+    str(record["id"])
+    for record in config["main_figures"]
   }
-  assert main_ids == {f"Figure_{index}" for index in range(1, 9)}
-  assert supplementary_ids == {f"Figure_S{index}" for index in range(1, 39)}
+  supplementary_ids = {
+    str(record["id"])
+    for record in config["supplementary_figures"]
+  }
+  assert main_ids == {
+    f"Figure_{index}"
+    for index in range(1, 9)
+  }
+  assert supplementary_ids == {
+    f"Figure_S{index}"
+    for index in range(1, 39)
+  }
   assert len(config["main_tables"]) == 4
   assert len(config["supplementary_tables"]) == 25
