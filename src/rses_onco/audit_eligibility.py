@@ -10,13 +10,34 @@ from .audit import (
   DomainSpec,
   candidate_identity,
   domain_specs,
-  evidence_state,
   metadata_for_source,
   numeric,
   present,
   score_family_summary,
   source_metadata,
 )
+
+
+TECHNICAL_STATUS_TOKENS = {
+  "failed",
+  "failure",
+  "error",
+  "timeout",
+  "unavailable",
+  "request_failed",
+  "mapping_request_failed",
+  "invalid_cache",
+  "technical_failure",
+}
+INSUFFICIENT_REASON_TOKENS = {
+  "insufficient",
+  "fewer_than",
+  "too_few",
+  "no_models_in_loss_group",
+  "no_models_in_intact_group",
+  "no_compatible_cancer_models",
+  "no_evaluable_models",
+}
 
 
 def explicit_boolean(value: object) -> bool | None:
@@ -72,6 +93,176 @@ def domain_eligibility(
   return True, "eligible_by_candidate_and_domain_definition"
 
 
+def explicit_absence_reason(
+  record: Mapping[str, object],
+  spec: DomainSpec,
+) -> str:
+  columns: tuple[str, ...]
+  if spec.domain == "tumor_event":
+    columns = ("tumor_event_absence_reason",)
+  elif spec.domain in {"dependency", "selectivity"}:
+    columns = ("dependency_absence_reason",)
+  elif spec.domain == "expression_compensation":
+    columns = ("expression_compensation_absence_reason",)
+  elif spec.domain == "expression_context":
+    columns = ("expression_context_absence_reason",)
+  elif spec.domain == "genetic_phenotype":
+    columns = ("phenotype_profile_absence_reason",)
+  else:
+    columns = (
+      f"{spec.domain}_absence_reason",
+      f"component_{spec.domain}_absence_reason",
+      f"microniche_{spec.domain}_absence_reason",
+    )
+  for column in columns:
+    value = record.get(column)
+    if present(value):
+      return str(value).strip()
+
+  if spec.domain == "expression_context":
+    n_models = numeric(record.get("expression_context_n_models"))
+    if n_models is not None and n_models < 3:
+      return "fewer_than_three_compatible_expression_models"
+  if spec.domain == "genetic_phenotype":
+    n_models = numeric(record.get("phenotype_profile_n_models"))
+    if n_models is not None and n_models < 3:
+      return "fewer_than_three_compatible_crispr_models"
+  if spec.domain == "functional_microniche":
+    observed = numeric(record.get("functional_microniche_n_domains"))
+    if observed is not None and observed == 0:
+      return "no_observed_eligible_functional_microniche_domains"
+  return ""
+
+
+def fallback_absence_reason(spec: DomainSpec) -> str:
+  reasons = {
+    "tumor_event": "no_evaluable_tcga_event_for_gene_and_cancer",
+    "dependency": "conditional_dependency_analysis_not_executable_or_no_observed_contrast",
+    "selectivity": "loss_selectivity_analysis_not_executable_or_no_observed_contrast",
+    "expression_compensation": "expression_compensation_analysis_not_executable_or_no_observed_contrast",
+    "functional_relation": "no_curated_functional_relation_value",
+    "functional_microniche": "no_observed_eligible_functional_microniche_domains",
+    "validation_tractability": "no_curated_validation_or_tractability_value",
+    "expression_context": "no_evaluable_expression_context_profile",
+    "localization": "no_valid_localization_annotation_for_one_or_both_proteins",
+    "biochemical_structural": "no_traceable_biochemical_or_structural_evidence",
+    "genetic_phenotype": "no_evaluable_crispr_phenotype_profile",
+    "interaction_network": "no_string_mapping_or_no_interaction_evidence",
+    "regulatory_network": "no_regulatory_edges_for_one_or_both_genes",
+  }
+  return reasons.get(spec.domain, "evidence_absent_reason_not_recorded_by_upstream_stage")
+
+
+def source_failed(source_info: Mapping[str, object]) -> bool:
+  status = str(source_info.get("source_status") or "").casefold()
+  available = source_info.get("source_available")
+  if available is False:
+    return True
+  return any(token in status for token in TECHNICAL_STATUS_TOKENS)
+
+
+def evidence_state_and_reason(
+  *,
+  eligible: bool,
+  eligibility_reason: str,
+  normalized: float | None,
+  explicit_reason: str,
+  source_info: Mapping[str, object],
+  spec: DomainSpec,
+) -> tuple[str, str]:
+  if not eligible:
+    return "not_eligible", eligibility_reason
+  if normalized is not None:
+    if np.isclose(normalized, 0.0, atol=1e-12):
+      return "negative_evidence", "observed_component_equals_zero"
+    if np.isclose(normalized, 0.5, atol=1e-12):
+      return "neutral_evidence", "observed_component_equals_neutral_midpoint"
+    return "observed_evidence", "observed_component_value"
+
+  reason = explicit_reason or fallback_absence_reason(spec)
+  reason_cf = reason.casefold()
+  if source_failed(source_info):
+    return "technical_failure", (
+      explicit_reason or "technical_failure_or_source_unavailable"
+    )
+  if any(token in reason_cf for token in INSUFFICIENT_REASON_TOKENS):
+    return "insufficient_sample", reason
+  if any(token in reason_cf for token in TECHNICAL_STATUS_TOKENS):
+    return "technical_failure", reason
+  return "missing", reason
+
+
+def evidence_count_details(
+  record: Mapping[str, object],
+  spec: DomainSpec,
+  normalized: float | None,
+) -> tuple[float | None, float | None, str]:
+  explicit_count = numeric(record.get(f"{spec.domain}_evidence_count"))
+  explicit_independent = numeric(
+    record.get(f"{spec.domain}_independent_evidence_count")
+  )
+  if explicit_count is not None or explicit_independent is not None:
+    return (
+      explicit_count,
+      explicit_independent,
+      "explicit_upstream_evidence_count",
+    )
+
+  if spec.domain in {"dependency", "selectivity"}:
+    n_loss = numeric(
+      record.get("dependency_n_loss_observed")
+      or record.get("dependency_n_loss")
+    )
+    n_intact = numeric(
+      record.get("dependency_n_intact_observed")
+      or record.get("dependency_n_intact")
+    )
+    if n_loss is not None and n_intact is not None:
+      return n_loss + n_intact, 1.0, "models_in_one_independent_loss_vs_intact_contrast"
+  if spec.domain == "expression_compensation":
+    n_loss = numeric(
+      record.get("expression_n_loss_observed")
+      or record.get("expression_n_loss")
+    )
+    n_intact = numeric(
+      record.get("expression_n_intact_observed")
+      or record.get("expression_n_intact")
+    )
+    if n_loss is not None and n_intact is not None:
+      return n_loss + n_intact, 1.0, "models_in_one_independent_expression_contrast"
+  if spec.domain == "tumor_event":
+    evaluable = numeric(record.get("tcga_evaluable_n"))
+    if evaluable is not None:
+      return evaluable, 1.0, "evaluable_tcga_samples_in_one_cancer_event_summary"
+  if spec.domain == "expression_context":
+    n_models = numeric(record.get("expression_context_n_models"))
+    if n_models is not None:
+      return n_models, 1.0 if normalized is not None else None, "models_in_one_expression_profile_comparison"
+  if spec.domain == "genetic_phenotype":
+    n_models = numeric(record.get("phenotype_profile_n_models"))
+    if n_models is not None:
+      return n_models, 1.0 if normalized is not None else None, "models_in_one_crispr_profile_comparison"
+  if spec.domain == "functional_microniche":
+    count = numeric(record.get("functional_microniche_n_domains"))
+    if count is not None:
+      return count, count, "observed_independent_microniche_domains"
+  if spec.domain == "validation_tractability":
+    count = sum(
+      present(record.get(column))
+      for column in (
+        "genetic_screen",
+        "isogenic_validation",
+        "in_vivo",
+        "clinical_tractability",
+      )
+    )
+    if count:
+      return float(count), float(count), "observed_curated_validation_fields"
+  if normalized is not None:
+    return 1.0, 1.0, "one_derived_pair_level_component_raw_counts_in_support_table"
+  return None, None, "no_observed_evidence_count"
+
+
 def build_candidate_domain_audit(
   ranking: pd.DataFrame,
   metadata_root,
@@ -107,12 +298,19 @@ def build_candidate_domain_audit(
       eligible, eligibility_reason = eligibility[(spec.family, spec.domain)]
       original = numeric(record.get(spec.column))
       normalized = None if original is None else float(np.clip(original, 0, 1))
-      state, reason = evidence_state(record, spec, eligible, normalized)
       if not eligible:
-        state = "not_eligible"
-        reason = eligibility_reason
-        normalized = None
         original = None
+        normalized = None
+      source_info = metadata_for_source(spec.source, metadata)
+      explicit_reason = explicit_absence_reason(record, spec)
+      state, reason = evidence_state_and_reason(
+        eligible=eligible,
+        eligibility_reason=eligibility_reason,
+        normalized=normalized,
+        explicit_reason=explicit_reason,
+        source_info=source_info,
+        spec=spec,
+      )
       observed, coverage, adjusted, n_domains = score_family_summary(
         record,
         spec.family,
@@ -123,10 +321,10 @@ def build_candidate_domain_audit(
         if eligible and normalized is not None and eligible_weight > 0
         else None
       )
-      source_info = metadata_for_source(spec.source, metadata)
-      evidence_count = record.get(f"{spec.domain}_evidence_count")
-      independent_count = record.get(
-        f"{spec.domain}_independent_evidence_count"
+      evidence_count, independent_count, count_basis = evidence_count_details(
+        record,
+        spec,
+        normalized,
       )
       rows.append({
         **identity,
@@ -152,10 +350,9 @@ def build_candidate_domain_audit(
         "source_status": source_info.get("source_status", "not_recorded"),
         "source_metadata_file": source_info.get("source_metadata_file", ""),
         "source_url": source_info.get("source_url", "not_recorded"),
-        "evidence_count": evidence_count if present(evidence_count) else np.nan,
-        "independent_evidence_count": (
-          independent_count if present(independent_count) else np.nan
-        ),
+        "evidence_count": evidence_count,
+        "independent_evidence_count": independent_count,
+        "evidence_count_basis": count_basis,
         "component_original": original,
         "component_normalized": normalized,
         "component_coverage_adjusted": contribution,
