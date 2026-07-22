@@ -7,7 +7,11 @@ import sys
 import numpy as np
 import pandas as pd
 
-from rses_onco.expanded import coverage_aware_score
+from rses_onco.expanded import (
+  EXPANDED_ONCO_WEIGHTS,
+  FUNCTIONAL_MICRONICHE_WEIGHTS,
+  coverage_aware_score,
+)
 from scripts.build_wgcna_regulatory_layer import (
   REGULATORY_SUBWEIGHTS,
   WGCNA_SUBWEIGHTS,
@@ -153,3 +157,86 @@ def test_consensus_aggregation_prevents_cancer_triplication(
     0.4,
   )
   assert result.loc[0, "consensus_cancers_observed"] == 3
+
+
+def test_recompute_matches_cancer_specific_network_evidence(
+  tmp_path: Path,
+) -> None:
+  rows = []
+  for cancer in ("colon", "lung"):
+    row: dict[str, object] = {
+      "pair_id": "P1",
+      "cancer": cancer,
+      "score_comparability_group": "gene_pair",
+      "microniche_expression_context": 0.8,
+    }
+    for domain in FUNCTIONAL_MICRONICHE_WEIGHTS:
+      row.setdefault(f"microniche_{domain}", 0.5)
+      row[f"eligible_microniche_{domain}"] = True
+    for domain in EXPANDED_ONCO_WEIGHTS:
+      row[f"component_{domain}"] = 0.5
+      row[f"eligible_component_{domain}"] = True
+    rows.append(row)
+  ranking = pd.DataFrame(rows)
+  evidence = pd.DataFrame([
+    {
+      "pair_id": "P1",
+      "cancer": "colon",
+      "component_wgcna_expression_network": 0.2,
+      "component_regulatory_network_composite": 0.3,
+      "regulatory_tf_association_divergence": 0.3,
+      "regulatory_tf_expression_profile_divergence": 0.3,
+      "regulatory_promoter_motif_divergence": 0.3,
+      "regulatory_network_raw": 0.3,
+      "regulatory_network_coverage": 1.0,
+      "promoter_evidence_type": (
+        "JASPAR_motif_prediction_not_direct_binding"
+      ),
+    },
+    {
+      "pair_id": "P1",
+      "cancer": "lung",
+      "component_wgcna_expression_network": 0.8,
+      "component_regulatory_network_composite": 0.9,
+      "regulatory_tf_association_divergence": 0.9,
+      "regulatory_tf_expression_profile_divergence": 0.9,
+      "regulatory_promoter_motif_divergence": 0.9,
+      "regulatory_network_raw": 0.9,
+      "regulatory_network_coverage": 1.0,
+      "promoter_evidence_type": (
+        "JASPAR_motif_prediction_not_direct_binding"
+      ),
+    },
+  ])
+  ranking_path = tmp_path / "ranking.tsv"
+  evidence_path = tmp_path / "evidence.tsv"
+  output_path = tmp_path / "output.tsv"
+  ranking.to_csv(ranking_path, sep="\t", index=False)
+  evidence.to_csv(evidence_path, sep="\t", index=False)
+  subprocess.run(
+    [
+      sys.executable,
+      "scripts/recompute_rses_with_wgcna_regulatory.py",
+      "--ranking",
+      str(ranking_path),
+      "--functional-evidence",
+      str(evidence_path),
+      "--output",
+      str(output_path),
+    ],
+    cwd=ROOT,
+    check=True,
+  )
+  result = pd.read_csv(output_path, sep="\t").set_index("cancer")
+  assert np.isclose(result.loc["colon", "wgcna_expression_network"], 0.2)
+  assert np.isclose(result.loc["lung", "wgcna_expression_network"], 0.8)
+  assert (
+    result.loc["lung", "coverage_adjusted_rses"]
+    > result.loc["colon", "coverage_adjusted_rses"]
+  )
+  assert set(result["scoring_semantics_version"]) == {
+    "eligibility-aware-v1"
+  }
+  assert set(result["expression_regulatory_semantics_version"]) == {
+    "eligibility-aware-wgcna-regulatory-v2"
+  }
