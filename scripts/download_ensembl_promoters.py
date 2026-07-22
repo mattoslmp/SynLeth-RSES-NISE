@@ -3,8 +3,8 @@
 
 Promoter sequence is defined relative to the canonical transcript TSS as 2,000 bp
 upstream and 500 bp downstream on the transcript strand. Coordinates and sequences
-are cached and source failures remain explicit; they are never converted into negative
-regulatory evidence.
+are cached and source failures remain explicit; they are never converted into
+negative regulatory evidence.
 """
 from __future__ import annotations
 
@@ -60,14 +60,19 @@ def request_json(
       )
       if response.ok:
         return response.json()
-      if response.status_code not in {408, 425, 429} and response.status_code < 500:
+      if (
+        response.status_code not in {408, 425, 429}
+        and response.status_code < 500
+      ):
         response.raise_for_status()
     except requests.RequestException:
       if attempt + 1 >= retries:
         raise
     time.sleep(delay)
     delay = min(delay * 2, 30)
-  raise RuntimeError(f"Ensembl request failed after {retries} attempts: {url}")
+  raise RuntimeError(
+    f"Ensembl request failed after {retries} attempts: {url}"
+  )
 
 
 def request_sequence(
@@ -81,12 +86,18 @@ def request_sequence(
     try:
       response = session.get(
         url,
-        headers={"Content-Type": "text/plain", "Accept": "text/plain"},
+        headers={
+          "Content-Type": "text/plain",
+          "Accept": "text/plain",
+        },
         timeout=90,
       )
       if response.ok:
         return response.text.strip().upper()
-      if response.status_code not in {408, 425, 429} and response.status_code < 500:
+      if (
+        response.status_code not in {408, 425, 429}
+        and response.status_code < 500
+      ):
         response.raise_for_status()
     except requests.RequestException:
       if attempt + 1 >= retries:
@@ -96,27 +107,42 @@ def request_sequence(
   raise RuntimeError(f"Ensembl sequence request failed: {region}")
 
 
-def promoter_coordinates(record: dict[str, Any], upstream: int, downstream: int) -> dict[str, Any]:
+def promoter_coordinates(
+  record: dict[str, Any],
+  upstream: int,
+  downstream: int,
+) -> dict[str, Any]:
   transcripts = record.get("Transcript") or []
-  canonical_id = str(record.get("canonical_transcript") or "").split(".")[0]
+  canonical_id = str(
+    record.get("canonical_transcript") or ""
+  ).split(".")[0]
   canonical = next(
     (
       item
       for item in transcripts
-      if str(item.get("id")) == canonical_id or int(item.get("is_canonical") or 0) == 1
+      if str(item.get("id")) == canonical_id
+      or int(item.get("is_canonical") or 0) == 1
     ),
     None,
   )
   if canonical is None:
     canonical = next(
-      (item for item in transcripts if item.get("biotype") == "protein_coding"),
+      (
+        item
+        for item in transcripts
+        if item.get("biotype") == "protein_coding"
+      ),
       None,
     )
   if canonical is None:
     raise ValueError("no_canonical_or_protein_coding_transcript")
   strand = int(canonical["strand"])
   chromosome = str(canonical["seq_region_name"])
-  tss = int(canonical["start"] if strand == 1 else canonical["end"])
+  tss = int(
+    canonical["start"]
+    if strand == 1
+    else canonical["end"]
+  )
   if strand == 1:
     start = max(1, tss - upstream)
     end = tss + downstream
@@ -126,7 +152,10 @@ def promoter_coordinates(record: dict[str, Any], upstream: int, downstream: int)
   return {
     "ensembl_gene_id": record.get("id"),
     "canonical_transcript_id": canonical.get("id"),
-    "assembly": canonical.get("assembly_name") or record.get("assembly_name"),
+    "assembly": (
+      canonical.get("assembly_name")
+      or record.get("assembly_name")
+    ),
     "chromosome": chromosome,
     "strand": strand,
     "tss": tss,
@@ -138,16 +167,35 @@ def promoter_coordinates(record: dict[str, Any], upstream: int, downstream: int)
 
 def main() -> None:
   parser = argparse.ArgumentParser()
-  parser.add_argument("--candidates", default="data/processed/expanded_candidate_universe.tsv")
-  parser.add_argument("--output", default="data/raw/regulatory/ensembl_promoters.tsv")
-  parser.add_argument("--fasta", default="data/raw/regulatory/ensembl_promoters.fa")
-  parser.add_argument("--cache-dir", default="data/raw/regulatory/ensembl_promoter_cache")
-  parser.add_argument("--status-output", default="data/raw/regulatory/ensembl_promoters_status.json")
+  parser.add_argument(
+    "--candidates",
+    default="data/processed/expanded_candidate_universe.tsv",
+  )
+  parser.add_argument(
+    "--output",
+    default="data/raw/regulatory/ensembl_promoters.tsv",
+  )
+  parser.add_argument(
+    "--fasta",
+    default="data/raw/regulatory/ensembl_promoters.fa",
+  )
+  parser.add_argument(
+    "--cache-dir",
+    default="data/raw/regulatory/ensembl_promoter_cache",
+  )
+  parser.add_argument(
+    "--status-output",
+    default="data/raw/regulatory/ensembl_promoters_status.json",
+  )
   parser.add_argument("--upstream", type=int, default=2000)
   parser.add_argument("--downstream", type=int, default=500)
   args = parser.parse_args()
 
-  candidates = pd.read_csv(resolve_path(args.candidates), sep="\t", low_memory=False)
+  candidates = pd.read_csv(
+    resolve_path(args.candidates),
+    sep="\t",
+    low_memory=False,
+  )
   genes = sorted({
     canonical_gene_name(value)
     for column in ("lost_gene", "target_gene")
@@ -169,7 +217,9 @@ def main() -> None:
     for gene in batch:
       cache = cache_dir / f"{gene}.lookup.json"
       if cache.exists() and cache.stat().st_size:
-        lookup[gene] = json.loads(cache.read_text(encoding="utf-8"))
+        lookup[gene] = json.loads(
+          cache.read_text(encoding="utf-8")
+        )
       else:
         uncached.append(gene)
     if uncached:
@@ -182,7 +232,10 @@ def main() -> None:
       for gene in uncached:
         value = response.get(gene)
         lookup[gene] = value
-        atomic_text(json.dumps(value, indent=2, sort_keys=True), cache_dir / f"{gene}.lookup.json")
+        atomic_text(
+          json.dumps(value, indent=2, sort_keys=True),
+          cache_dir / f"{gene}.lookup.json",
+        )
       time.sleep(0.2)
 
   rows: list[dict[str, Any]] = []
@@ -192,7 +245,9 @@ def main() -> None:
     base = {
       "gene": gene,
       "source": "Ensembl REST",
-      "source_url": f"{SERVER}/lookup/symbol/homo_sapiens/{gene}?expand=1",
+      "source_url": (
+        f"{SERVER}/lookup/symbol/homo_sapiens/{gene}?expand=1"
+      ),
       "accessed_at_utc": datetime.now(timezone.utc).isoformat(),
       "promoter_upstream_bp": args.upstream,
       "promoter_downstream_bp": args.downstream,
@@ -201,19 +256,33 @@ def main() -> None:
       rows.append({**base, "status": "symbol_unresolved"})
       continue
     try:
-      coordinates = promoter_coordinates(record, args.upstream, args.downstream)
+      coordinates = promoter_coordinates(
+        record,
+        args.upstream,
+        args.downstream,
+      )
       sequence_cache = cache_dir / f"{gene}.promoter.fa"
       if sequence_cache.exists() and sequence_cache.stat().st_size:
         sequence = "".join(
           line.strip()
-          for line in sequence_cache.read_text(encoding="utf-8").splitlines()
+          for line in sequence_cache.read_text(
+            encoding="utf-8"
+          ).splitlines()
           if not line.startswith(">")
         ).upper()
       else:
-        sequence = request_sequence(session, coordinates["region"])
-        atomic_text(f">{gene}|{coordinates['region']}\n{sequence}\n", sequence_cache)
+        sequence = request_sequence(
+          session,
+          coordinates["region"],
+        )
+        atomic_text(
+          f">{gene}|{coordinates['region']}\n{sequence}\n",
+          sequence_cache,
+        )
         time.sleep(0.1)
-      digest = hashlib.sha256(sequence.encode("utf-8")).hexdigest()
+      digest = hashlib.sha256(
+        sequence.encode("utf-8")
+      ).hexdigest()
       rows.append({
         **base,
         **coordinates,
@@ -221,9 +290,16 @@ def main() -> None:
         "sequence_sha256": digest,
         "status": "available",
       })
-      fasta_lines.extend([f">{gene}|{coordinates['region']}", sequence])
-    except Exception as error:  # preserve source failure explicitly
-      rows.append({**base, "status": "technical_failure", "failure_reason": str(error)})
+      fasta_lines.extend([
+        f">{gene}|{coordinates['region']}",
+        sequence,
+      ])
+    except Exception as error:
+      rows.append({
+        **base,
+        "status": "technical_failure",
+        "failure_reason": str(error),
+      })
 
   frame = pd.DataFrame(rows)
   output.parent.mkdir(parents=True, exist_ok=True)
@@ -231,18 +307,26 @@ def main() -> None:
   frame.to_csv(temporary, sep="\t", index=False)
   temporary.replace(output)
   atomic_text("\n".join(fasta_lines) + "\n", fasta)
+  available = frame["status"].eq("available")
   status = {
     "source": "Ensembl REST",
-    "lookup_endpoint": f"{SERVER}/lookup/symbol/homo_sapiens",
-    "sequence_endpoint": f"{SERVER}/sequence/region/homo_sapiens",
+    "lookup_endpoint": (
+      f"{SERVER}/lookup/symbol/homo_sapiens"
+    ),
+    "sequence_endpoint": (
+      f"{SERVER}/sequence/region/homo_sapiens"
+    ),
     "candidate_gene_count": len(genes),
-    "available_promoters": int(frame["status"].eq("available").sum()),
-    "failed_or_unresolved": int(~frame["status"].eq("available").sum()),
+    "available_promoters": int(available.sum()),
+    "failed_or_unresolved": int((~available).sum()),
     "output": str(output),
     "fasta": str(fasta),
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
   }
-  atomic_text(json.dumps(status, indent=2, sort_keys=True), status_output)
+  atomic_text(
+    json.dumps(status, indent=2, sort_keys=True),
+    status_output,
+  )
   print(frame["status"].value_counts(dropna=False).to_string())
   print(f"Wrote {output}")
   print(f"Wrote {fasta}")
