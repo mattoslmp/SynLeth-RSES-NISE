@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
+import sys
 
 import numpy as np
 import pandas as pd
 
+from rses_onco.expanded import coverage_aware_score
 from scripts.build_wgcna_regulatory_layer import (
   REGULATORY_SUBWEIGHTS,
   WGCNA_SUBWEIGHTS,
@@ -12,7 +15,6 @@ from scripts.build_wgcna_regulatory_layer import (
   jaccard_divergence,
   weighted_subscore,
 )
-from rses_onco.expanded import coverage_aware_score
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -28,7 +30,10 @@ def test_wgcna_subscore_preserves_missingness() -> None:
   )
   assert score["observed_subcomponents"] == 2
   assert 0 < score["coverage"] < 1
-  assert np.isclose(score["adjusted"], score["raw"] * score["coverage"])
+  assert np.isclose(
+    score["adjusted"],
+    score["raw"] * score["coverage"],
+  )
 
 
 def test_regulatory_sublayer_weights_sum_to_one() -> None:
@@ -37,8 +42,14 @@ def test_regulatory_sublayer_weights_sum_to_one() -> None:
 
 
 def test_set_and_profile_divergence_are_bounded() -> None:
-  assert np.isclose(jaccard_divergence({"TF1", "TF2"}, {"TF2"}) or 0, 0.5)
-  value = cosine_divergence({"TF1": 1.0}, {"TF1": -1.0})
+  assert np.isclose(
+    jaccard_divergence({"TF1", "TF2"}, {"TF2"}) or 0,
+    0.5,
+  )
+  value = cosine_divergence(
+    {"TF1": 1.0},
+    {"TF1": -1.0},
+  )
   assert value is not None
   assert np.isclose(value, 1.0)
 
@@ -59,8 +70,11 @@ def test_expression_pairwise_and_wgcna_share_one_domain_weight() -> None:
 
 
 def test_promoter_motifs_are_not_direct_binding_claims() -> None:
-  scanner = (ROOT / "scripts/scan_promoter_motifs.py").read_text(encoding="utf-8")
-  assert '"direct_binding_claim"] = False' in scanner
+  scanner = (
+    ROOT / "scripts/scan_promoter_motifs.py"
+  ).read_text(encoding="utf-8")
+  assert "direct_binding_claim" in scanner
+  assert "= False" in scanner
   assert "not direct TF binding" in scanner
   validator = (
     ROOT / "scripts/validate_wgcna_regulatory_evidence.py"
@@ -72,6 +86,10 @@ def test_resume_pipeline_requires_actual_wgcna_and_fimo() -> None:
   pipeline = (
     ROOT / "scripts/resume_wgcna_regulatory_pipeline.sh"
   ).read_text(encoding="utf-8")
+  builder = (
+    ROOT / "scripts/build_wgcna_regulatory_layer.py"
+  ).read_text(encoding="utf-8")
+  implementation = pipeline + "\n" + builder
   required = {
     "run_wgcna_expression_network.R",
     "download_ensembl_promoters.py",
@@ -83,12 +101,23 @@ def test_resume_pipeline_requires_actual_wgcna_and_fimo() -> None:
     "Rscript",
     "fimo",
   }
-  missing = sorted(value for value in required if value not in pipeline)
-  assert not missing, f"WGCNA regulatory pipeline missing: {missing}"
+  missing = sorted(
+    value
+    for value in required
+    if value not in implementation
+  )
+  assert not missing, (
+    f"WGCNA regulatory pipeline missing: {missing}"
+  )
 
 
-def test_consensus_aggregation_prevents_cancer_triplication(tmp_path: Path) -> None:
-  base = pd.DataFrame({"pair_id": ["P1"], "component_localization": [0.4]})
+def test_consensus_aggregation_prevents_cancer_triplication(
+  tmp_path: Path,
+) -> None:
+  base = pd.DataFrame({
+    "pair_id": ["P1"],
+    "component_localization": [0.4],
+  })
   detailed = pd.DataFrame({
     "pair_id": ["P1", "P1", "P1"],
     "cancer": ["colon", "stomach", "lung"],
@@ -102,9 +131,6 @@ def test_consensus_aggregation_prevents_cancer_triplication(tmp_path: Path) -> N
   output_path = tmp_path / "output.tsv"
   base.to_csv(base_path, sep="\t", index=False)
   detailed.to_csv(detailed_path, sep="\t", index=False)
-
-  import subprocess
-  import sys
 
   subprocess.run(
     [
@@ -122,5 +148,8 @@ def test_consensus_aggregation_prevents_cancer_triplication(tmp_path: Path) -> N
   )
   result = pd.read_csv(output_path, sep="\t")
   assert len(result) == 1
-  assert np.isclose(result.loc[0, "component_wgcna_expression_network"], 0.4)
+  assert np.isclose(
+    result.loc[0, "component_wgcna_expression_network"],
+    0.4,
+  )
   assert result.loc[0, "consensus_cancers_observed"] == 3
