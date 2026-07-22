@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Generate pharmacology priorities, human NISE structural atlas and every article asset.
+# Generate pharmacology priorities, evidence audits, robustness analyses, structures and every publication asset.
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -31,6 +31,7 @@ STRUCTURAL_ANNOTATIONS="${STRUCTURAL_ANNOTATIONS:-data/processed/structures/nise
 STRUCTURAL_COVERAGE="${STRUCTURAL_COVERAGE:-data/processed/structures/nise_structural_annotation_coverage.tsv}"
 STRUCTURE_RENDER_MANIFEST="${STRUCTURE_RENDER_MANIFEST:-data/processed/structures/nise_structure_render_manifest.tsv}"
 STRUCTURE_LOG_DIR="${STRUCTURE_LOG_DIR:-logs/structures_26Q1}"
+RUN_MARKER="${RUN_MARKER:-$LOG_DIR/assets_only_run.marker}"
 
 mkdir -p "$PHARMACOLOGY_DATA" "$PHARMACOLOGY_RESULTS" "$ARTICLE_ROOT" \
   "$LOG_DIR" "$STRUCTURE_LOG_DIR" data/processed/structures data/raw/structures
@@ -51,12 +52,32 @@ run_logged() {
   fi
 }
 
-require_ranking() {
-  if [[ ! -s "$RANKING" ]]; then
-    echo "Expanded ranking is absent: $RANKING" >&2
-    echo "Run the expanded TCGA plus DepMap stage first." >&2
+require_file() {
+  local path="$1"
+  if [[ ! -s "$path" ]]; then
+    echo "Mandatory input is absent or empty: $path" >&2
     exit 1
   fi
+}
+
+preflight_assets() {
+  log_stage "Validate mandatory publication inputs"
+  require_file "$RANKING"
+  require_file "$CANDIDATES"
+  require_file "$DISCOVERY"
+  require_file "$FUNCTIONAL_EVIDENCE"
+  require_file "$PHARMACOLOGY_DATA/pharmacology_evidence_long.tsv"
+  require_file "$STRUCTURE_MANIFEST"
+  require_file "$STRUCTURAL_ANNOTATIONS"
+  require_file "$STRUCTURE_RENDER_MANIFEST"
+  python -m compileall -q src scripts tests
+  bash -n scripts/run_publication_pipeline.sh
+  printf '%s\n' "$(date -Iseconds)" > "$RUN_MARKER"
+  echo "Assets-only run marker: $RUN_MARKER"
+}
+
+require_ranking() {
+  require_file "$RANKING"
 }
 
 acquire_pharmacology() {
@@ -108,43 +129,62 @@ prioritize_pharmacology() {
       --output-dir "$PHARMACOLOGY_RESULTS"
 }
 
+build_evidence_audit() {
+  log_stage "Audit candidate-domain eligibility, missingness, coverage and evidence overlap"
+  run_logged "$LOG_DIR/04b_build_publication_evidence_audit.log" \
+    python -u scripts/build_publication_evidence_audit.py \
+      --ranking "$RANKING" \
+      --functional-evidence "$FUNCTIONAL_EVIDENCE" \
+      --pharmacology-evidence "$PHARMACOLOGY_DATA/pharmacology_evidence_long.tsv" \
+      --source-metadata-root data/raw \
+      --output-root "$ARTICLE_ROOT"
+}
+
+run_robustness() {
+  log_stage "Run raw-versus-adjusted, leave-one-domain-out and weight-sensitivity analyses"
+  run_logged "$LOG_DIR/04c_run_rses_robustness.log" \
+    python -u scripts/run_rses_robustness_analyses.py \
+      --ranking "$RANKING" \
+      --output-root "$ARTICLE_ROOT" \
+      --top-k 20 \
+      --weight-delta 0.20
+}
+
+export_supporting_evidence() {
+  log_stage "Export expression, network, phenotype, genomic, structural and pharmacology support tables"
+  run_logged "$LOG_DIR/04d_export_supporting_evidence.log" \
+    python -u scripts/export_supporting_evidence_tables.py \
+      --ranking "$RANKING" \
+      --functional-evidence "$FUNCTIONAL_EVIDENCE" \
+      --output-root "$ARTICLE_ROOT"
+}
+
 prepare_structures() {
   require_ranking
   log_stage "Download every curated human NISE AlphaFold DB structure"
   run_logged "$STRUCTURE_LOG_DIR/01_download_alphafold.log" \
     python -u scripts/download_alphafold_nise_structures.py \
-      --proteins "$PROTEINS" \
-      --output-dir data/raw/structures/alphafold \
-      --manifest "$STRUCTURE_MANIFEST"
-
+      --proteins "$PROTEINS" --output-dir data/raw/structures/alphafold --manifest "$STRUCTURE_MANIFEST"
   log_stage "Collect exact-numbered M-CSA, UniProt and PDBe residue annotations"
   run_logged "$STRUCTURE_LOG_DIR/02_collect_structural_annotations.log" \
     python -u scripts/collect_nise_structural_annotations.py \
-      --proteins "$PROTEINS" \
-      --output "$STRUCTURAL_ANNOTATIONS" \
-      --coverage-output "$STRUCTURAL_COVERAGE" \
-      --cache-dir data/raw/structures/annotation_cache
-
+      --proteins "$PROTEINS" --output "$STRUCTURAL_ANNOTATIONS" \
+      --coverage-output "$STRUCTURAL_COVERAGE" --cache-dir data/raw/structures/annotation_cache
   log_stage "Render whole structures and enlarged functional-site views with PyMOL"
   run_logged "$STRUCTURE_LOG_DIR/03_render_structures.log" \
     python -u scripts/render_nise_structures.py \
-      --structure-manifest "$STRUCTURE_MANIFEST" \
-      --annotations "$STRUCTURAL_ANNOTATIONS" \
+      --structure-manifest "$STRUCTURE_MANIFEST" --annotations "$STRUCTURAL_ANNOTATIONS" \
       --output-dir "$ARTICLE_ROOT/structure_atlas/individual" \
-      --render-manifest "$STRUCTURE_RENDER_MANIFEST" \
-      --pymol "$PYMOL_EXECUTABLE"
+      --render-manifest "$STRUCTURE_RENDER_MANIFEST" --pymol "$PYMOL_EXECUTABLE"
 }
 
 export_tables() {
   require_ranking
-  log_stage "Export all main and supplementary article tables"
+  log_stage "Export all main, supplementary, audit and robustness article tables"
   run_logged "$LOG_DIR/05_export_article_tables.log" \
     python -u scripts/export_article_tables.py \
-      --ranking "$RANKING" \
-      --candidates "$CANDIDATES" \
-      --members "$MEMBERS" \
-      --functional-evidence "$FUNCTIONAL_EVIDENCE" \
-      --discovery "$DISCOVERY" \
+      --ranking "$RANKING" --candidates "$CANDIDATES" --members "$MEMBERS" \
+      --functional-evidence "$FUNCTIONAL_EVIDENCE" --discovery "$DISCOVERY" \
       --pharmacology-evidence "$PHARMACOLOGY_DATA/pharmacology_evidence_long.tsv" \
       --pharmacology-ranking "$PHARMACOLOGY_RESULTS/pharmacology_ranked_hypotheses.tsv" \
       --drug-sensitivity "$PHARMACOLOGY_DATA/drug_response_selectivity.tsv" \
@@ -158,24 +198,33 @@ export_tables() {
 
 generate_figures() {
   require_ranking
-  log_stage "Generate every main, supplementary and structural figure from scripts"
+  log_stage "Generate every main, supplementary, structural and audit figure from scripts"
   local layout_flag="--strict-layout"
   if [[ "$STRICT_LAYOUT" != "1" ]]; then
     layout_flag="--no-strict-layout"
   fi
   run_logged "$LOG_DIR/06_make_all_article_figures.log" \
     python -u scripts/make_all_article_figures.py \
-      --ranking "$RANKING" \
-      --candidates "$CANDIDATES" \
-      --discovery "$DISCOVERY" \
+      --ranking "$RANKING" --candidates "$CANDIDATES" --discovery "$DISCOVERY" \
       --pharmacology "$PHARMACOLOGY_RESULTS/pharmacology_ranked_hypotheses.tsv" \
-      --proteins "$PROTEINS" \
-      --structure-manifest "$STRUCTURE_MANIFEST" \
+      --proteins "$PROTEINS" --structure-manifest "$STRUCTURE_MANIFEST" \
       --render-manifest "$STRUCTURE_RENDER_MANIFEST" \
       --structural-annotations "$STRUCTURAL_ANNOTATIONS" \
       --structural-coverage "$STRUCTURAL_COVERAGE" \
-      --output-root "$ARTICLE_ROOT" \
-      "$layout_flag"
+      --output-root "$ARTICLE_ROOT" "$layout_flag"
+}
+
+catalog_figure_data() {
+  log_stage "Catalog exact source tables and reproduction commands for every figure"
+  run_logged "$LOG_DIR/06b_catalog_figure_source_data.log" \
+    python -u scripts/catalog_figure_source_data.py --article-root "$ARTICLE_ROOT"
+}
+
+validate_scientific_integrity() {
+  log_stage "Validate missingness, score formula, overlap control, FDR and figure semantics"
+  run_logged "$LOG_DIR/06c_validate_scientific_integrity.log" \
+    python -u scripts/validate_publication_scientific_integrity.py \
+      --article-root "$ARTICLE_ROOT" --run-marker "$RUN_MARKER"
 }
 
 build_workbook() {
@@ -191,43 +240,51 @@ build_manifests() {
   run_logged "$LOG_DIR/08_build_publication_manifest.log" \
     python -u scripts/build_publication_manifest.py \
       --article-root "$ARTICLE_ROOT" \
-      --input "$RANKING" \
-      --input "$CANDIDATES" \
-      --input "$DISCOVERY" \
+      --input "$RANKING" --input "$CANDIDATES" --input "$DISCOVERY" \
       --input "$FUNCTIONAL_EVIDENCE" \
       --input "$PHARMACOLOGY_DATA/pharmacology_evidence_long.tsv" \
       --input "$PHARMACOLOGY_RESULTS/pharmacology_ranked_hypotheses.tsv" \
-      --input "$STRUCTURE_MANIFEST" \
-      --input "$STRUCTURAL_ANNOTATIONS" \
+      --input "$STRUCTURE_MANIFEST" --input "$STRUCTURAL_ANNOTATIONS" \
       --input "$STRUCTURE_RENDER_MANIFEST"
 }
 
 validate_outputs() {
   log_stage "Validate publication package and software tests"
   run_logged "$LOG_DIR/09_validate_publication_outputs.log" \
-    python -u scripts/validate_publication_outputs.py \
-      --article-root "$ARTICLE_ROOT"
+    python -u scripts/validate_publication_outputs.py --article-root "$ARTICLE_ROOT"
   run_logged "$LOG_DIR/10_pytest.log" \
     python -m pytest -q -p no:cacheprovider
 }
 
 all() {
+  preflight_assets
   acquire_pharmacology
   standardize_sensitivity
   analyze_sensitivity
   prioritize_pharmacology
+  build_evidence_audit
+  run_robustness
+  export_supporting_evidence
   prepare_structures
   export_tables
   generate_figures
+  catalog_figure_data
+  validate_scientific_integrity
   build_workbook
   build_manifests
   validate_outputs
 }
 
 assets_only() {
+  preflight_assets
   prioritize_pharmacology
+  build_evidence_audit
+  run_robustness
+  export_supporting_evidence
   export_tables
   generate_figures
+  catalog_figure_data
+  validate_scientific_integrity
   build_workbook
   build_manifests
   validate_outputs
@@ -242,17 +299,19 @@ Stages:
   standardize-sensitivity Standardize local PRISM, GDSC and CTRP releases
   analyze-sensitivity     Test biomarker-matched drug response
   prioritize              Build target-drug actionability priorities
+  evidence-audit          Build candidate-domain coverage, missingness and overlap audits
+  robustness              Run leave-one-domain-out and controlled weight sensitivity
+  supporting-evidence     Export expression, network, phenotype, structural and pharmacology tables
   structures              Download, annotate and render all human NISE structures
-  tables                  Export 4 main and 18 supplementary tables
-  figures                 Generate all 8 main and 32 supplementary figures
+  tables                  Export all main and supplementary tables
+  figures                 Generate all main, supplementary, structural and audit figures
+  figure-data             Catalog the exact table used by every figure
+  scientific-validate     Validate score, missingness, overlap, FDR and figure semantics
   workbook                Build organized Excel workbook
   manifests               Build file inventory, provenance and SHA-256 checksums
-  validate                Validate figure triplets, layout audits, tables and tests
-  assets-only             Rebuild assets from cached pharmacology and structures
+  validate                Validate figure triplets, audits, tables and tests
+  assets-only             Rebuild all publication assets from cached evidence and structures
   all                     Run complete pharmacology, structural and publication workflow
-
-PyMOL is required for the structural atlas:
-  conda install -c conda-forge pymol-open-source
 EOF
 }
 
@@ -262,9 +321,14 @@ case "$stage" in
   standardize-sensitivity) standardize_sensitivity ;;
   analyze-sensitivity) analyze_sensitivity ;;
   prioritize) prioritize_pharmacology ;;
+  evidence-audit) build_evidence_audit ;;
+  robustness) run_robustness ;;
+  supporting-evidence) export_supporting_evidence ;;
   structures) prepare_structures ;;
   tables) export_tables ;;
   figures) generate_figures ;;
+  figure-data) catalog_figure_data ;;
+  scientific-validate) validate_scientific_integrity ;;
   workbook) build_workbook ;;
   manifests) build_manifests ;;
   validate) validate_outputs ;;
