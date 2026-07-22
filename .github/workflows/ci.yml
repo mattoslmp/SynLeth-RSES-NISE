@@ -21,6 +21,7 @@ jobs:
       - run: bash -n scripts/run_publication_pipeline.sh
       - run: bash -n scripts/run_structural_pipeline.sh
       - run: bash -n scripts/verify_complete_article_run.sh
+      - run: bash -n scripts/run_resume_functional_resilient.sh
       - name: Figure triplet smoke test
         run: python -m pytest -q -p no:cacheprovider tests/test_publication.py::test_scripted_figure_exports_png_pdf_svg
       - name: Axes overlap detection test
@@ -33,6 +34,8 @@ jobs:
         run: python -m pytest -q -p no:cacheprovider tests/test_pharmacology.py
       - name: Structural annotation and PML tests
         run: python -m pytest -q -p no:cacheprovider tests/test_structural.py
+      - name: DoRothEA resilience tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_dorothea_resilience.py
       - name: Complete test suite
         run: python -m pytest -q -p no:cacheprovider
       - name: Build complete directed NISE universe
