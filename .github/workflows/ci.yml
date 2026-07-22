@@ -19,6 +19,7 @@ jobs:
       - run: bash -n scripts/run_real_data_pipeline.sh
       - run: bash -n scripts/run_expanded_pipeline.sh
       - run: bash -n scripts/run_publication_pipeline.sh
+      - run: bash -n scripts/publication_pipeline_steps.sh
       - run: bash -n scripts/run_structural_pipeline.sh
       - run: bash -n scripts/verify_complete_article_run.sh
       - name: Figure triplet smoke test
@@ -33,6 +34,18 @@ jobs:
         run: python -m pytest -q -p no:cacheprovider tests/test_pharmacology.py
       - name: Structural annotation and PML tests
         run: python -m pytest -q -p no:cacheprovider tests/test_structural.py
+      - name: Evidence audit and robustness tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_publication_evidence_audit.py
+      - name: Assets-only contract tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_assets_only_contract.py
+      - name: Eligibility-aware scoring tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_eligibility_aware_scoring.py
+      - name: Scoring semantics contract tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_scoring_semantics_contract.py
+      - name: Extended supporting-evidence output tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_extended_supporting_evidence_real_outputs.py
+      - name: Manual inspection checklist output tests
+        run: python -m pytest -q -p no:cacheprovider tests/test_manual_inspection_checklist_real_outputs.py
       - name: Complete test suite
         run: python -m pytest -q -p no:cacheprovider
       - name: Build complete directed NISE universe

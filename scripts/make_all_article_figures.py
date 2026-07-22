@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate and validate every main and supplementary article figure."""
+"""Generate and validate every main, supplementary, structural and audit figure."""
 from __future__ import annotations
 
 import argparse
@@ -49,31 +49,25 @@ def main() -> None:
     strict_flag,
   ]
   run([
-    sys.executable,
-    "-u",
-    "scripts/make_main_figures_resilient.py",
-    *common,
-    "--pharmacology",
-    args.pharmacology,
-    "--top-n",
-    str(args.top_n),
+    sys.executable, "-u", "scripts/make_main_figures_resilient.py", *common,
+    "--pharmacology", args.pharmacology, "--top-n", str(args.top_n),
   ])
   run([
-    sys.executable,
-    "-u",
-    "scripts/make_supplementary_figures_resilient.py",
-    *common,
+    sys.executable, "-u", "scripts/make_supplementary_figures_resilient.py", *common,
   ])
   run([
-    sys.executable,
-    "-u",
-    "scripts/make_nise_structure_figures.py",
+    sys.executable, "-u", "scripts/make_nise_structure_figures.py",
     "--ranking", args.ranking,
     "--proteins", args.proteins,
     "--structure-manifest", args.structure_manifest,
     "--render-manifest", args.render_manifest,
     "--annotations", args.structural_annotations,
     "--coverage", args.structural_coverage,
+    "--output-root", args.output_root,
+    strict_flag,
+  ])
+  run([
+    sys.executable, "-u", "scripts/make_audit_supplementary_figures.py",
     "--output-root", args.output_root,
     strict_flag,
   ])
@@ -84,13 +78,16 @@ def main() -> None:
     "supplementary_figure_manifest.tsv",
     "structural_main_figure_manifest.tsv",
     "structural_supplementary_figure_manifest.tsv",
+    "audit_supplementary_figure_manifest.tsv",
   ]
-  manifests = [
-    pd.read_csv(output_root / "manifests" / name, sep="\t")
-    for name in manifest_names
-  ]
+  manifests = []
+  for name in manifest_names:
+    path = output_root / "manifests" / name
+    if not path.exists() or path.stat().st_size == 0:
+      raise FileNotFoundError(f"Missing or empty figure manifest: {path}")
+    manifests.append(pd.read_csv(path, sep="\t"))
   combined = pd.concat(manifests, ignore_index=True)
-  expected = 40
+  expected = 46
   if len(combined) != expected:
     raise RuntimeError(f"Expected {expected} registered figures; observed {len(combined)}")
   if combined["figure_id"].duplicated().any():
@@ -106,18 +103,24 @@ def main() -> None:
     base = Path(record["base_path"])
     if not base.is_absolute():
       base = ROOT / base
+    source_path = Path(str(record["source_data_path"]))
+    if not source_path.is_absolute():
+      source_path = ROOT / source_path
+    if not source_path.exists() or source_path.stat().st_size == 0:
+      missing.append(str(source_path))
     for extension in ("png", "pdf", "svg"):
       path = base.with_suffix(f".{extension}")
       if not path.exists() or path.stat().st_size == 0:
         missing.append(str(path))
   if missing:
-    raise RuntimeError("Missing or empty figure files:\n" + "\n".join(missing))
+    raise RuntimeError("Missing or empty figure files/source data:\n" + "\n".join(missing))
 
   legend_names = [
     "main_figure_legends.md",
     "supplementary_figure_legends.md",
     "structural_main_figure_legends.md",
     "structural_supplementary_figure_legends.md",
+    "audit_supplementary_figure_legends.md",
   ]
   legends = []
   for name in legend_names:

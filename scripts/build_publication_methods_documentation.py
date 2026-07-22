@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+"""Generate human-readable scientific methods and asset-reproduction documentation."""
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+import pandas as pd
+
+from rses_onco.expanded import EXPANDED_ONCO_WEIGHTS, FUNCTIONAL_MICRONICHE_WEIGHTS
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def resolve_path(value: str) -> Path:
+  path = Path(value)
+  return path if path.is_absolute() else ROOT / path
+
+
+def main() -> None:
+  parser = argparse.ArgumentParser()
+  parser.add_argument("--article-root", default="article_outputs")
+  args = parser.parse_args()
+  article_root = resolve_path(args.article_root)
+  methods_dir = article_root / "manuscript_assets" / "supplementary_methods"
+  methods_dir.mkdir(parents=True, exist_ok=True)
+
+  formula = r"""# RSES-Onco score definition and evidence rules
+
+## Coverage-aware score
+
+For an eligible component $i$ with weight $w_i$ and observed normalized value $x_i \in [0,1]$:
+
+$S_{observed} = \frac{\sum_{i \in O} w_i x_i}{\sum_{i \in O} w_i}$
+
+$C = \frac{\sum_{i \in O} w_i}{\sum_{i \in E} w_i}$
+
+$S_{adjusted} = S_{observed} C = \frac{\sum_{i \in O} w_i x_i}{\sum_{i \in E} w_i}$
+
+Here, $O$ contains observed eligible components and $E$ contains all components eligible under the score definition. A missing component is not converted to zero. A non-eligible component does not enter the observed denominator. Technical source failure is not biological negative evidence. An observed value of zero is retained as observed negative evidence.
+
+## Evidence states
+
+- **Observed evidence:** a numeric component was calculated from available evidence.
+- **Observed negative evidence:** an eligible observed component equals zero.
+- **Observed neutral evidence:** an eligible observed component equals the operational midpoint.
+- **Missing evidence:** no eligible evidence was available and no technical failure was documented.
+- **Insufficient sample:** the analysis could not satisfy the required sample size.
+- **Technical/source failure:** acquisition or mapping failed; this is not scored as zero.
+- **Not eligible:** the candidate/context cannot be evaluated by that domain, for example a composite event that cannot be represented as a single-gene loss.
+
+## Independence and overlap
+
+Evidence representations sharing a publication, original dataset or traceable evidence identifier are grouped into one evidence unit. Repeated aggregators may confirm interpretation but cannot receive more than one combined evidence weight. Score evidence, prioritization evidence, independent validation and interpretative evidence are explicitly distinguished.
+
+## Terminology boundaries
+
+A candidate in the universe is not automatically a discovery. A prioritized hypothesis is not automatically statistically significant. Nominal significance is distinct from FDR support. Conditional dependency is distinct from general essentiality. Experimental tractability is not clinical efficacy.
+"""
+  (methods_dir / "RSES_Onco_score_formula_and_missing_data_rules.md").write_text(formula, encoding="utf-8")
+
+  weights = []
+  for family, mapping in (
+    ("RSES-Onco", EXPANDED_ONCO_WEIGHTS),
+    ("Functional microniche", FUNCTIONAL_MICRONICHE_WEIGHTS),
+  ):
+    for domain, weight in mapping.items():
+      weights.append({"score_family": family, "domain": domain, "weight": weight})
+  pd.DataFrame(weights).to_csv(methods_dir / "RSES_Onco_domain_weights.tsv", sep="\t", index=False)
+
+  inventory_path = article_root / "tables/figure_data/figure_source_data_inventory.tsv"
+  table_manifest_path = article_root / "manifests/table_manifest.tsv"
+  rows = []
+  if inventory_path.exists() and inventory_path.stat().st_size:
+    inventory = pd.read_csv(inventory_path, sep="\t", low_memory=False)
+    for record in inventory.to_dict("records"):
+      rows.append({
+        "asset": record.get("figure_id"),
+        "asset_type": "figure",
+        "script": record.get("generator_script"),
+        "inputs": record.get("input_paths"),
+        "intermediate_or_source_table": record.get("source_table"),
+        "command": record.get("reproduction_command"),
+        "outputs": record.get("figure_base_path"),
+        "dependencies": "Python environment defined by environment.yml and pyproject.toml",
+        "article_location": record.get("category"),
+      })
+  if table_manifest_path.exists() and table_manifest_path.stat().st_size:
+    tables = pd.read_csv(table_manifest_path, sep="\t", low_memory=False)
+    for record in tables.to_dict("records"):
+      rows.append({
+        "asset": record.get("table_id"),
+        "asset_type": "table",
+        "script": record.get("script"),
+        "inputs": record.get("source_paths"),
+        "intermediate_or_source_table": record.get("path"),
+        "command": "MPLBACKEND=Agg bash scripts/run_publication_pipeline.sh assets-only",
+        "outputs": record.get("path"),
+        "dependencies": "Python environment defined by environment.yml and pyproject.toml",
+        "article_location": record.get("category"),
+      })
+  reproduction = pd.DataFrame(rows)
+  reproduction.to_csv(methods_dir / "Table_asset_script_input_output_reproduction.tsv", sep="\t", index=False)
+  markdown = [
+    "# Publication asset reproduction", "",
+    "| Asset | Type | Script | Inputs | Exact source/intermediate table | Command | Output |",
+    "|---|---|---|---|---|---|---|",
+  ]
+  for row in rows:
+    markdown.append(
+      f"| {row['asset']} | {row['asset_type']} | `{row['script']}` | `{row['inputs']}` | "
+      f"`{row['intermediate_or_source_table']}` | `{row['command']}` | `{row['outputs']}` |"
+    )
+  (methods_dir / "PUBLICATION_ASSET_REPRODUCTION.md").write_text("\n".join(markdown) + "\n", encoding="utf-8")
+
+  definitions = pd.DataFrame([
+    {"category": "candidate_universe", "criterion": "Included by a documented curated or systematic candidate-source rule."},
+    {"category": "computational_hypothesis", "criterion": "Candidate received a source-bounded computational score."},
+    {"category": "prioritized_hypothesis", "criterion": "Coverage-adjusted score met the declared prioritization rule."},
+    {"category": "microniche_supported_hypothesis", "criterion": "At least one traceable functional-microniche domain was observed."},
+    {"category": "conditional_dependency_supported_hypothesis", "criterion": "A loss-versus-intact DepMap contrast was executable and observed."},
+    {"category": "nominally_significant_result", "criterion": "P < 0.05 within the declared test family before multiple-testing correction."},
+    {"category": "fdr_supported_result", "criterion": "Benjamini-Hochberg q < 0.05 within the declared family and supportive effect direction."},
+    {"category": "externally_validated_result", "criterion": "Requires an independent dataset not used to construct the score; unavailable unless explicitly documented."},
+    {"category": "experimentally_tractable_candidate", "criterion": "A compound, assay or experimental tool is traceably available; not evidence of efficacy."},
+    {"category": "clinical_evidence", "criterion": "Requires traceable clinical evidence and is never inferred from tractability alone."},
+  ])
+  definitions.to_csv(methods_dir / "evidence_category_definitions.tsv", sep="\t", index=False)
+  print(f"Wrote scientific methods and reproduction documentation to {methods_dir}")
+
+
+if __name__ == "__main__":
+  main()

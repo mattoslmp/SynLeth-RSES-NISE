@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the complete organized main/supplementary article workbook."""
+"""Build the complete organized article, supplementary, QC and evidence workbook."""
 from __future__ import annotations
 
 import argparse
@@ -11,6 +11,7 @@ from openpyxl.utils import get_column_letter
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
+EXCEL_MAX_ROWS = 1_048_576
 
 
 def resolve_path(value: str) -> Path:
@@ -59,6 +60,52 @@ def format_workbook(path: Path) -> None:
   workbook.save(path)
 
 
+def table_groups(article_root: Path) -> list[tuple[str, list[Path]]]:
+  groups = [
+    ("Main", sorted((article_root / "tables/main").glob("*.tsv"))),
+    ("Supplementary", sorted((article_root / "tables/supplementary").glob("*.tsv"))),
+    ("QC", sorted((article_root / "tables/qc").glob("*.tsv"))),
+    ("Score components", sorted((article_root / "tables/score_components").glob("*.tsv"))),
+    ("Robustness", sorted((article_root / "tables/robustness").glob("*.tsv"))),
+    ("Figure data", sorted((article_root / "tables/figure_data").glob("*.tsv"))),
+    ("Supporting evidence", sorted((article_root / "tables/supporting_evidence").rglob("*.tsv"))),
+    ("Manifest", sorted((article_root / "manifests").glob("*.tsv"))),
+  ]
+  return [(category, paths) for category, paths in groups if paths]
+
+
+def write_frame_chunks(
+  writer: pd.ExcelWriter,
+  frame: pd.DataFrame,
+  path: Path,
+  category: str,
+  used: set[str],
+  contents_rows: list[dict[str, object]],
+) -> None:
+  maximum_data_rows = EXCEL_MAX_ROWS - 1
+  if frame.empty:
+    chunks = [(1, frame)]
+  else:
+    chunks = [
+      (index + 1, frame.iloc[start:start + maximum_data_rows])
+      for index, start in enumerate(range(0, len(frame), maximum_data_rows))
+    ]
+  for part, chunk in chunks:
+    suffix = f"_p{part}" if len(chunks) > 1 else ""
+    sheet = safe_sheet_name(path.stem + suffix, used)
+    chunk.to_excel(writer, sheet_name=sheet, index=False)
+    contents_rows.append({
+      "category": category,
+      "sheet": sheet,
+      "source_file": str(path),
+      "part": part,
+      "rows_in_sheet": len(chunk),
+      "total_source_rows": len(frame),
+      "columns": len(frame.columns),
+      "source_status": "available" if path.exists() else "missing",
+    })
+
+
 def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument("--article-root", default="article_outputs")
@@ -67,42 +114,27 @@ def main() -> None:
     default="article_outputs/workbooks/RSES_Onco_Article_Tables_and_Evidence.xlsx",
   )
   args = parser.parse_args()
-
   article_root = resolve_path(args.article_root)
   output = resolve_path(args.output)
   output.parent.mkdir(parents=True, exist_ok=True)
-  main_tables = sorted((article_root / "tables" / "main").glob("*.tsv"))
-  supplementary_tables = sorted(
-    (article_root / "tables" / "supplementary").glob("*.tsv")
-  )
-  manifests = sorted((article_root / "manifests").glob("*.tsv"))
+  groups = table_groups(article_root)
+  main_tables = dict(groups).get("Main", [])
+  supplementary_tables = dict(groups).get("Supplementary", [])
   if not main_tables or not supplementary_tables:
-    raise RuntimeError(
-      "Article tables are absent. Run scripts/export_article_tables.py first."
-    )
+    raise RuntimeError("Article tables are absent. Run scripts/export_article_tables.py first.")
 
-  contents_rows = []
+  contents_rows: list[dict[str, object]] = []
   used: set[str] = set()
   with pd.ExcelWriter(output, engine="openpyxl") as writer:
-    for category, paths in (
-      ("Main", main_tables),
-      ("Supplementary", supplementary_tables),
-      ("Manifest", manifests),
-    ):
+    for category, paths in groups:
       for path in paths:
-        frame = pd.read_csv(path, sep="\t")
-        sheet = safe_sheet_name(path.stem, used)
-        frame.to_excel(writer, sheet_name=sheet, index=False)
-        contents_rows.append({
-          "category": category,
-          "sheet": sheet,
-          "source_file": str(path),
-          "rows": len(frame),
-          "columns": len(frame.columns),
-        })
+        frame = pd.read_csv(path, sep="\t", low_memory=False)
+        write_frame_chunks(writer, frame, path, category, used, contents_rows)
     contents = pd.DataFrame(contents_rows)
     contents.to_excel(writer, sheet_name="Contents", index=False)
   format_workbook(output)
+  if not output.exists() or output.stat().st_size < 1000:
+    raise RuntimeError(f"Workbook was not produced or is too small: {output}")
   print(f"Workbook sheets: {len(contents_rows) + 1}")
   print(f"Wrote {output}")
 

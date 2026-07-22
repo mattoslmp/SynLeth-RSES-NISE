@@ -7,48 +7,51 @@ main_figures:
     file: Figure_1_framework
     title: Expanded RSES-Onco framework
     caption: >-
-      Scripted overview of the source-bounded candidate universe, human functional-microniche evidence,
-      cancer-selective dependency analysis, pharmacological actionability layer and experimental-validation path.
+      Source-bounded candidate universe, functional-microniche evidence, cancer-selective dependency analysis,
+      pharmacological actionability and experimental-validation workflow.
   - id: Figure_2
     file: Figure_2_candidate_universe
     title: Candidate universe across mechanistic classes
     caption: >-
-      Counts of directed candidates by mechanistic class and representation of all curated human NISE activity groups.
+      Complete directed-candidate counts with an explicit enlargement of low-frequency classes and all curated human NISE activity groups.
   - id: Figure_3
     file: Figure_3_cancer_specific_ranking
     title: Cancer-specific RSES-Onco vulnerability ranking
     caption: >-
-      Coverage-adjusted vulnerability rankings for colorectal, gastric and lung cancer, retaining missing domains as missing.
+      Coverage-adjusted vulnerability rankings for colorectal, gastric and lung cancer; composite biomarkers,
+      prioritized hypotheses, nominal results and FDR-supported discoveries remain explicitly distinguished.
   - id: Figure_4
     file: Figure_4_tcga_depmap_integration
     title: Integration of tumor events and conditional dependencies
     caption: >-
-      TCGA/GDC homozygous-deletion prevalence compared with DepMap conditional target selectivity in each cancer context.
+      Biologically bounded TCGA/GDC homozygous-deletion frequencies compared with DepMap conditional target selectivity,
+      with a separate exact-value key for numbered points.
   - id: Figure_5
     file: Figure_5_functional_microniches
     title: Human functional-microniche evidence map
     caption: >-
-      Expression, localization, biochemical/structural, CRISPR phenotype, STRING and regulatory-network components for top candidates.
+      Observed expression, localization, biochemical/structural, CRISPR phenotype, STRING and regulatory-network
+      components; unavailable and non-eligible domains are explicitly marked and never imputed as zero.
   - id: Figure_6
     file: Figure_6_class_discoveries
     title: Mechanistic classes and all-target discoveries
     caption: >-
-      Strongest class-specific and all-target conditional-dependency discoveries with effect size, evidence coverage and FDR context.
+      Class medians, maxima, sample sizes and exact FDR-supported all-target conditional-dependency results.
   - id: Figure_7
     file: Figure_7_pharmacology
     title: Pharmacological actionability and experimental treatment hypotheses
     caption: >-
-      Target-drug actionability, compound evidence, clinical maturity and biomarker-matched sensitivity integrated with vulnerability strength.
+      Compound-resolved actionability hypotheses and the density of all scored pharmacology records; tractability is not clinical efficacy.
   - id: Figure_8
     file: Figure_8_human_nise_structures
     title: Structural basis of representative human NISE vulnerabilities
     caption: >-
-      AlphaFold DB models for representative ranked human NISE directions, with known catalytic, binding, metal and experimental ligand-contact residues highlighted using exact UniProt numbering.
+      AlphaFold DB models for representative ranked human NISE directions, with traceable exact-numbered functional residues.
 
 supplementary_figures:
   - id: Figure_S1
     file: Figure_S1_data_coverage
-    title: Evidence coverage by domain and source
+    title: Evidence coverage by domain, source, cancer, class and missingness reason
   - id: Figure_S2
     file: Figure_S2_all_nise_activities
     title: Complete NISE catalogue and activity-group representation
@@ -142,6 +145,24 @@ supplementary_figures:
   - id: Figure_S32
     file: Figure_S32_pairwise_structural_evidence
     title: Pairwise structural evidence across directed human NISE hypotheses
+  - id: Figure_S33
+    file: Figure_S33_complete_missingness_matrix
+    title: Complete evidence-state and missingness matrix
+  - id: Figure_S34
+    file: Figure_S34_raw_vs_coverage_adjusted
+    title: Observed-domain and coverage-adjusted RSES-Onco scores
+  - id: Figure_S35
+    file: Figure_S35_leave_one_domain_out
+    title: Leave-one-domain-out ranking robustness
+  - id: Figure_S36
+    file: Figure_S36_top_k_stability
+    title: Stability of high-priority candidates
+  - id: Figure_S37
+    file: Figure_S37_evidence_overlap_control
+    title: Evidence overlap and deduplication control
+  - id: Figure_S38
+    file: Figure_S38_evidence_categories
+    title: Explicit evidence-category assignments
 
 main_tables:
   - Table_1_candidate_class_summary.tsv
@@ -168,3 +189,10 @@ supplementary_tables:
   - Table_S16_alphafold_structure_manifest.tsv
   - Table_S17_structural_residue_annotations.tsv
   - Table_S18_structure_render_manifest.tsv
+  - Table_S19_coverage_domain_source_cancer_class.tsv
+  - Table_S20_score_decomposition_and_coverage.tsv
+  - Table_S21_evidence_overlap_and_roles.tsv
+  - Table_S22_candidate_domain_missingness_audit.tsv
+  - Table_S23_rses_ranking_stability.tsv
+  - Table_S24_leave_one_domain_out.tsv
+  - Table_S25_weight_sensitivity.tsv

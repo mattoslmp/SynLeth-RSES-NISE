@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify that the complete real-data, structural and publication workflow finished correctly.
+# Verify that the complete real-data, evidence-audit, structural and publication workflow finished correctly.
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -48,7 +48,9 @@ for key, expected in required.items():
   observed = data.get(key)
   print(f"{key}: {observed}")
   if observed != expected:
-    raise SystemExit(f"Ensembl completeness check failed: {key}={observed!r}, expected {expected!r}")
+    raise SystemExit(
+      f"Ensembl completeness check failed: {key}={observed!r}, expected {expected!r}"
+    )
 print(f"seed_gene_count: {data.get('seed_gene_count')}")
 print(f"directed_paralog_count: {data.get('directed_paralog_count')}")
 PY
@@ -57,6 +59,11 @@ log_stage "Verify that no GDC partial download remains"
 partial_count="$(find "$GDC_DIR" -type f -name '*.part' 2>/dev/null | wc -l | tr -d '[:space:]')"
 echo "GDC .part files: $partial_count"
 test "$partial_count" -eq 0
+
+log_stage "Validate scientific integrity and exact figure-source correspondence"
+MPLBACKEND=Agg \
+python -u scripts/validate_publication_scientific_integrity.py \
+  --article-root "$ARTICLE_ROOT"
 
 log_stage "Validate the complete publication package"
 MPLBACKEND=Agg \
@@ -89,18 +96,26 @@ root = Path(sys.argv[1])
 figures = pd.read_csv(root / "manifests/figure_manifest.tsv", sep="\t")
 tables = pd.read_csv(root / "manifests/table_manifest.tsv", sep="\t")
 
-main_figures = int(figures["figure_id"].astype(str).str.match(r"^Figure_[1-8]$").sum())
-supplementary_figures = int(figures["figure_id"].astype(str).str.match(r"^Figure_S(?:[1-9]|[12][0-9]|3[0-2])$").sum())
+main_figures = int(
+  figures["figure_id"].astype(str).str.match(r"^Figure_[1-8]$").sum()
+)
+supplementary_figures = int(
+  figures["figure_id"].astype(str).str.match(r"^Figure_S(?:[1-9]|[12][0-9]|3[0-8])$").sum()
+)
 image_files = sum(
   1
   for path in (root / "figures").rglob("*")
   if path.is_file() and path.suffix.lower() in {".png", ".pdf", ".svg"}
 )
 structure_renders = sum(
-  1 for path in (root / "structure_atlas/individual").rglob("*.png") if path.is_file()
+  1
+  for path in (root / "structure_atlas/individual").rglob("*.png")
+  if path.is_file()
 )
 main_tables = int(tables["category"].astype(str).eq("main").sum())
-supplementary_tables = int(tables["category"].astype(str).eq("supplementary").sum())
+supplementary_tables = int(
+  tables["category"].astype(str).eq("supplementary").sum()
+)
 
 summary = {
   "main_figures": main_figures,
@@ -115,18 +130,34 @@ for key, value in summary.items():
 
 expected = {
   "main_figures": 8,
-  "supplementary_figures": 32,
-  "exported_figure_files": 120,
+  "supplementary_figures": 38,
+  "exported_figure_files": 138,
   "main_tables": 4,
-  "supplementary_tables": 18,
+  "supplementary_tables": 25,
 }
 for key, value in expected.items():
   if summary[key] != value:
-    raise SystemExit(f"Final asset count failed: {key}={summary[key]}, expected {value}")
+    raise SystemExit(
+      f"Final asset count failed: {key}={summary[key]}, expected {value}"
+    )
 if structure_renders < 140:
   raise SystemExit(
-    f"Final asset count failed: individual_structure_renders={structure_renders}, expected at least 140"
+    "Final asset count failed: "
+    f"individual_structure_renders={structure_renders}, expected at least 140"
   )
+
+required = [
+  root / "tables/qc/candidate_domain_evidence_audit.tsv",
+  root / "tables/qc/evidence_overlap_registry.tsv",
+  root / "tables/score_components/rses_onco_score_decomposition.tsv",
+  root / "tables/robustness/leave_one_domain_out.tsv",
+  root / "tables/figure_data/figure_source_data_inventory.tsv",
+  root / "tables/supporting_evidence/supporting_evidence_manifest.tsv",
+  root / "manifests/scientific_integrity_validation.json",
+]
+for path in required:
+  if not path.exists() or path.stat().st_size == 0:
+    raise SystemExit(f"Missing or empty audit asset: {path}")
 
 provenance_path = root / "manifests/publication_provenance.json"
 if provenance_path.exists():
@@ -136,4 +167,4 @@ if provenance_path.exists():
 PY
 
 log_stage "Complete run validation passed"
-echo "Automated validation is complete. Manual inspection of every figure at 100% zoom remains mandatory."
+echo "Automated validation is complete. Manual inspection of every rendered page and figure at 100% zoom remains mandatory."

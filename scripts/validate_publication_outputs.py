@@ -33,31 +33,22 @@ def validate_structural_atlas(article_root: Path, errors: list[str]) -> None:
   annotation_path = ROOT / "data/processed/structures/nise_structural_residue_annotations.tsv"
   for path in (proteins_path, structure_manifest_path, render_manifest_path, annotation_path):
     require(path, errors)
-  if any(not path.exists() for path in (
-    proteins_path, structure_manifest_path, render_manifest_path
-  )):
+  if any(not path.exists() for path in (proteins_path, structure_manifest_path, render_manifest_path)):
     return
-
   proteins = pd.read_csv(proteins_path, sep="\t").drop_duplicates("uniprot_accession")
   structures = pd.read_csv(structure_manifest_path, sep="\t")
   renders = pd.read_csv(render_manifest_path, sep="\t")
   expected_accessions = set(proteins["uniprot_accession"].astype(str))
-  observed_structures = set(
-    structures.loc[structures["status"].astype(str).eq("ok"), "uniprot_accession"].astype(str)
-  )
+  observed_structures = set(structures.loc[structures["status"].astype(str).eq("ok"), "uniprot_accession"].astype(str))
   if len(expected_accessions) != 70:
     errors.append(f"curated_nise_protein_count:{len(expected_accessions)}:expected_70")
   missing_structures = expected_accessions - observed_structures
   if missing_structures:
     errors.append(f"missing_alphafold_structures:{sorted(missing_structures)}")
-
   ok_renders = renders.loc[renders["status"].astype(str).eq("ok")].copy()
   for accession in sorted(expected_accessions):
-    accession_rows = ok_renders.loc[
-      ok_renders["uniprot_accession"].astype(str).eq(accession)
-    ]
-    views = set(accession_rows["view"].astype(str))
-    missing_views = {"whole", "site"} - views
+    accession_rows = ok_renders.loc[ok_renders["uniprot_accession"].astype(str).eq(accession)]
+    missing_views = {"whole", "site"} - set(accession_rows["view"].astype(str))
     if missing_views:
       errors.append(f"missing_structural_views:{accession}:{sorted(missing_views)}")
     for render_path in accession_rows.get("render_path", pd.Series(dtype=object)).dropna():
@@ -71,7 +62,6 @@ def validate_structural_atlas(article_root: Path, errors: list[str]) -> None:
             errors.append(f"structural_render_too_small:{path}:{width}x{height}")
         except Exception as exc:
           errors.append(f"invalid_structural_image:{path}:{exc}")
-
   structure_dir = article_root / "structure_atlas" / "individual"
   if not structure_dir.is_dir():
     errors.append(f"missing_structure_directory:{structure_dir}")
@@ -85,11 +75,10 @@ def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument("--article-root", default="article_outputs")
   args = parser.parse_args()
-
   article_root = resolve_path(args.article_root)
   errors: list[str] = []
-  manifest_path = article_root / "manifests" / "figure_manifest.tsv"
-  table_manifest_path = article_root / "manifests" / "table_manifest.tsv"
+  manifest_path = article_root / "manifests/figure_manifest.tsv"
+  table_manifest_path = article_root / "manifests/table_manifest.tsv"
   require(manifest_path, errors)
   require(table_manifest_path, errors)
   if errors:
@@ -97,12 +86,12 @@ def main() -> None:
 
   figures = pd.read_csv(manifest_path, sep="\t")
   tables = pd.read_csv(table_manifest_path, sep="\t")
-  if len(figures) != 40:
-    errors.append(f"figure_count:{len(figures)}:expected_40")
+  if len(figures) != 46:
+    errors.append(f"figure_count:{len(figures)}:expected_46")
   if figures["figure_id"].duplicated().any():
     errors.append("duplicate_figure_ids")
   expected_main = {f"Figure_{index}" for index in range(1, 9)}
-  expected_supplementary = {f"Figure_S{index}" for index in range(1, 33)}
+  expected_supplementary = {f"Figure_S{index}" for index in range(1, 39)}
   observed = set(figures["figure_id"].astype(str))
   missing_main = expected_main - observed
   missing_supplementary = expected_supplementary - observed
@@ -134,40 +123,53 @@ def main() -> None:
       source_path = ROOT / source_path
     require(source_path, errors)
 
-  if len(tables) != 22:
-    errors.append(f"table_count:{len(tables)}:expected_22")
+  if len(tables) != 29:
+    errors.append(f"table_count:{len(tables)}:expected_29")
   main_count = int(tables["category"].astype(str).eq("main").sum())
   supplementary_count = int(tables["category"].astype(str).eq("supplementary").sum())
   if main_count != 4:
     errors.append(f"main_table_count:{main_count}:expected_4")
-  if supplementary_count != 18:
-    errors.append(f"supplementary_table_count:{supplementary_count}:expected_18")
+  if supplementary_count != 25:
+    errors.append(f"supplementary_table_count:{supplementary_count}:expected_25")
   for path_value in tables["path"].astype(str):
     path = Path(path_value)
     if not path.is_absolute():
       path = ROOT / path
     require(path, errors)
 
-  require(
-    article_root / "workbooks" / "RSES_Onco_Article_Tables_and_Evidence.xlsx",
-    errors,
-    minimum_size=1000,
-  )
-  require(article_root / "manifests" / "publication_file_inventory.tsv", errors)
-  require(article_root / "manifests" / "publication_provenance.json", errors)
-  require(article_root / "manifests" / "SHA256SUMS.txt", errors)
-  require(article_root / "manuscript_assets" / "all_figure_legends.md", errors)
+  required_audit_outputs = [
+    article_root / "tables/qc/candidate_domain_evidence_audit.tsv",
+    article_root / "tables/qc/coverage_by_domain.tsv",
+    article_root / "tables/qc/coverage_by_source.tsv",
+    article_root / "tables/qc/coverage_by_cancer.tsv",
+    article_root / "tables/qc/coverage_by_mechanistic_class.tsv",
+    article_root / "tables/qc/missingness_reasons.tsv",
+    article_root / "tables/qc/evidence_overlap_registry.tsv",
+    article_root / "tables/score_components/rses_onco_score_decomposition.tsv",
+    article_root / "tables/robustness/leave_one_domain_out.tsv",
+    article_root / "tables/robustness/controlled_weight_perturbation.tsv",
+    article_root / "tables/figure_data/figure_source_data_inventory.tsv",
+    article_root / "tables/supporting_evidence/supporting_evidence_manifest.tsv",
+    article_root / "manifests/scientific_integrity_validation.json",
+  ]
+  for path in required_audit_outputs:
+    require(path, errors)
+
+  require(article_root / "workbooks/RSES_Onco_Article_Tables_and_Evidence.xlsx", errors, minimum_size=1000)
+  require(article_root / "manifests/publication_file_inventory.tsv", errors)
+  require(article_root / "manifests/publication_provenance.json", errors)
+  require(article_root / "manifests/SHA256SUMS.txt", errors)
+  require(article_root / "manuscript_assets/all_figure_legends.md", errors)
   validate_structural_atlas(article_root, errors)
 
   if errors:
-    raise SystemExit(
-      "Publication package validation failed:\n" + "\n".join(f"- {error}" for error in errors)
-    )
+    raise SystemExit("Publication package validation failed:\n" + "\n".join(f"- {error}" for error in errors))
   print("Publication package validation passed.")
-  print("Main figures: 8; supplementary figures: 32; exported image files: 120")
-  print("Main tables: 4; supplementary tables: 18")
+  print("Main figures: 8; supplementary figures: 38; exported image files: 138")
+  print("Main tables: 4; supplementary tables: 25")
   print("All 70 curated NISE proteins have whole and site structural renders.")
   print("All registered figures passed automated layout audits.")
+  print("Coverage, missingness, overlap, robustness and exact figure-source tables are present.")
 
 
 if __name__ == "__main__":
