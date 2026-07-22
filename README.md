@@ -1,6 +1,6 @@
 # SynLeth-RSES-Onco / RSES-Onco
 
-**RSES-Onco v0.10.2** is a coverage-aware framework for discovering and
+**RSES-Onco v0.10.3** is a coverage-aware framework for discovering and
 prioritizing cancer-selective dependencies created by non-homologous
 isofunctional enzymes (NISEs), homologous paralogs, pathway backups, collateral
 deletions and downstream vulnerabilities. The initial disease scope is
@@ -45,13 +45,14 @@ STRING mapping, per-gene caching and recovery after a functional-evidence failur
 are documented in:
 
 - [`docs/STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md`](docs/STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md)
+- [`docs/DOROTHEA_RECOVERY_WORKFLOW.md`](docs/DOROTHEA_RECOVERY_WORKFLOW.md)
 
 The canonical post-run verification command is:
 
 ```bash
 MPLBACKEND=Agg \
 GDC_DIR=/absolute/path/to/data/raw/gdc \
-PIPELINE_EXITCODE_FILE=logs/run_expanded_after_download_v0101.exitcode \
+PIPELINE_EXITCODE_FILE=logs/run_expanded_after_download_v0103.exitcode \
 bash scripts/verify_complete_article_run.sh
 ```
 
@@ -104,10 +105,10 @@ PYTHONUNBUFFERED=1 \
 DEPMAP_DIR="$DEPMAP_DIR" \
 GDC_DIR="$GDC_DIR" \
 bash scripts/run_expanded_pipeline.sh after-download \
-  2>&1 | tee logs/run_expanded_after_download_v0101.log
+  2>&1 | tee logs/run_expanded_after_download_v0103.log
 
 status=${PIPESTATUS[0]}
-echo "$status" > logs/run_expanded_after_download_v0101.exitcode
+echo "$status" > logs/run_expanded_after_download_v0103.exitcode
 echo "Exit code: $status"
 test "$status" -eq 0
 ```
@@ -123,7 +124,7 @@ After it finishes, execute:
 ```bash
 MPLBACKEND=Agg \
 GDC_DIR="$GDC_DIR" \
-PIPELINE_EXITCODE_FILE=logs/run_expanded_after_download_v0101.exitcode \
+PIPELINE_EXITCODE_FILE=logs/run_expanded_after_download_v0103.exitcode \
 bash scripts/verify_complete_article_run.sh \
   2>&1 | tee logs/verify_complete_article_run.log
 ```
@@ -153,10 +154,10 @@ PYTHONUNBUFFERED=1 \
 DEPMAP_DIR="$DEPMAP_DIR" \
 GDC_DIR="$GDC_DIR" \
 bash scripts/run_expanded_pipeline.sh resume-functional \
-  2>&1 | tee logs/run_expanded_resume_functional_v0102.log
+  2>&1 | tee logs/run_expanded_resume_functional_v0103.log
 
 status=${PIPESTATUS[0]}
-echo "$status" > logs/run_expanded_resume_functional_v0102.exitcode
+echo "$status" > logs/run_expanded_resume_functional_v0103.exitcode
 echo "Resume exit code: $status"
 test "$status" -eq 0
 ```
@@ -164,8 +165,16 @@ test "$status" -eq 0
 The STRING downloader maps symbols to exact STRING IDs, uses the version-specific
 stable API, waits one second between network calls, writes per-gene caches and
 reuses completed queries after interruption. It records unmapped identifiers as
-missing coverage rather than score zero. Persistent request failures remain fatal
-in the strict pipeline stage after status and resume files have been written.
+missing coverage rather than score zero. Persistent STRING request failures remain
+fatal after status and resume files have been written.
+
+The resilient DoRothEA stage first reuses a valid local cache, then tries multiple
+official OmniPath service addresses and both supported organism parameter spellings.
+A persistent OmniPath outage is recorded in
+`data/raw/human_functional_evidence/omnipath_dorothea_status.json`; regulatory-network
+evidence remains missing and is not converted to zero. Set `DOROTHEA_STRICT=1` to
+make the outage fatal, or set `DOROTHEA_FILE=/absolute/path/to/dorothea.tsv` to use a
+validated local table.
 
 ## Structural atlas only
 
@@ -280,6 +289,7 @@ article_outputs/
 
 - [`docs/END_TO_END_ARTICLE_PROTOCOL.md`](docs/END_TO_END_ARTICLE_PROTOCOL.md)
 - [`docs/STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md`](docs/STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md)
+- [`docs/DOROTHEA_RECOVERY_WORKFLOW.md`](docs/DOROTHEA_RECOVERY_WORKFLOW.md)
 - [`docs/REAL_DATA_WORKFLOW.md`](docs/REAL_DATA_WORKFLOW.md)
 - [`docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md`](docs/EXPANDED_HUMAN_EVIDENCE_WORKFLOW.md)
 - [`docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md`](docs/ALL_CLASS_AND_ALL_TARGET_DISCOVERY.md)

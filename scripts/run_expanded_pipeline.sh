@@ -28,6 +28,8 @@ LOSS_THRESHOLD="${LOSS_THRESHOLD:-0.30}"
 MIN_GROUP_SIZE="${MIN_GROUP_SIZE:-3}"
 DISCOVERY_FDR="${DISCOVERY_FDR:-0.10}"
 DISCOVERY_MIN_DELTA="${DISCOVERY_MIN_DELTA:-0.15}"
+DOROTHEA_STRICT="${DOROTHEA_STRICT:-0}"
+DOROTHEA_FILE="${DOROTHEA_FILE:-}"
 
 mkdir -p "$PROCESSED_DIR" "$DEPMAP_RESULTS" "$FULL_RESULTS" \
   "$DISCOVERY_RESULTS" "$LOG_DIR" supplementary
@@ -124,12 +126,19 @@ discover_all_targets() {
 
 acquire_functional_evidence() {
   log_stage "Acquire STRING, DoRothEA, HPA and UniProt evidence"
-  run_logged "$LOG_DIR/08_human_functional_evidence.log" \
-    python -u scripts/download_human_functional_evidence.py \
-      --candidates "$CANDIDATES" \
-      --raw-dir data/raw/human_functional_evidence \
-      --output "$FUNCTIONAL_EVIDENCE" \
-      --strict-string-requests
+  local command=(
+    python -u scripts/download_human_functional_evidence_resilient.py
+    --candidates "$CANDIDATES"
+    --raw-dir data/raw/human_functional_evidence
+    --output "$FUNCTIONAL_EVIDENCE"
+  )
+  if [[ "$DOROTHEA_STRICT" == "1" ]]; then
+    command+=(--strict-dorothea)
+  fi
+  if [[ -n "$DOROTHEA_FILE" ]]; then
+    command+=(--dorothea-file "$DOROTHEA_FILE")
+  fi
+  run_logged "$LOG_DIR/08_human_functional_evidence.log" "${command[@]}"
 }
 
 run_depmap_expanded() {
@@ -283,6 +292,10 @@ Stages:
   all               Complete workflow including GDC acquisition
   publication       Rebuild pharmacology, main/supplementary figures and tables from existing scores
   discover-all-cn   Optional broad screen with every eligible copy-number loss gene
+
+Functional evidence controls:
+  DOROTHEA_STRICT=1      Require DoRothEA instead of preserving an outage as missing coverage
+  DOROTHEA_FILE=/path    Use a local standardized DoRothEA TSV
 EOF
 }
 
