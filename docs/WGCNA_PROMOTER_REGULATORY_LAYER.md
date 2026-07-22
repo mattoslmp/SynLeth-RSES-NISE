@@ -9,9 +9,9 @@ This implementation keeps the original functional-microniche domain weights. It 
 The existing expression-context domain is internally decomposed into:
 
 - cancer-specific pairwise expression divergence: 0.50;
-- consensus signed WGCNA context: 0.50.
+- cancer-specific signed WGCNA context: 0.50.
 
-WGCNA uses DepMap log2(TPM+1), cancer-compatible models, all mapped candidate genes plus cancer-specific highly variable genes, biweight midcorrelation, signed adjacency, signed TOM, dynamic tree cut, merged modules, kME and intramodular connectivity. The pair subscore combines TOM divergence (0.40), module divergence (0.30) and kME divergence (0.30). Cancer-specific results remain available, but the functional prior uses their median so cancers are not counted as independent evidence units.
+WGCNA uses DepMap log2(TPM+1), cancer-compatible models, all mapped candidate genes plus cancer-specific highly variable genes, biweight midcorrelation, signed adjacency, signed TOM, dynamic tree cut, merged modules, kME and intramodular connectivity. The pair subscore combines TOM divergence (0.40), module divergence (0.30) and kME divergence (0.30). Each cancer-specific RSES-Onco row receives only the WGCNA network derived from the corresponding cancer models. A separate median consensus table is retained for pair-level source compatibility and descriptive reporting, not as an additional evidence unit.
 
 ### Regulatory-network domain
 
@@ -21,19 +21,22 @@ The existing regulatory-network domain is internally decomposed into:
 - cancer-specific TF-target expression-profile divergence: 0.35;
 - JASPAR promoter motif divergence: 0.25.
 
-Canonical promoter windows are based on Ensembl canonical transcript TSS coordinates, 2 kb upstream and 500 bp downstream. JASPAR 2026 CORE vertebrate non-redundant motifs are scanned with FIMO.
+Canonical promoter windows are based on Ensembl canonical-transcript TSS coordinates, 2 kb upstream and 500 bp downstream. JASPAR 2026 CORE vertebrate non-redundant motifs are scanned with FIMO. Each cancer score receives the DoRothEA/TF-expression regulatory context calculated for that cancer; promoter motif annotations are sequence based and therefore shared across cancers without being multiplied into separate evidence units.
 
 A JASPAR motif is predicted cis-regulatory support. It is not direct TF binding, ChIP evidence, promoter occupancy, causal regulation or experimental validation. The pipeline sets `direct_promoter_binding_claim = false` and rejects outputs that violate this rule.
 
-### Missingness and overlap
+### Missingness, overlap and ablation
 
 Missing subcomponents are not zero-imputed. They lower internal coverage. The total parent-domain weights remain unchanged, preventing expression-derived and regulatory-derived evidence from being counted multiple times.
+
+Ablations remove the selected subcomponent from the eligible internal model and renormalize the retained subcomponents. This differs from treating the ablated source as missing. The workflow evaluates rankings without WGCNA, pairwise expression, DoRothEA regulator sets, TF-expression consistency, promoter motifs and the complete regulatory domain.
 
 ## New source tables
 
 - `data/processed/regulatory/wgcna/wgcna_pair_metrics_all_cancers.tsv`
 - `data/processed/regulatory/wgcna/wgcna_input_preparation.tsv`
 - `data/processed/regulatory/promoter_tf_regulatory_pair_metrics.tsv`
+- `data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv`
 - `data/raw/regulatory/ensembl_promoters.tsv`
 - `data/raw/regulatory/ensembl_promoters.fa`
 - `data/processed/regulatory/jaspar_promoter_motif_hits.tsv`
@@ -47,7 +50,7 @@ Missing subcomponents are not zero-imputed. They lower internal coverage. The to
 conda activate rses-onco
 conda install -c conda-forge -c bioconda \
   'r-base>=4.3' \
-  'r-wgcna>=1.74' \
+  r-wgcna \
   r-dynamictreecut \
   r-fastcluster \
   meme
@@ -67,7 +70,7 @@ The STRING, DoRothEA, HPA and UniProt caches do not need to be downloaded again.
 bash scripts/resume_wgcna_regulatory_pipeline.sh resume-regulatory
 ```
 
-The command preserves the pre-WGCNA functional evidence, downloads/caches promoter and JASPAR data, runs WGCNA and FIMO, recalculates the DepMap-only and integrated TCGA/DepMap scores, regenerates pharmacology and publication assets, performs sublayer ablation analyses, validates the package, runs the complete test suite and rebuilds checksums.
+The command preserves the pre-WGCNA functional evidence, downloads and caches promoter and JASPAR data, runs WGCNA and FIMO, recalculates the DepMap-only and integrated TCGA/DepMap scores, regenerates pharmacology and publication assets, performs sublayer ablations, validates the package, runs the complete test suite and rebuilds checksums. Cached pharmacology and structure outputs are reused through `assets-only` when present; the full publication acquisition path is selected automatically only when a mandatory cache is absent.
 
 ## Required validation
 
