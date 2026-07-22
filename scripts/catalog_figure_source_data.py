@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
-"""Catalog and validate the exact machine-readable table used by every figure.
-
-The figure generators already write source-data TSV files before rendering. This
-script copies those exact tables into a reader-oriented hierarchy and records the
-figure, generator, inputs, output formats, column meanings when documented, and the
-reproduction command. It fails if any registered figure lacks source data.
-"""
+"""Catalog and validate the exact machine-readable table used by every figure."""
 from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
 import hashlib
-import json
 from pathlib import Path
 import shutil
+import subprocess
+import sys
 
 import pandas as pd
 
@@ -41,11 +36,13 @@ def infer_category(figure_id: str) -> str:
   return "main" if figure_id.startswith("Figure_") and not figure_id.startswith("Figure_S") else "supplementary"
 
 
-def command_for_script(script: str, article_root: Path) -> str:
-  if script.endswith("make_main_figures.py") or "make_main_figures" in script:
+def command_for_script(script: str) -> str:
+  if "make_main_figures" in script:
     return "MPLBACKEND=Agg python -u scripts/make_main_figures_resilient.py --output-root article_outputs --strict-layout"
-  if script.endswith("make_supplementary_figures.py") or "make_supplementary_figures" in script:
+  if "make_supplementary_figures" in script:
     return "MPLBACKEND=Agg python -u scripts/make_supplementary_figures_resilient.py --output-root article_outputs --strict-layout"
+  if "make_audit_supplementary_figures" in script:
+    return "MPLBACKEND=Agg python -u scripts/make_audit_supplementary_figures.py --output-root article_outputs --strict-layout"
   if "structure" in script:
     return "MPLBACKEND=Agg python -u scripts/make_nise_structure_figures.py --output-root article_outputs --strict-layout"
   return "MPLBACKEND=Agg bash scripts/run_publication_pipeline.sh figures"
@@ -56,7 +53,7 @@ def main() -> None:
   parser.add_argument("--article-root", default="article_outputs")
   args = parser.parse_args()
   article_root = resolve_path(args.article_root)
-  manifest_path = article_root / "manifests" / "figure_manifest.tsv"
+  manifest_path = article_root / "manifests/figure_manifest.tsv"
   if not manifest_path.exists() or manifest_path.stat().st_size == 0:
     raise FileNotFoundError(f"Missing or empty figure manifest: {manifest_path}")
   manifest = read_tsv(manifest_path)
@@ -108,7 +105,7 @@ def main() -> None:
       "columns": len(frame.columns),
       "generator_script": script,
       "input_paths": record.get("input_paths"),
-      "reproduction_command": command_for_script(script, article_root),
+      "reproduction_command": command_for_script(script),
       "rendered_formats": ";".join(formats),
       "figure_base_path": str(base),
       "catalogued_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -135,7 +132,6 @@ def main() -> None:
   catalog_dir = article_root / "tables" / "figure_data"
   inventory.to_csv(catalog_dir / "figure_source_data_inventory.tsv", sep="\t", index=False)
   columns.to_csv(catalog_dir / "figure_source_data_column_dictionary.tsv", sep="\t", index=False)
-
   readme_lines = [
     "# Figure source-data reproduction", "",
     "Every registered figure has an exact TSV copy in `main/` or `supplementary/`.",
@@ -149,6 +145,11 @@ def main() -> None:
       f"`{row['source_table']}` | `{row['reproduction_command']}` |"
     )
   (catalog_dir / "README.md").write_text("\n".join(readme_lines) + "\n", encoding="utf-8")
+
+  subprocess.run([
+    sys.executable, "-u", "scripts/build_publication_methods_documentation.py",
+    "--article-root", str(article_root),
+  ], cwd=ROOT, check=True)
   print(f"Catalogued exact source data for {len(inventory)} figures.")
   print(f"Inventory: {catalog_dir / 'figure_source_data_inventory.tsv'}")
 
