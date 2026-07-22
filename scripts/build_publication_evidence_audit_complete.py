@@ -41,6 +41,14 @@ def read_optional(path: Path) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def first_existing(frame: pd.DataFrame, columns: tuple[str, ...]) -> pd.Series:
+  result = pd.Series(pd.NA, index=frame.index, dtype="object")
+  for column in columns:
+    if column in frame:
+      result = result.fillna(frame[column])
+  return result
+
+
 def source_table(path: Path, label: str) -> pd.DataFrame:
   frame = read_optional(path)
   if frame.empty:
@@ -49,6 +57,28 @@ def source_table(path: Path, label: str) -> pd.DataFrame:
   if "source" in frame.columns:
     frame["source_record_identifier"] = frame["source"]
   frame["source"] = label
+  if "target_gene" not in frame:
+    frame["target_gene"] = first_existing(
+      frame,
+      (
+        "target_genesymbol", "preferredName_B", "preferredName",
+        "Gene name", "gene_name", "gene", "Entry",
+      ),
+    )
+  if "source_gene" not in frame:
+    frame["source_gene"] = first_existing(
+      frame,
+      ("source_genesymbol", "query_gene", "preferredName_A", "Gene name"),
+    )
+  stable_columns = [
+    column for column in frame.columns
+    if column not in {"evidence_id"}
+  ]
+  normalized = frame[stable_columns].copy()
+  for column in normalized.columns:
+    normalized[column] = normalized[column].astype(str)
+  hashes = pd.util.hash_pandas_object(normalized, index=False).astype("uint64")
+  frame["evidence_id"] = [f"{label}:{value:016x}" for value in hashes]
   return frame
 
 
@@ -94,8 +124,8 @@ def main() -> None:
     )
   )
   named_tables = [
-    ("functional_pair_evidence", read_optional(functional_path), functional_path),
-    ("pharmacology_evidence", read_optional(pharmacology_path), pharmacology_path),
+    ("functional_pair_evidence", source_table(functional_path, "functional_pair_evidence"), functional_path),
+    ("pharmacology_evidence", source_table(pharmacology_path, "pharmacology_evidence"), pharmacology_path),
     (
       "STRING",
       source_table(raw_dir / "string_interaction_partners.tsv", "STRING"),
