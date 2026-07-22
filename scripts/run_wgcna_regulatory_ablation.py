@@ -54,10 +54,18 @@ def numeric(value: object) -> float | None:
 def explicit_bool(value: object) -> bool:
   if isinstance(value, bool):
     return value
-  return str(value).strip().casefold() in {"1", "true", "yes", "eligible"}
+  return str(value).strip().casefold() in {
+    "1",
+    "true",
+    "yes",
+    "eligible",
+  }
 
 
-def subscore(values: dict[str, float | None], weights: dict[str, float]) -> float | None:
+def subscore(
+  values: dict[str, float | None],
+  weights: dict[str, float],
+) -> float | None:
   result = coverage_aware_score(values, weights)
   return (
     result.adjusted_score
@@ -66,17 +74,24 @@ def subscore(values: dict[str, float | None], weights: dict[str, float]) -> floa
   )
 
 
-def score_scenario(record: dict[str, object], scenario: str) -> float | None:
+def score_scenario(
+  record: dict[str, object],
+  scenario: str,
+) -> float | None:
   expression_values = {
     "pairwise": numeric(record.get("pairwise_expression_context")),
     "wgcna": numeric(record.get("wgcna_expression_network")),
   }
   regulatory_values = {
-    "dorothea": numeric(record.get("regulatory_tf_association_divergence")),
+    "dorothea": numeric(
+      record.get("regulatory_tf_association_divergence")
+    ),
     "tf_expression": numeric(
       record.get("regulatory_tf_expression_profile_divergence")
     ),
-    "promoter": numeric(record.get("regulatory_promoter_motif_divergence")),
+    "promoter": numeric(
+      record.get("regulatory_promoter_motif_divergence")
+    ),
   }
   if scenario == "without_wgcna":
     expression_values["wgcna"] = None
@@ -132,7 +147,11 @@ def score_scenario(record: dict[str, object], scenario: str) -> float | None:
     onco_components,
     eligible_domains=eligible_onco,
   )
-  return onco.adjusted_score if np.isfinite(onco.adjusted_score) else None
+  return (
+    onco.adjusted_score
+    if np.isfinite(onco.adjusted_score)
+    else None
+  )
 
 
 def main() -> None:
@@ -145,7 +164,11 @@ def main() -> None:
   parser.add_argument("--top-k", type=int, default=20)
   args = parser.parse_args()
 
-  ranking = pd.read_csv(resolve_path(args.ranking), sep="\t", low_memory=False)
+  ranking = pd.read_csv(
+    resolve_path(args.ranking),
+    sep="\t",
+    low_memory=False,
+  )
   required = {
     "cancer",
     "pair_id",
@@ -158,13 +181,22 @@ def main() -> None:
   }
   missing = sorted(required - set(ranking.columns))
   if missing:
-    raise ValueError(f"Ranking lacks WGCNA/regulatory ablation fields: {missing}")
+    raise ValueError(
+      f"Ranking lacks WGCNA/regulatory ablation fields: {missing}"
+    )
 
   scenario_rows = []
   summary_rows = []
-  baseline = ranking[["cancer", "pair_id", "coverage_adjusted_rses"]].copy()
+  baseline = ranking[[
+    "cancer",
+    "pair_id",
+    "coverage_adjusted_rses",
+  ]].copy()
   for scenario in SCENARIOS:
-    values = [score_scenario(record, scenario) for record in ranking.to_dict("records")]
+    values = [
+      score_scenario(record, scenario)
+      for record in ranking.to_dict("records")
+    ]
     frame = ranking[[
       column
       for column in (
@@ -180,11 +212,17 @@ def main() -> None:
     frame["scenario_rank"] = frame.groupby(
       [
         column
-        for column in ("cancer", "score_comparability_group")
+        for column in (
+          "cancer",
+          "score_comparability_group",
+        )
         if column in frame
       ],
       dropna=False,
-    )["scenario_adjusted_score"].rank(method="min", ascending=False)
+    )["scenario_adjusted_score"].rank(
+      method="min",
+      ascending=False,
+    )
     scenario_rows.append(frame)
 
     merged = baseline.merge(
@@ -193,19 +231,31 @@ def main() -> None:
       how="inner",
     )
     for cancer, group in merged.groupby("cancer", dropna=False):
-      valid = group[["coverage_adjusted_rses", "scenario_adjusted_score"]].dropna()
+      valid = group[[
+        "coverage_adjusted_rses",
+        "scenario_adjusted_score",
+      ]].dropna()
       rho = (
-        float(spearmanr(valid.iloc[:, 0], valid.iloc[:, 1]).statistic)
+        float(
+          spearmanr(
+            valid.iloc[:, 0],
+            valid.iloc[:, 1],
+          ).statistic
+        )
         if len(valid) >= 3
         else np.nan
       )
       base_top = set(
-        group.sort_values("coverage_adjusted_rses", ascending=False)
-          .head(args.top_k)["pair_id"].astype(str)
+        group.sort_values(
+          "coverage_adjusted_rses",
+          ascending=False,
+        ).head(args.top_k)["pair_id"].astype(str)
       )
       scenario_top = set(
-        group.sort_values("scenario_adjusted_score", ascending=False)
-          .head(args.top_k)["pair_id"].astype(str)
+        group.sort_values(
+          "scenario_adjusted_score",
+          ascending=False,
+        ).head(args.top_k)["pair_id"].astype(str)
       )
       union = base_top | scenario_top
       summary_rows.append({
@@ -224,9 +274,7 @@ def main() -> None:
 
   root = resolve_path(args.article_root)
   output_dir = root / "tables/robustness"
-  supplementary_dir = root / "tables/supplementary"
   output_dir.mkdir(parents=True, exist_ok=True)
-  supplementary_dir.mkdir(parents=True, exist_ok=True)
   scenarios = pd.concat(scenario_rows, ignore_index=True)
   summary = pd.DataFrame(summary_rows)
   scenarios.to_csv(
@@ -236,11 +284,6 @@ def main() -> None:
   )
   summary.to_csv(
     output_dir / "wgcna_regulatory_ablation_summary.tsv",
-    sep="\t",
-    index=False,
-  )
-  summary.to_csv(
-    supplementary_dir / "Table_S26_wgcna_regulatory_ablation.tsv",
     sep="\t",
     index=False,
   )
