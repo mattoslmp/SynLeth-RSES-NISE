@@ -12,10 +12,33 @@ if str(ROOT) not in sys.path:
 import scripts.make_main_figures as target
 from scripts.publication_layout_resilience import save_figure_triplet
 from scripts.publication_scientific_semantics import (
+  add_display_pair_columns,
   figure_6 as semantic_figure_6,
   figure_7 as semantic_figure_7,
   pair_labels,
 )
+
+_original_figure_3 = target.figure_3
+
+
+def figure_3(
+  item,
+  ranking,
+  output_dir,
+  source_dir,
+  strict,
+  input_path,
+  top_n,
+):
+  return _original_figure_3(
+    item,
+    add_display_pair_columns(ranking),
+    output_dir,
+    source_dir,
+    strict,
+    input_path,
+    top_n,
+  )
 
 
 def figure_6(
@@ -62,6 +85,7 @@ def figure_7(
 
 target.save_figure_triplet = save_figure_triplet
 target.pair_labels = pair_labels
+target.figure_3 = figure_3
 target.figure_6 = figure_6
 target.figure_7 = figure_7
 
