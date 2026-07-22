@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the evidence audit and finalize complete coverage and overlap views."""
+"""Run the eligibility-aware evidence audit and finalize coverage/overlap views."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,6 +14,10 @@ if str(ROOT) not in sys.path:
 
 import scripts.build_publication_evidence_audit as target
 from rses_onco.audit import coverage_summary
+from rses_onco.audit_eligibility import (
+  build_candidate_domain_audit,
+  score_decomposition,
+)
 
 
 def argument_value(name: str, default: str) -> str:
@@ -71,11 +75,15 @@ def source_table(path: Path, label: str) -> pd.DataFrame:
       frame,
       ("source_genesymbol", "query_gene", "preferredName_A", "Gene name"),
     )
-  normalized = frame[[column for column in frame.columns if column != "evidence_id"]].copy()
+  normalized = frame[[
+    column for column in frame.columns if column != "evidence_id"
+  ]].copy()
   for column in normalized.columns:
     normalized[column] = normalized[column].astype(str)
   hashes = pd.util.hash_pandas_object(normalized, index=False).astype("uint64")
-  frame["evidence_id"] = [f"{label}:{value:016x}" for value in hashes]
+  frame["evidence_id"] = [
+    f"{label}:{value:016x}" for value in hashes
+  ]
   return frame
 
 
@@ -87,11 +95,13 @@ def atomic_tsv(frame: pd.DataFrame, path: Path) -> None:
 
 
 def main() -> None:
+  target.build_candidate_domain_audit = build_candidate_domain_audit
+  target.score_decomposition = score_decomposition
   target.main()
+
   output_root = resolve_path(argument_value("output-root", "article_outputs"))
   audit_path = output_root / "tables/qc/candidate_domain_evidence_audit.tsv"
   audit = pd.read_csv(audit_path, sep="\t", low_memory=False)
-
   complete = coverage_summary(
     audit,
     [
