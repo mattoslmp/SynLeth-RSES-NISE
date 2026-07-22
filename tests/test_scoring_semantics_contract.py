@@ -29,11 +29,12 @@ def test_audit_rejects_pre_eligibility_ranking() -> None:
     ROOT / "scripts/build_publication_evidence_audit_complete.py"
   ).read_text(encoding="utf-8")
   assert "eligibility-aware-v1" in script
+  assert "eligible_component_{domain}" in script
+  assert "Rerun the " in script
+  assert "expanded scoring stage" in script
+  assert "before assets-only" in script
   for domain in EXPANDED_ONCO_WEIGHTS:
-    assert f"eligible_component_{{domain}}" in script or (
-      "eligible_component_{domain}" in script
-    )
-  assert "Rerun the expanded scoring stage" in script
+    assert domain in EXPANDED_ONCO_WEIGHTS
 
 
 def test_missing_and_noneligible_rules_are_documented() -> None:
