@@ -19,6 +19,7 @@ require_command libreoffice
 require_command dot
 
 python -u scripts/sync_methylation_documentation_v0111.py
+python -u scripts/sync_circos_documentation_v0112.py
 
 mkdir -p \
   supplementary \
@@ -49,14 +50,14 @@ pandoc \
   "$SUPPLEMENT_MD" \
   --from markdown+tex_math_dollars \
   --standalone \
-  --metadata title="Supplementary Methods: RSES-Onco v0.11.1" \
+  --metadata title="Supplementary Methods: RSES-Onco v0.11.2" \
   --output "$SUPPLEMENT_DOCX"
 
 pandoc \
   "$MANUSCRIPT_MD" \
   --from markdown+tex_math_dollars \
   --standalone \
-  --metadata title="RSES-Onco Introduction and Materials and Methods v0.11.1" \
+  --metadata title="RSES-Onco Introduction and Materials and Methods v0.11.2" \
   --output "$MANUSCRIPT_DOCX"
 
 LO_PROFILE="file:///tmp/rses-onco-libreoffice-${UID}-$$"
@@ -106,6 +107,7 @@ required = [
   Path("docs/END_TO_END_ARTICLE_PROTOCOL.md"),
   Path("docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md"),
   Path("docs/METHYLATION_DATA_AND_SCORING_V0111.md"),
+  Path("docs/GENOMIC_CIRCOS_WORKFLOW_V0112.md"),
   Path("supplementary/Supplementary_Methods_RSES_Onco_v0110.md"),
   Path("supplementary/Supplementary_Methods_RSES_Onco_v0110.docx"),
   Path("supplementary/Supplementary_Methods_RSES_Onco_v0110.pdf"),
@@ -115,7 +117,6 @@ required = [
   Path("docs/figures/RSES_Onco_workflow_and_applications.svg"),
   Path("docs/figures/RSES_Onco_workflow_and_applications.png"),
 ]
-
 for path in required:
   if not path.exists() or path.stat().st_size == 0:
     raise SystemExit(f"Missing generated documentation asset: {path}")
@@ -127,9 +128,13 @@ for token in (
   "RSES-Onco-expanded-v0.10.10",
   "promoter-methylation-context-v1",
   "Methylation (1kb upstream TSS)",
+  "Figure S70",
+  "Supplementary Tables S45-S52",
+  "70 supplementary figures",
+  "52 supplementary tables",
 ):
   if token not in protocol:
-    raise SystemExit(f"Canonical protocol lacks methylation token: {token}")
+    raise SystemExit(f"Canonical protocol lacks required token: {token}")
 
-print("Methylation-aware documentation asset validation passed.")
+print("Circos-aware documentation asset validation passed.")
 PY
