@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Figure S70 with a strict-layout-safe complete 25-ring legend."""
+"""Generate Figure S70 with a strict-layout-safe complete 35-ring legend."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,31 +23,31 @@ def compact_complete_legend(
   axis.set_xticks([])
   axis.set_yticks([])
   axis.set_axis_off()
-  y = 0.98
+  y = 0.985
   axis.text(
     0.0,
     y,
     "Ring key",
-    fontsize=12,
+    fontsize=11.5,
     fontweight="bold",
     va="top",
     transform=axis.transAxes,
   )
-  y -= 0.045
+  y -= 0.038
   for panel, title in (
-    ("A", "Panel A — top-level RSES-Onco"),
+    ("A", "Panel A — top-level RSES-Onco and validation"),
     ("B", "Panel B — microniche and internal layers"),
   ):
     axis.text(
       0.0,
       y,
       title,
-      fontsize=9.0,
+      fontsize=8.5,
       fontweight="bold",
       va="top",
       transform=axis.transAxes,
     )
-    y -= 0.030
+    y -= 0.025
     subset = tracks.loc[
       tracks["panel"].astype(str).eq(panel)
     ].sort_values("ring_order")
@@ -56,26 +56,26 @@ def compact_complete_legend(
         0.0,
         y,
         f"{row['track_id']}  {row['track_label']}",
-        fontsize=6.8,
+        fontsize=6.15,
         va="top",
         transform=axis.transAxes,
       )
-      y -= 0.020
-    y -= 0.012
-  y -= 0.005
+      y -= 0.0168
+    y -= 0.009
+  y -= 0.003
   axis.text(
     0.0,
     y,
     "Rendering rules",
-    fontsize=9.0,
+    fontsize=8.5,
     fontweight="bold",
     va="top",
     transform=axis.transAxes,
   )
-  y -= 0.028
+  y -= 0.024
   rules = [
     "• every eligible NISE/paralog gene is a genomic tick",
-    "• every coordinate-complete pair is a chord",
+    "• every simple candidate pair is exactly one chord",
     "• ring values are maxima across pair × cancer rows",
     "• hollow markers are missing/non-eligible, never zero",
     "• chromosome positions use Ensembl/GRCh38 coordinates",
@@ -86,11 +86,11 @@ def compact_complete_legend(
       0.0,
       y,
       rule,
-      fontsize=6.8,
+      fontsize=6.15,
       va="top",
       transform=axis.transAxes,
     )
-    y -= 0.023
+    y -= 0.019
 
 
 target.legend_panel = compact_complete_legend
