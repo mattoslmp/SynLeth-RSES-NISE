@@ -1,4 +1,4 @@
-# RSES-Onco v0.11.1: canonical end-to-end data, analysis and article protocol
+# RSES-Onco v0.11.2: canonical end-to-end data, analysis and article protocol
 
 **Author:** Leandro de Mattos Pereira  
 **Affiliation:** Databiomics, Laboratório de Bioinformática e Ciências de Dados, WBPereira  
@@ -13,16 +13,16 @@ RSES-Onco prioritizes experimental hypotheses. It does not establish clinical ef
 ## Current version contract
 
 ```text
-Repository and publication framework: 0.11.1
+Repository and publication framework: 0.11.2
 Scientific score: RSES-Onco-expanded-v0.10.10
 Expression/regulatory semantics: eligibility-aware-wgcna-regulatory-v3
 8 main figures
-69 supplementary figures
-77 registered figures
-231 PNG/PDF/SVG exports
+70 supplementary figures
+78 registered figures
+234 PNG/PDF/SVG exports
 4 main tables
-44 supplementary tables
-48 registered tables
+52 supplementary tables
+56 registered tables
 ```
 
 Supplementary Figures S68 and S69 must be rendered on different pages.
@@ -118,6 +118,7 @@ The source-specific commands, expected files, provenance rules and recovery proc
 
 - [`DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](DATA_ACQUISITION_AND_REPRODUCTION_V0110.md)
 - [`METHYLATION_DATA_AND_SCORING_V0111.md`](METHYLATION_DATA_AND_SCORING_V0111.md)
+- [`GENOMIC_CIRCOS_WORKFLOW_V0112.md`](GENOMIC_CIRCOS_WORKFLOW_V0112.md)
 - [`STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md`](STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md)
 - [`DOROTHEA_RECOVERY_WORKFLOW.md`](DOROTHEA_RECOVERY_WORKFLOW.md)
 - [`STRUCTURAL_ATLAS_WORKFLOW.md`](STRUCTURAL_ATLAS_WORKFLOW.md)
@@ -298,10 +299,10 @@ validation_tractability   0.18
 
 ```bash
 STAMP="$(date +%Y%m%d_%H%M%S)"
-SESSION="rses_v0111_${STAMP}"
-RUNNER="$NEW/logs/run_rses_v0111_${STAMP}.sh"
-RUN_LOG="$NEW/logs/run_rses_v0111_${STAMP}.log"
-EXITCODE_FILE="$NEW/logs/run_rses_v0111_${STAMP}.exitcode"
+SESSION="rses_v0112_${STAMP}"
+RUNNER="$NEW/logs/run_rses_v0112_${STAMP}.sh"
+RUN_LOG="$NEW/logs/run_rses_v0112_${STAMP}.log"
+EXITCODE_FILE="$NEW/logs/run_rses_v0112_${STAMP}.exitcode"
 
 cat > "$RUNNER" <<EOF
 #!/usr/bin/env bash
@@ -332,9 +333,9 @@ exit "\$status"
 EOF
 
 chmod +x "$RUNNER"
-printf '%s\n' "$SESSION" > logs/last_rses_v0111_session.txt
-printf '%s\n' "$RUN_LOG" > logs/last_rses_v0111_log.txt
-printf '%s\n' "$EXITCODE_FILE" > logs/last_rses_v0111_exitcode_path.txt
+printf '%s\n' "$SESSION" > logs/last_rses_v0112_session.txt
+printf '%s\n' "$RUN_LOG" > logs/last_rses_v0112_log.txt
+printf '%s\n' "$EXITCODE_FILE" > logs/last_rses_v0112_exitcode_path.txt
 
 tmux new-session -d -s "$SESSION" "bash '$RUNNER'"
 ```
@@ -342,7 +343,7 @@ tmux new-session -d -s "$SESSION" "bash '$RUNNER'"
 Attach with:
 
 ```bash
-tmux attach -t "$(cat logs/last_rses_v0111_session.txt)"
+tmux attach -t "$(cat logs/last_rses_v0112_session.txt)"
 ```
 
 Detach without stopping the run with `Ctrl+B`, then `D`.
@@ -350,15 +351,15 @@ Detach without stopping the run with `Ctrl+B`, then `D`.
 Monitor with:
 
 ```bash
-RUN_LOG="$(cat logs/last_rses_v0111_log.txt)"
+RUN_LOG="$(cat logs/last_rses_v0112_log.txt)"
 tail -f "$RUN_LOG"
 ```
 
 ## 9. Completion and WGCNA checks
 
 ```bash
-EXITCODE_FILE="$(cat logs/last_rses_v0111_exitcode_path.txt)"
-RUN_LOG="$(cat logs/last_rses_v0111_log.txt)"
+EXITCODE_FILE="$(cat logs/last_rses_v0112_exitcode_path.txt)"
+RUN_LOG="$(cat logs/last_rses_v0112_log.txt)"
 cat "$EXITCODE_FILE"
 tail -n 300 "$RUN_LOG"
 ```
@@ -461,17 +462,17 @@ Do not auto-fill the checklist.
 ## 14. Final verification
 
 ```bash
-PIPELINE_EXITCODE_FILE="$(cat logs/last_rses_v0111_exitcode_path.txt)" \
+PIPELINE_EXITCODE_FILE="$(cat logs/last_rses_v0112_exitcode_path.txt)" \
 GDC_DIR="$GDC_DIR" \
 MPLBACKEND=Agg \
 bash scripts/verify_complete_article_run.sh \
-  2>&1 | tee logs/verify_complete_article_run_v0111.log
+  2>&1 | tee logs/verify_complete_article_run_v0112.log
 ```
 
 ## 15. Final package
 
 ```bash
-PACKAGE="RSES_Onco_v0111_complete_submission_package.zip"
+PACKAGE="RSES_Onco_v0112_complete_submission_package.zip"
 rm -f "$PACKAGE" "$PACKAGE.sha256"
 
 zip -r -9 "$PACKAGE" \
@@ -492,6 +493,7 @@ sha256sum -c "$PACKAGE.sha256"
 
 - [`DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](DATA_ACQUISITION_AND_REPRODUCTION_V0110.md)
 - [`METHYLATION_DATA_AND_SCORING_V0111.md`](METHYLATION_DATA_AND_SCORING_V0111.md)
+- [`GENOMIC_CIRCOS_WORKFLOW_V0112.md`](GENOMIC_CIRCOS_WORKFLOW_V0112.md)
 - [`../supplementary/Supplementary_Methods_RSES_Onco_v0110.md`](../supplementary/Supplementary_Methods_RSES_Onco_v0110.md)
 - [`../manuscript/RSES_Onco_intro_methods_draft_v0110.md`](../manuscript/RSES_Onco_intro_methods_draft_v0110.md)
 - [`figures/RSES_Onco_workflow_and_applications.svg`](figures/RSES_Onco_workflow_and_applications.svg)
@@ -540,3 +542,37 @@ regulatory_layer_version=wgcna-promoter-methylation-regulatory-v3
 Supplementary Figure S52 and the exact source-data table report the methylation layer. Beta-values are association evidence and are not direct proof of silencing, derepression, compensation or synthetic lethality.
 
 <!-- END PROMOTER METHYLATION V0.11.1 -->
+
+<!-- BEGIN GENOMIC CIRCOS V0.11.2 -->
+
+## Genomic Circos and complete code catalogue
+
+The canonical `all` and `assets-only` workflows generate Supplementary Figure S70 as a GRCh38 genomic Circos containing every coordinate-complete simple NISE and homologous-paralog hypothesis. Red chords denote NISEs and black chords denote homologous paralogs. Panel A contains the complete top-level RSES-Onco score, coverage and seven domains. Panel B contains all functional-microniche, expression-network, WGCNA, regulatory, promoter-motif, methylation and nested-coverage layers.
+
+Before publication assets are generated, the wrapper executes:
+
+```bash
+python -u scripts/build_script_documentation.py
+
+python -u scripts/build_genomic_circos_inputs.py \
+  --ranking results/expanded_26Q1/full/expanded_rses_onco.tsv \
+  --candidates data/processed/expanded_candidate_universe.tsv \
+  --promoters data/raw/regulatory/ensembl_promoters.tsv \
+  --expression data/raw/depmap/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv \
+  --models data/raw/depmap/Model.csv \
+  --output-dir data/processed/circos
+```
+
+The final publication stage generates and registers S70 and Supplementary Tables S45-S52. Table S50 contains every model-level expression value used for every Circos gene. Table S51 is the complete source-derived catalogue of every Python, Bash and R script/module under `scripts/` and `src/rses_onco/`.
+
+The canonical command remains:
+
+```bash
+MPLBACKEND=Agg \
+STRICT_LAYOUT=1 \
+bash scripts/run_publication_pipeline.sh assets-only
+```
+
+Detailed ring definitions, source tables and individual commands are documented in [`GENOMIC_CIRCOS_WORKFLOW_V0112.md`](GENOMIC_CIRCOS_WORKFLOW_V0112.md).
+
+<!-- END GENOMIC CIRCOS V0.11.2 -->
