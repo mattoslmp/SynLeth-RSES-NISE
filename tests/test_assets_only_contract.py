@@ -59,6 +59,10 @@ def test_assets_only_core_includes_all_publication_stages() -> None:
     "build_article_workbook.py",
     "build_publication_manifest.py",
     "validate_publication_outputs.py",
+    "materialize_extended_supplementary_tables.py",
+    "build_asset_reproduction_registry.py",
+    "build_publication_documents.py",
+    "validate_publication_documents.py",
   }
   missing = sorted(
     value
@@ -90,7 +94,7 @@ def test_publication_registry_matches_expanded_contract() -> None:
   }
   assert supplementary_ids == {
     f"Figure_S{index}"
-    for index in range(1, 39)
+    for index in range(1, 70)
   }
   assert len(config["main_tables"]) == 4
-  assert len(config["supplementary_tables"]) == 25
+  assert len(config["supplementary_tables"]) == 44
