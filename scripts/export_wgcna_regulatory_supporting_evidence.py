@@ -99,6 +99,26 @@ def main() -> None:
       "motif predictions are distinct subcomponents.",
     ),
     (
+      "tcga_gdc_methylation_pair_metrics",
+      resolve_path(
+        "data/processed/epigenetics/methylation/"
+        "tcga_nise_methylation_pair_metrics.tsv"
+      ),
+      output_dir / "tcga_nise_methylation_pair_metrics.tsv",
+      "GDC beta values accessed through UCSC Xena provide gene-associated "
+      "methylation context; they are not direct proof of silencing or causality.",
+    ),
+    (
+      "tcga_gdc_methylation_source_status",
+      resolve_path(
+        "data/processed/epigenetics/methylation/"
+        "tcga_nise_methylation_source_status.tsv"
+      ),
+      output_dir / "tcga_nise_methylation_source_status.tsv",
+      "Source, dataset, access date and technical availability are reported. "
+      "Repbase is not used because it is a repeat-sequence library.",
+    ),
+    (
       "ensembl_canonical_promoters",
       resolve_path("data/raw/regulatory/ensembl_promoters.tsv"),
       output_dir / "ensembl_canonical_promoters.tsv",

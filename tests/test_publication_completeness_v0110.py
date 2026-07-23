@@ -19,10 +19,10 @@ def test_registry_has_complete_v0110_asset_contract() -> None:
     f"Figure_{index}" for index in range(1, 9)
   }
   assert {row["id"] for row in config["supplementary_figures"]} == {
-    f"Figure_S{index}" for index in range(1, 70)
+    f"Figure_S{index}" for index in range(1, 73)
   }
   assert len(config["main_tables"]) == 4
-  assert len(config["supplementary_tables"]) == 44
+  assert len(config["supplementary_tables"]) == 47
 
 
 def test_extended_figure_orchestrator_registers_s39_to_s69() -> None:

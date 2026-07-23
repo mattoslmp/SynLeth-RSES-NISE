@@ -5,28 +5,28 @@ main_figures:
 - id: Figure_1
   file: Figure_1_framework
   title: Expanded RSES-Onco framework
-  caption: Source-bounded candidate universe, functional-microniche evidence, cancer-selective dependency analysis,
-    pharmacological actionability and experimental-validation workflow.
+  caption: Source-bounded candidate universe, functional-microniche evidence, cancer-selective dependency analysis, pharmacological
+    actionability and experimental-validation workflow.
 - id: Figure_2
   file: Figure_2_candidate_universe
   title: Candidate universe across mechanistic classes
-  caption: Complete directed-candidate counts with an explicit enlargement of low-frequency classes and all curated
-    human NISE activity groups.
+  caption: Complete directed-candidate counts with an explicit enlargement of low-frequency classes and all curated human
+    NISE activity groups.
 - id: Figure_3
   file: Figure_3_cancer_specific_ranking
   title: Cancer-specific RSES-Onco vulnerability ranking
-  caption: Coverage-adjusted vulnerability rankings for colorectal, gastric and lung cancer; composite biomarkers,
-    prioritized hypotheses, nominal results and FDR-supported discoveries remain explicitly distinguished.
+  caption: Coverage-adjusted vulnerability rankings for colorectal, gastric and lung cancer; composite biomarkers, prioritized
+    hypotheses, nominal results and FDR-supported discoveries remain explicitly distinguished.
 - id: Figure_4
   file: Figure_4_tcga_depmap_integration
   title: Integration of tumor events and conditional dependencies
-  caption: Biologically bounded TCGA/GDC homozygous-deletion frequencies compared with DepMap conditional target
-    selectivity, with a separate exact-value key for numbered points.
+  caption: Biologically bounded TCGA/GDC homozygous-deletion frequencies compared with DepMap conditional target selectivity,
+    with a separate exact-value key for numbered points.
 - id: Figure_5
   file: Figure_5_functional_microniches
   title: Human functional-microniche evidence map
-  caption: Observed expression, localization, biochemical/structural, CRISPR phenotype, STRING and regulatory-network
-    components; unavailable and non-eligible domains are explicitly marked and never imputed as zero.
+  caption: Observed expression, localization, biochemical/structural, CRISPR phenotype, STRING and regulatory-network components;
+    unavailable and non-eligible domains are explicitly marked and never imputed as zero.
 - id: Figure_6
   file: Figure_6_class_discoveries
   title: Mechanistic classes and all-target discoveries
@@ -34,13 +34,12 @@ main_figures:
 - id: Figure_7
   file: Figure_7_pharmacology
   title: Pharmacological actionability and experimental treatment hypotheses
-  caption: Compound-resolved actionability hypotheses and the density of all scored pharmacology records; tractability
-    is not clinical efficacy.
+  caption: Compound-resolved actionability hypotheses and the density of all scored pharmacology records; tractability is
+    not clinical efficacy.
 - id: Figure_8
   file: Figure_8_human_nise_structures
   title: Structural basis of representative human NISE vulnerabilities
-  caption: AlphaFold DB models for representative ranked human NISE directions, with traceable exact-numbered functional
-    residues.
+  caption: AlphaFold DB models for representative ranked human NISE directions, with traceable exact-numbered functional residues.
 supplementary_figures:
 - id: Figure_S1
   file: Figure_S1_data_coverage
@@ -159,8 +158,8 @@ supplementary_figures:
 - id: Figure_S39
   file: Figure_S39_score_component_decomposition
   title: RSES-Onco contribution by observed eligible component
-  caption: Weighted domain contributions for high-priority candidate-context rows; missing and non-eligible components
-    are not displayed as zero.
+  caption: Weighted domain contributions for high-priority candidate-context rows; missing and non-eligible components are
+    not displayed as zero.
 - id: Figure_S40
   file: Figure_S40_weight_perturbation_sensitivity
   title: Ranking sensitivity to controlled domain-weight perturbation
@@ -176,13 +175,12 @@ supplementary_figures:
 - id: Figure_S43
   file: Figure_S43_expression_loss_intact
   title: Target expression in loss and intact model groups
-  caption: Operational comparison of target expression between biomarker-loss and intact models; this is not automatic
-    proof of compensation.
+  caption: Operational comparison of target expression between biomarker-loss and intact models; this is not automatic proof
+    of compensation.
 - id: Figure_S44
   file: Figure_S44_conditioned_coexpression
   title: Coexpression conditioned on event state
-  caption: Pairwise expression correlations in all, loss and intact strata with sample-size and multiple-testing
-    context.
+  caption: Pairwise expression correlations in all, loss and intact strata with sample-size and multiple-testing context.
 - id: Figure_S45
   file: Figure_S45_model_level_evidence_coverage
   title: Model-level expression, copy-number and CRISPR coverage
@@ -243,8 +241,7 @@ supplementary_figures:
 - id: Figure_S59
   file: Figure_S59_uniprot_functional_coverage
   title: UniProt functional annotation coverage
-  caption: Candidate coverage for molecular function, catalytic activity, cofactor, EC and experimental-structure
-    cross-references.
+  caption: Candidate coverage for molecular function, catalytic activity, cofactor, EC and experimental-structure cross-references.
 - id: Figure_S60
   file: Figure_S60_tcga_homdel_counts
   title: TCGA homozygous-deletion counts
@@ -285,6 +282,19 @@ supplementary_figures:
   file: Figure_S69_integrated_regulatory_context
   title: Integrated regulatory evidence context
   caption: Coverage-adjusted regulatory-network components across cancer-specific candidate pairs.
+- id: Figure_S70
+  file: Figure_S70_methylation_gene_coverage
+  title: TCGA/GDC methylation coverage for candidate genes
+  caption: Gene-associated CpG methylation coverage and primary-tumor sample support by cancer context.
+- id: Figure_S71
+  file: Figure_S71_pair_methylation_context
+  title: NISE and paralog pair methylation context
+  caption: Coverage-adjusted methylation-context divergence for directed candidate pairs; methylation is not direct proof
+    of silencing.
+- id: Figure_S72
+  file: Figure_S72_methylation_regulatory_integration
+  title: Integration of methylation into regulatory microniches
+  caption: Relationship between the methylation subcomponent and the integrated regulatory-network component.
 main_tables:
 - Table_1_candidate_class_summary.tsv
 - Table_2_top_vulnerabilities_by_cancer.tsv
@@ -335,3 +345,6 @@ supplementary_tables:
 - Table_S42_pharmacology_source_coverage.tsv
 - Table_S43_evidence_category_definitions.tsv
 - Table_S44_asset_reproduction_registry.tsv
+- Table_S45_tcga_nise_methylation_gene_summary.tsv
+- Table_S46_tcga_nise_methylation_pair_metrics.tsv
+- Table_S47_tcga_nise_methylation_source_status.tsv

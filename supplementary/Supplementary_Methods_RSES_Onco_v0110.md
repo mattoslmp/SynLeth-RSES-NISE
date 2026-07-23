@@ -180,7 +180,8 @@ Simple correlation is not treated as automatic evidence of compensation. Compens
 
 For cancer-compatible models with both genes observed, the implementation calculates:
 
-- Spearman correlation \(ho\);
+- Spearman correlation \(
+ho\);
 - median absolute expression difference;
 - correlation divergence \((1-\rho)/2\);
 - saturated expression separation, clipped to \([0,1]\);
@@ -430,3 +431,23 @@ The complete command sequence is documented in `docs/END_TO_END_ARTICLE_PROTOCOL
 23. Ochoa D, Hercules A, Carmona M, et al. Open Targets Platform: supporting systematic drug-target identification and prioritisation. *Nucleic Acids Research*. 2021;49:D1302-D1310.
 24. Gaulton A, Hersey A, Nowotka M, et al. The ChEMBL database in 2017. *Nucleic Acids Research*. 2017;45:D945-D954.
 25. Freshour SL, Kiwala S, Cotto KC, et al. Integration of the Drug-Gene Interaction Database (DGIdb 4.0) with open crowdsource efforts. *Nucleic Acids Research*. 2021;49:D1144-D1151.
+
+## TCGA/GDC DNA methylation layer (v0.11.1)
+
+RSES-Onco now acquires gene-associated CpG methylation beta values from the NCI Genomic Data Commons through the UCSC Xena GDC hub. Repbase is not used because it is a reference library of repetitive DNA sequences rather than a sample-level methylation resource.
+
+```bash
+python -u scripts/acquire_tcga_nise_methylation.py \
+  --candidates data/processed/expanded_candidate_universe.tsv \
+  --output-dir data/processed/epigenetics/methylation
+```
+
+Methylation is integrated inside the existing regulatory-network microniche weight. It does not receive a new independent top-level RSES-Onco domain. Regulatory subweights are DoRothEA regulator divergence 0.32, TF-expression-profile divergence 0.28, JASPAR motif divergence 0.20 and TCGA/GDC methylation context 0.20. A technical source failure makes methylation non-eligible and preserves the original three-component regulatory score. Available source data with missing pair-level probes or samples reduce internal regulatory coverage.
+
+New outputs are Figures S70-S72 and Supplementary Tables S45-S47.
+
+## SeSAMe methylation references (v0.11.1)
+
+- Zhou W, Triche TJ Jr, Laird PW, Shen H. SeSAMe: reducing artifactual detection of DNA methylation by Infinium BeadChips in genomic deletions. *Nucleic Acids Research*. 2018;46:e123.
+- Zhou W, Laird PW, Shen H. Comprehensive characterization, annotation and innovative use of Infinium DNA methylation BeadChip probes. *Nucleic Acids Research*. 2017;45:e22.
+- Goldman MJ, Craft B, Hastie M, et al. Visualizing and interpreting cancer genomics data via the Xena platform. *Nature Biotechnology*. 2020;38:675-678.

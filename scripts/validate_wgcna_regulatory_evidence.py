@@ -10,7 +10,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_ELIGIBILITY_SEMANTICS = "eligibility-aware-v1"
 EXPECTED_EXPRESSION_REGULATORY_SEMANTICS = (
-  "eligibility-aware-wgcna-regulatory-v3"
+  "eligibility-aware-wgcna-regulatory-methylation-v4"
 )
 
 
@@ -67,6 +67,8 @@ def main() -> None:
       "regulatory_tf_association_divergence",
       "regulatory_tf_expression_profile_divergence",
       "regulatory_promoter_motif_divergence",
+      "regulatory_promoter_methylation_context",
+      "methylation_context_subcoverage",
       "regulatory_network_subcoverage",
       "direct_promoter_binding_claim",
     },
@@ -94,10 +96,10 @@ def main() -> None:
       f"{EXPECTED_EXPRESSION_REGULATORY_SEMANTICS}"
     )
   score_versions = set(ranking["score_version"].dropna().astype(str))
-  if score_versions != {"RSES-Onco-expanded-v0.10.9"}:
+  if score_versions != {"RSES-Onco-expanded-v0.11.1"}:
     raise ValueError(
       f"Unexpected score versions {sorted(score_versions)}; "
-      "expected RSES-Onco-expanded-v0.10.9"
+      "expected RSES-Onco-expanded-v0.11.1"
     )
   if ranking["direct_promoter_binding_claim"].astype(str).str.casefold().isin(
     {"1", "true", "yes"}
@@ -176,6 +178,8 @@ def main() -> None:
     "promoter_tf_regulatory_pair_metrics",
     "ensembl_canonical_promoters",
     "jaspar_promoter_motif_predictions",
+    "tcga_gdc_methylation_pair_metrics",
+    "tcga_gdc_methylation_source_status",
   }
   missing_families = sorted(
     required_families - set(manifest["evidence_family"].astype(str))

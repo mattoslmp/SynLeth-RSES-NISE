@@ -87,8 +87,8 @@ def validate_overlap(article_root: Path) -> None:
 def validate_figures(article_root: Path) -> None:
   manifest = read_tsv(article_root / "manifests/figure_manifest.tsv")
   require_columns(manifest, {"figure_id", "category", "base_path", "source_data_path", "layout_status"}, "figure manifest")
-  if len(manifest) != 77:
-    raise ValueError(f"Expected 77 registered figures; observed {len(manifest)}")
+  if len(manifest) != 80:
+    raise ValueError(f"Expected 80 registered figures; observed {len(manifest)}")
   if manifest["figure_id"].duplicated().any():
     raise ValueError("Duplicated figure identifiers")
   if not manifest["layout_status"].eq("pass").all():
@@ -150,6 +150,9 @@ def validate_figures(article_root: Path) -> None:
   for figure_name in (
     "Figure_S68_wgcna_module_eigengene_context_source_data.tsv",
     "Figure_S69_integrated_regulatory_context_source_data.tsv",
+    "Figure_S70_methylation_gene_coverage_source_data.tsv",
+    "Figure_S71_pair_methylation_context_source_data.tsv",
+    "Figure_S72_methylation_regulatory_integration_source_data.tsv",
   ):
     path = supplementary_source / figure_name
     if not path.exists() or path.stat().st_size == 0:
@@ -161,8 +164,8 @@ def validate_tables(article_root: Path) -> None:
   require_columns(manifest, {"table_id", "category", "path", "rows", "status"}, "table manifest")
   if int(manifest["category"].eq("main").sum()) != 4:
     raise ValueError("Expected four main tables")
-  if int(manifest["category"].eq("supplementary").sum()) != 44:
-    raise ValueError("Expected 44 supplementary tables")
+  if int(manifest["category"].eq("supplementary").sum()) != 47:
+    raise ValueError("Expected 47 supplementary tables")
   for record in manifest.to_dict("records"):
     path = Path(str(record["path"]))
     if not path.is_absolute():

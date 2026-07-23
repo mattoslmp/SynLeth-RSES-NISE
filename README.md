@@ -72,11 +72,11 @@ bash scripts/verify_complete_article_run.sh
 
 ```text
 8 main figures
-69 supplementary figures
+72 supplementary figures
 77 registered figures
-231 PNG/PDF/SVG files
+240 PNG/PDF/SVG files
 4 main tables
-44 supplementary tables
+47 supplementary tables
 48 registered tables
 ```
 
@@ -125,3 +125,7 @@ article_outputs/
 ## License
 
 MIT for code. Third-party data retain their original licenses and terms.
+
+## TCGA/GDC methylation integration
+
+Version 0.11.1 adds gene-associated TCGA/GDC CpG methylation through the UCSC Xena GDC hub as an internal regulatory-network sublayer. Repbase is not used because it is a repetitive-element sequence library. The total top-level and microniche domain weights remain unchanged; the regulatory weight is internally shared with methylation to prevent double counting.

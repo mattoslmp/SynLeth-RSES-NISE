@@ -106,7 +106,7 @@ main_figures = int(
   figures["figure_id"].astype(str).str.match(r"^Figure_[1-8]$").sum()
 )
 supplementary_figures = int(
-  figures["figure_id"].astype(str).str.match(r"^Figure_S(?:[1-9]|[1-5][0-9]|6[0-9])$").sum()
+  figures["figure_id"].astype(str).str.match(r"^Figure_S(?:[1-9]|[1-6][0-9]|7[0-2])$").sum()
 )
 image_files = sum(
   1
@@ -136,10 +136,10 @@ for key, value in summary.items():
 
 expected = {
   "main_figures": 8,
-  "supplementary_figures": 69,
-  "exported_figure_files": 231,
+  "supplementary_figures": 72,
+  "exported_figure_files": 240,
   "main_tables": 4,
-  "supplementary_tables": 44,
+  "supplementary_tables": 47,
 }
 for key, value in expected.items():
   if summary[key] != value:
@@ -162,6 +162,9 @@ required = [
   root / "tables/supplementary/Table_S44_asset_reproduction_registry.tsv",
   root / "source_data/figures/supplementary/Figure_S68_wgcna_module_eigengene_context_source_data.tsv",
   root / "source_data/figures/supplementary/Figure_S69_integrated_regulatory_context_source_data.tsv",
+  root / "source_data/figures/supplementary/Figure_S70_methylation_gene_coverage_source_data.tsv",
+  root / "source_data/figures/supplementary/Figure_S71_pair_methylation_context_source_data.tsv",
+  root / "source_data/figures/supplementary/Figure_S72_methylation_regulatory_integration_source_data.tsv",
   root / "manifests/scientific_integrity_validation.json",
 ]
 for path in required:

@@ -77,6 +77,12 @@ def main() -> None:
     "--output-root", args.output_root,
     strict_flag,
   ])
+  run([
+    sys.executable, "-u", "scripts/make_methylation_figures.py",
+    "--config", args.config,
+    "--output-root", args.output_root,
+    strict_flag,
+  ])
 
   output_root = resolve_path(args.output_root)
   manifest_names = [
@@ -86,6 +92,7 @@ def main() -> None:
     "structural_supplementary_figure_manifest.tsv",
     "audit_supplementary_figure_manifest.tsv",
     "extended_supplementary_figure_manifest.tsv",
+    "methylation_supplementary_figure_manifest.tsv",
   ]
   manifests = []
   for name in manifest_names:
@@ -94,7 +101,7 @@ def main() -> None:
       raise FileNotFoundError(f"Missing or empty figure manifest: {path}")
     manifests.append(pd.read_csv(path, sep="\t"))
   combined = pd.concat(manifests, ignore_index=True)
-  expected = 77
+  expected = 80
   if len(combined) != expected:
     raise RuntimeError(f"Expected {expected} registered figures; observed {len(combined)}")
   if combined["figure_id"].duplicated().any():
@@ -129,6 +136,7 @@ def main() -> None:
     "structural_supplementary_figure_legends.md",
     "audit_supplementary_figure_legends.md",
     "extended_supplementary_figure_legends.md",
+    "methylation_supplementary_figure_legends.md",
   ]
   legends = []
   for name in legend_names:
