@@ -62,7 +62,9 @@ def patch_protocol() -> None:
     )
     text = text.replace(anchor, anchor + "\n" + link)
   body = r"""
-The canonical `all` and `assets-only` workflows generate Supplementary Figure S70 as a GRCh38 genomic Circos containing every coordinate-complete simple NISE and homologous-paralog hypothesis. Red chords denote NISEs and black chords denote homologous paralogs. Panel A contains the complete top-level RSES-Onco score, coverage and seven domains. Panel B contains all functional-microniche, expression-network, WGCNA, regulatory, promoter-motif, methylation and nested-coverage layers.
+The canonical `all` and `assets-only` workflows generate Supplementary Figure S70 as a GRCh38 genomic Circos containing every coordinate-complete simple NISE and homologous-paralog hypothesis. Red chords denote NISEs and black chords denote homologous paralogs. Every simple pair remains represented even when the final score is unavailable.
+
+Figure S70 contains 35 score/domain/internal tracks. Panel A contains observed and coverage-adjusted RSES-Onco, evidence coverage, all seven top-level domains and the four individual validation/tractability terms. Panel B contains all six functional-microniche domains, pairwise expression, WGCNA composite, TOM, module and kME divergence, DoRothEA, TF-expression profiles, JASPAR/FIMO promoter motifs, methylation composite, methylation-profile divergence, conditional target hypomethylation and nested coverage values.
 
 Before publication assets are generated, the wrapper executes:
 
@@ -76,11 +78,13 @@ python -u scripts/build_genomic_circos_inputs.py \
   --expression data/raw/depmap/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv \
   --models data/raw/depmap/Model.csv \
   --output-dir data/processed/circos
+
+python -u scripts/enrich_genomic_circos_internal_layers.py
+python -u scripts/complete_genomic_circos_expression_summary.py
+python -u scripts/complete_genomic_circos_links.py
 ```
 
-The final publication stage generates and registers S70 and Supplementary Tables S45-S52. Table S50 contains every model-level expression value used for every Circos gene. Table S51 is the complete source-derived catalogue of every Python, Bash and R script/module under `scripts/` and `src/rses_onco/`.
-
-The canonical command remains:
+The final stage generates and registers S70 and Supplementary Tables S45-S52. Table S50 contains every observed model-level expression value plus explicit `NA` sentinel rows for unavailable gene/context combinations. Table S51 is the complete source-derived catalogue of every Python, Bash and R script/module under `scripts/` and `src/rses_onco/`.
 
 ```bash
 MPLBACKEND=Agg \
@@ -88,7 +92,7 @@ STRICT_LAYOUT=1 \
 bash scripts/run_publication_pipeline.sh assets-only
 ```
 
-Detailed ring definitions, source tables and individual commands are documented in [`GENOMIC_CIRCOS_WORKFLOW_V0112.md`](GENOMIC_CIRCOS_WORKFLOW_V0112.md).
+Detailed ring definitions, source tables and commands are documented in [`GENOMIC_CIRCOS_WORKFLOW_V0112.md`](GENOMIC_CIRCOS_WORKFLOW_V0112.md).
 """
   write(path, replace_block(text, "Genomic Circos and complete code catalogue", body))
 
@@ -97,11 +101,9 @@ def patch_acquisition() -> None:
   path = "docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md"
   text = read(path)
   body = r"""
-The genomic Circos requires the completed candidate universe, final cancer-specific ranking, Ensembl canonical-promoter coordinate table, DepMap model metadata and protein-coding expression matrix. The Ensembl table provides chromosome and canonical TSS coordinates; no gene lacking a canonical coordinate is assigned an invented position.
+The genomic Circos requires the completed candidate universe, final cancer-specific ranking, Ensembl canonical-promoter coordinate table, DepMap model metadata, protein-coding expression matrix and WGCNA pair-metrics table. No gene lacking a supported GRCh38 coordinate is assigned an invented position.
 
-All expression columns for Circos genes are read directly from `OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv`. The pipeline exports both cancer-by-gene summaries and every model-level `log2(TPM+1)` value. These outputs become Supplementary Tables S49 and S50.
-
-Run the source-data stage with:
+All required expression columns are read directly from `OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv`. The pipeline exports cancer-by-gene summaries and every observed model-level `log2(TPM+1)` value. Gene/context combinations without values receive explicit `NA` sentinel rows with `is_measurement=false`, never numeric zero.
 
 ```bash
 python -u scripts/build_genomic_circos_inputs.py \
@@ -113,7 +115,7 @@ python -u scripts/build_genomic_circos_inputs.py \
   --output-dir data/processed/circos
 ```
 
-The generated source-provenance table retains every source path, byte size and SHA-256. Missing coordinates terminate the stage with the unresolved gene names; missing domain values remain NA and are never converted to zero.
+The source-provenance table retains every source path, byte size and SHA-256. Missing coordinates terminate the stage with unresolved gene names; missing domain values remain NA. A completion stage verifies that the pair-link table contains exactly one chord for every simple NISE/paralog candidate pair.
 """
   write(path, replace_block(text, "Genomic Circos source acquisition and provenance", body))
 
@@ -122,13 +124,13 @@ def patch_supplement() -> None:
   path = "supplementary/Supplementary_Methods_RSES_Onco_v0110.md"
   text = read(path)
   body = r"""
-Supplementary Figure S70 was generated from every coordinate-complete simple-gene candidate classified as a NISE, homologous paralog or both. Canonical positions were derived from the Ensembl canonical-transcript lookup used for promoter acquisition and displayed on a GRCh38 chromosome ideogram. Every gene was represented as a genomic tick; NISE relationships were connected in red and homologous-paralog relationships in black. Chord width and transparency were proportional to the maximum cancer-specific coverage-adjusted RSES-Onco score for the pair.
+Supplementary Figure S70 was generated from every coordinate-complete simple-gene candidate classified as a NISE, homologous paralog or both. Canonical positions were derived from the Ensembl canonical-transcript lookup and displayed on a GRCh38 ideogram including chromosomes 1-22, X, Y and MT. Every gene was a genomic tick; NISE relationships were red and homologous-paralog relationships black. Every simple candidate pair was retained exactly once, including score-missing pairs.
 
-Panel A included rings for coverage-adjusted RSES-Onco, evidence coverage, tumor event, dependency, selectivity, expression compensation, functional relation, functional microniche and validation/tractability. Panel B included expression context, localization, biochemical/structural evidence, genetic phenotype, interaction network, regulatory network, pairwise expression, WGCNA, DoRothEA, TF-expression profiles, JASPAR/FIMO promoter motifs, promoter methylation and nested coverage values.
+The figure contained 35 tracks. Panel A included observed and coverage-adjusted RSES-Onco, evidence coverage, all seven top-level domains and genetic-screen, isogenic, in vivo and clinical-tractability terms. Panel B included all six functional-microniche domains; pairwise expression; WGCNA composite, TOM, module and kME terms; DoRothEA; TF-expression profiles; JASPAR/FIMO motifs; promoter-methylation composite, methylation-profile divergence and conditional target hypomethylation; and nested coverage values.
 
-For each gene and ring, the plotted value was the maximum observed value across associated pair-by-cancer records. Median, minimum, observed-row count, eligible-row count and missingness status were preserved in Supplementary Table S47. Missing or non-eligible evidence was rendered as a hollow marker and not as numeric zero.
+For each gene and ring, the plotted value was the maximum observed value across associated pair-by-cancer records. Median, minimum, observed-row count, eligible-row count and missingness status were retained in Supplementary Table S47. Missing or non-eligible evidence was a hollow marker, not numeric zero.
 
-All model-level DepMap `log2(TPM+1)` values used for Circos genes were exported in Supplementary Table S50. Supplementary Tables S45-S52 contain coordinates, links, rings, ring definitions, expression summaries, model-level expression, complete script documentation and source provenance. The exact combined source TSV used to render S70 was registered and copied byte-for-byte to the figure-data directory.
+All observed model-level DepMap `log2(TPM+1)` values were exported in Table S50. Unavailable gene/context combinations were represented by `NA` sentinel rows with `is_measurement=false`. Tables S45-S52 contain coordinates, all links, all ring values, 35 ring definitions, expression summaries, model-level expression, complete script documentation and source provenance. The exact combined source TSV used for S70 was copied byte-for-byte to the figure-data directory.
 """
   write(path, replace_block(text, "Genomic Circos methods and source-data transparency", body))
 
@@ -137,7 +139,7 @@ def patch_manuscript() -> None:
   path = "manuscript/RSES_Onco_intro_methods_draft_v0110.md"
   text = read(path)
   body = r"""
-A genomic Circos representation was generated to integrate chromosomal position, NISE/paralog relationships and every RSES-Onco evidence layer. Canonical Ensembl/GRCh38 positions were assigned only to coordinate-resolved genes. NISE and homologous-paralog links were displayed separately, while concentric rings summarized top-level score domains, functional-microniche domains, expression-network and regulatory subcomponents, promoter methylation and evidence coverage. Missing evidence was retained as missing and displayed using hollow markers. Complete model-level expression values and exact figure-source tables were exported as supplementary data.
+A genomic Circos representation integrated chromosomal position, every simple NISE/paralog relationship and 35 RSES-Onco score/domain/internal layers. Canonical Ensembl/GRCh38 positions were assigned only to coordinate-resolved genes. NISE and homologous-paralog links were displayed separately, while concentric rings summarized top-level domains, validation terms, functional-microniche domains, pairwise expression, WGCNA internal terms, regulatory subcomponents, promoter-methylation internal terms and evidence coverage. Missing evidence remained missing and was displayed using hollow markers. Complete model-level expression values, explicit unavailable sentinels and exact figure-source tables were exported as supplementary data.
 """
   write(path, replace_block(text, "Genomic Circos visualization", body))
 
