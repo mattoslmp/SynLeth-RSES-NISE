@@ -49,15 +49,20 @@ full RSES-Onco domain.
 
 The canonical publication pipeline generates **Supplementary Figure S70**, a
 GRCh38 Circos representation containing every coordinate-complete simple NISE and
-homologous-paralog hypothesis.
+homologous-paralog hypothesis. Every simple candidate pair receives exactly one
+chord, including pairs whose score is unavailable; those pairs retain
+`link_status=score_missing` instead of disappearing.
 
 - red chords: NISE relationships;
 - black chords: homologous-paralog relationships;
 - purple genomic ticks: genes represented in both classes;
-- Panel A rings: all seven top-level RSES-Onco domains plus score and coverage;
-- Panel B rings: all six microniche domains, pairwise expression, WGCNA, DoRothEA,
-  TF-expression consistency, JASPAR/FIMO motifs, promoter methylation and nested
-  coverage values;
+- **35 rings** in total;
+- Panel A: observed and coverage-adjusted RSES-Onco, evidence coverage, all seven
+  top-level domains and four individual validation/tractability terms;
+- Panel B: all six microniche domains, pairwise expression, WGCNA composite, TOM,
+  module and kME divergence, DoRothEA, TF-expression consistency, JASPAR/FIMO
+  motifs, promoter-methylation composite, methylation-profile divergence,
+  conditional target hypomethylation and nested coverage values;
 - hollow ring markers: missing or non-eligible evidence, never numeric zero.
 
 The Circos stage exports:
@@ -70,11 +75,20 @@ data/processed/circos/genomic_circos_track_definitions.tsv
 data/processed/circos/genomic_circos_expression_summary.tsv
 data/processed/circos/genomic_circos_expression_model_values.tsv
 data/processed/circos/genomic_circos_source_provenance.tsv
+data/processed/circos/genomic_circos_status.json
 ```
 
-All model-level DepMap expression values used for Circos genes are retained in
-Supplementary Table S50. The exact combined source TSV used for Figure S70 is
-copied to `article_outputs/tables/figure_data/supplementary/Figure_S70_source_data.tsv`.
+All observed model-level DepMap expression values used for Circos genes are retained
+in Supplementary Table S50. A gene/cancer context without an observed expression
+value receives an explicit sentinel row with expression `NA`,
+`is_measurement=false` and a documented absence reason; missing expression is never
+represented as zero. The exact combined source TSV used for Figure S70 is copied to
+`article_outputs/tables/figure_data/supplementary/Figure_S70_source_data.tsv`.
+
+The finalized status and source-provenance contract records 35 rings, all pair
+chords, missing-score chords, observed expression measurements, unavailable
+expression sentinels, and SHA-256 values for the final ranking, candidate universe,
+Ensembl coordinates, DepMap expression/models and WGCNA pair metrics.
 
 See [`docs/GENOMIC_CIRCOS_WORKFLOW_V0112.md`](docs/GENOMIC_CIRCOS_WORKFLOW_V0112.md).
 
@@ -90,8 +104,8 @@ data/processed/documentation/pipeline_script_catalog.tsv
 ```
 
 The catalogue records purpose, language, pipeline stage, command, CLI options,
-declared paths, line count and SHA-256 for every script/module. A test fails if any
-pipeline source is omitted.
+declared paths, line count and SHA-256 for every script/module. A test and the
+Circos integrity validator fail if any pipeline source is omitted.
 
 ## Methylation input
 
@@ -118,7 +132,8 @@ python -m pytest -q -p no:cacheprovider
 - [`docs/END_TO_END_ARTICLE_PROTOCOL.md`](docs/END_TO_END_ARTICLE_PROTOCOL.md) — canonical command-by-command pipeline tutorial;
 - [`docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md) — source acquisition, provenance, validation and recovery;
 - [`docs/METHYLATION_DATA_AND_SCORING_V0111.md`](docs/METHYLATION_DATA_AND_SCORING_V0111.md) — methylation source, formulas and missingness;
-- [`docs/GENOMIC_CIRCOS_WORKFLOW_V0112.md`](docs/GENOMIC_CIRCOS_WORKFLOW_V0112.md) — genomic coordinates, links, rings, expression tables and exact commands;
+- [`docs/GENOMIC_CIRCOS_WORKFLOW_V0112.md`](docs/GENOMIC_CIRCOS_WORKFLOW_V0112.md) — genomic coordinates, all pair links, 35 rings, expression tables and exact commands;
+- [`docs/GENOMIC_CIRCOS_IMPLEMENTATION_CONTRACT_V0112.md`](docs/GENOMIC_CIRCOS_IMPLEMENTATION_CONTRACT_V0112.md) — executable completeness contract;
 - [`docs/SCRIPT_CATALOG.md`](docs/SCRIPT_CATALOG.md) — generated complete code catalogue;
 - [`supplementary/Supplementary_Methods_RSES_Onco_v0110.md`](supplementary/Supplementary_Methods_RSES_Onco_v0110.md) — scientific methods, formulas, evidence rules and references;
 - [`manuscript/RSES_Onco_intro_methods_draft_v0110.md`](manuscript/RSES_Onco_intro_methods_draft_v0110.md) — editable Introduction and Materials and Methods draft.
@@ -155,11 +170,12 @@ bash scripts/verify_complete_article_run.sh
 56 registered tables
 ```
 
-Supplementary Tables S45-S52 contain the Circos coordinates, links, ring values,
-track definitions, expression summary, complete model-level expression values,
-complete script catalogue and source provenance. Every registered figure has an
-exact source TSV, generator script, input list, reproduction command, layout audit
-and PNG/PDF/SVG export.
+Supplementary Tables S45-S52 contain the Circos coordinates, every pair link, all
+35 ring values, track definitions, complete expression summary, observed
+model-level expression plus explicit NA sentinels, complete script catalogue and
+SHA-256 source provenance. Every registered figure has an exact source TSV,
+generator script, input list, reproduction command, layout audit and PNG/PDF/SVG
+export.
 
 The document pipeline creates editable DOCX files, rendered PDFs and page PNGs.
 Every supplementary figure starts on a separate page.
