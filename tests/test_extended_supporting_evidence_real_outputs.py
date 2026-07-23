@@ -26,6 +26,19 @@ def test_extended_supporting_evidence_when_real_outputs_exist() -> None:
     pytest.fail(
       "Only part of the mandatory extended supporting-evidence package exists"
     )
+  import pandas as pd
+  foreign_paths = []
+  for manifest_path in (model_manifest, raw_manifest):
+    manifest = pd.read_csv(manifest_path, sep="\t", low_memory=False)
+    for column in ("output_path", "path"):
+      if column not in manifest:
+        continue
+      for value in manifest[column].dropna().astype(str):
+        path = Path(value)
+        if path.is_absolute() and not path.exists():
+          foreign_paths.append(path)
+  if foreign_paths:
+    pytest.skip("Real-output snapshot contains paths from another checkout")
   subprocess.run(
     [
       sys.executable,
