@@ -43,6 +43,8 @@ def command_for_script(script: str) -> str:
     return "MPLBACKEND=Agg python -u scripts/make_supplementary_figures_resilient.py --output-root article_outputs --strict-layout"
   if "make_audit_supplementary_figures" in script:
     return "MPLBACKEND=Agg python -u scripts/make_audit_supplementary_figures.py --output-root article_outputs --strict-layout"
+  if "make_extended_supporting_figures" in script:
+    return "MPLBACKEND=Agg python -u scripts/make_extended_supporting_figures.py --output-root article_outputs --strict-layout"
   if "structure" in script:
     return "MPLBACKEND=Agg python -u scripts/make_nise_structure_figures.py --output-root article_outputs --strict-layout"
   return "MPLBACKEND=Agg bash scripts/run_publication_pipeline.sh figures"
