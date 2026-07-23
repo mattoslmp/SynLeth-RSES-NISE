@@ -205,3 +205,15 @@ The publication contract comprised 8 main figures, 69 supplementary figures, 231
 20. Ochoa D, Hercules A, Carmona M, et al. Open Targets Platform. *Nucleic Acids Research*. 2021;49:D1302-D1310.
 21. Gaulton A, Hersey A, Nowotka M, et al. The ChEMBL database in 2017. *Nucleic Acids Research*. 2017;45:D945-D954.
 22. Benjamini Y, Hochberg Y. Controlling the false discovery rate. *Journal of the Royal Statistical Society Series B*. 1995;57:289-300.
+
+<!-- BEGIN PROMOTER METHYLATION V0.11.1 -->
+
+## Promoter methylation analysis
+
+Promoter methylation was incorporated as an epigenetic subcomponent of the regulatory-network microniche domain. The analysis supported the DepMap `Methylation (1kb upstream TSS)` custom-download matrix and the historical CCLE RRBS TSS1kb matrix. Multiple promoter features assigned to the same gene were collapsed by the median within each model.
+
+For each candidate pair and cancer lineage, the analysis quantified divergence between the lost- and target-gene promoter-methylation profiles and tested whether target-promoter methylation was lower in models with loss of the origin gene than in intact models. The latter comparison used a Mann-Whitney U test, with Benjamini-Hochberg adjustment globally and within cancer context. The methylation context combined pair-profile divergence and conditional target hypomethylation with equal internal weights and explicit missing-data coverage.
+
+Methylation shared the existing regulatory-network domain with DoRothEA TF associations, TF-expression consistency and JASPAR/FIMO promoter-motif evidence. Its inclusion did not alter the seven top-level RSES-Onco weights. Promoter methylation was considered association evidence and not direct proof of transcriptional silencing or causal compensation.
+
+<!-- END PROMOTER METHYLATION V0.11.1 -->

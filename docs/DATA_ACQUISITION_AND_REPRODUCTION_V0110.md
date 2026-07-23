@@ -408,3 +408,42 @@ known_limitations
 - `PUBLICATION_PHARMACOLOGY_WORKFLOW.md`
 - `STRUCTURAL_ATLAS_WORKFLOW.md`
 - `PUBLICATION_EVIDENCE_AUDIT_AND_REPRODUCTION.md`
+
+<!-- BEGIN PROMOTER METHYLATION V0.11.1 -->
+
+## Promoter methylation data acquisition
+
+The promoter methylation input is acquired separately from the four required DepMap matrices. Use the DepMap custom-download resource named `Methylation (1kb upstream TSS)` or the historical CCLE RRBS file `CCLE_RRBS_TSS1kb_20181022.txt.gz`.
+
+Accepted default names under `DEPMAP_DIR` are:
+
+```text
+Methylation_(1kb_upstream_TSS)_subsetted_NAsdropped.csv
+Methylation_1kb_upstream_TSS.csv
+CCLE_RRBS_TSS1kb_20181022.txt.gz
+CCLE_RRBS_TSS1kb_20181022.txt
+```
+
+A non-default path is supplied with:
+
+```bash
+export METHYLATION="/absolute/path/to/promoter_methylation.csv"
+```
+
+Validate that values are beta-like ratios in [0,1], that model or cell-line identifiers map through `Model.csv`, and that candidate genes have promoter/TSS features when expected. The parser accepts ModelID-row, long ModelID/gene/value and historical feature-row layouts. Multiple features assigned to one gene are collapsed by the median and feature counts are retained.
+
+Generate the methylation-aware regulatory layer with:
+
+```bash
+python -u scripts/integrate_methylation_regulatory_layer.py \
+  --methylation "$METHYLATION" \
+  --copy-number "$DEPMAP_DIR/OmicsCNGeneWGS.csv" \
+  --models "$DEPMAP_DIR/Model.csv" \
+  --candidates data/processed/expanded_candidate_universe.tsv \
+  --input data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv \
+  --output data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv
+```
+
+The canonical resume workflow performs this stage automatically. Source absence, unmapped genes, unmapped models and insufficient groups are recorded explicitly rather than converted to biological zero. Detailed formulas and accepted layouts are documented in [`METHYLATION_DATA_AND_SCORING_V0111.md`](METHYLATION_DATA_AND_SCORING_V0111.md).
+
+<!-- END PROMOTER METHYLATION V0.11.1 -->

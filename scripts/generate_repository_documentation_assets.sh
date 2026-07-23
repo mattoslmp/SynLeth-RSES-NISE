@@ -13,9 +13,12 @@ require_command() {
   }
 }
 
+require_command python
 require_command pandoc
 require_command libreoffice
 require_command dot
+
+python -u scripts/sync_methylation_documentation_v0111.py
 
 mkdir -p \
   supplementary \
@@ -46,14 +49,14 @@ pandoc \
   "$SUPPLEMENT_MD" \
   --from markdown+tex_math_dollars \
   --standalone \
-  --metadata title="Supplementary Methods: RSES-Onco v0.11.0" \
+  --metadata title="Supplementary Methods: RSES-Onco v0.11.1" \
   --output "$SUPPLEMENT_DOCX"
 
 pandoc \
   "$MANUSCRIPT_MD" \
   --from markdown+tex_math_dollars \
   --standalone \
-  --metadata title="RSES-Onco Introduction and Materials and Methods" \
+  --metadata title="RSES-Onco Introduction and Materials and Methods v0.11.1" \
   --output "$MANUSCRIPT_DOCX"
 
 LO_PROFILE="file:///tmp/rses-onco-libreoffice-${UID}-$$"
@@ -100,6 +103,9 @@ python - <<'PY'
 from pathlib import Path
 
 required = [
+  Path("docs/END_TO_END_ARTICLE_PROTOCOL.md"),
+  Path("docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md"),
+  Path("docs/METHYLATION_DATA_AND_SCORING_V0111.md"),
   Path("supplementary/Supplementary_Methods_RSES_Onco_v0110.md"),
   Path("supplementary/Supplementary_Methods_RSES_Onco_v0110.docx"),
   Path("supplementary/Supplementary_Methods_RSES_Onco_v0110.pdf"),
@@ -114,5 +120,16 @@ for path in required:
   if not path.exists() or path.stat().st_size == 0:
     raise SystemExit(f"Missing generated documentation asset: {path}")
 
-print("Documentation asset validation passed.")
+protocol = Path("docs/END_TO_END_ARTICLE_PROTOCOL.md").read_text(
+  encoding="utf-8"
+)
+for token in (
+  "RSES-Onco-expanded-v0.10.10",
+  "promoter-methylation-context-v1",
+  "Methylation (1kb upstream TSS)",
+):
+  if token not in protocol:
+    raise SystemExit(f"Canonical protocol lacks methylation token: {token}")
+
+print("Methylation-aware documentation asset validation passed.")
 PY
