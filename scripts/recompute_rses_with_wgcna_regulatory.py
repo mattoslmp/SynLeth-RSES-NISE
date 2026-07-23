@@ -25,7 +25,7 @@ from rses_onco.expanded import (
 ROOT = Path(__file__).resolve().parents[1]
 ELIGIBILITY_SEMANTICS_VERSION = "eligibility-aware-v1"
 EXPRESSION_REGULATORY_SEMANTICS_VERSION = (
-  "eligibility-aware-wgcna-regulatory-v2"
+  "eligibility-aware-wgcna-regulatory-v3"
 )
 EXPRESSION_SUBWEIGHTS = {
   "pairwise_expression_context": 0.50,
@@ -241,7 +241,7 @@ def main() -> None:
       "expression_regulatory_semantics_version": (
         EXPRESSION_REGULATORY_SEMANTICS_VERSION
       ),
-      "score_version": "RSES-Onco-expanded-v0.10.8",
+      "score_version": "RSES-Onco-expanded-v0.10.9",
       "expression_context_formula": (
         "0.5*pairwise_expression_context + 0.5*WGCNA_context, "
         "coverage-adjusted within the existing expression-context domain"

@@ -51,40 +51,77 @@ def main() -> None:
   specifications = [
     (
       "cancer_specific_wgcna_pair_metrics",
-      resolve_path("data/processed/regulatory/wgcna/wgcna_pair_metrics_all_cancers.tsv"),
+      resolve_path(
+        "data/processed/regulatory/wgcna/"
+        "wgcna_pair_metrics_all_cancers.tsv"
+      ),
       output_dir / "wgcna_pair_metrics_all_cancers.tsv",
-      "Signed WGCNA TOM, modules and kME are expression-derived subcomponents and do not receive an independent full-domain weight.",
+      "Signed WGCNA TOM, modules and kME are expression-derived "
+      "subcomponents and do not receive an independent full-domain weight.",
     ),
     (
       "wgcna_input_preparation",
-      resolve_path("data/processed/regulatory/wgcna/wgcna_input_preparation.tsv"),
+      resolve_path(
+        "data/processed/regulatory/wgcna/wgcna_input_preparation.tsv"
+      ),
       output_dir / "wgcna_input_preparation.tsv",
-      "All candidate genes plus cancer-specific highly variable genes were used; median imputation is reported only for network estimation.",
+      "All candidate genes plus cancer-specific highly variable genes "
+      "were used; median imputation is reported only for network estimation.",
+    ),
+    (
+      "wgcna_correlation_fallback_audit",
+      resolve_path(
+        "data/processed/regulatory/wgcna/"
+        "wgcna_correlation_fallback_all_cancers.tsv"
+      ),
+      output_dir / "wgcna_correlation_fallback_all_cancers.tsv",
+      "Biweight midcorrelation is primary; Pearson is used only for "
+      "individual genes or module eigengenes with zero or non-finite MAD, "
+      "and every affected entity is recorded.",
+    ),
+    (
+      "wgcna_run_diagnostics",
+      resolve_path(
+        "data/processed/regulatory/wgcna/"
+        "wgcna_run_diagnostics_all_cancers.tsv"
+      ),
+      output_dir / "wgcna_run_diagnostics_all_cancers.tsv",
+      "Correlation settings, zero-MAD counts, fallback policy, selected "
+      "power and module counts are reported per cancer.",
     ),
     (
       "promoter_tf_regulatory_pair_metrics",
-      resolve_path("data/processed/regulatory/promoter_tf_regulatory_pair_metrics.tsv"),
+      resolve_path(
+        "data/processed/regulatory/promoter_tf_regulatory_pair_metrics.tsv"
+      ),
       output_dir / "promoter_tf_regulatory_pair_metrics.tsv",
-      "DoRothEA associations, TF-expression consistency and promoter motif predictions are distinct subcomponents.",
+      "DoRothEA associations, TF-expression consistency and promoter "
+      "motif predictions are distinct subcomponents.",
     ),
     (
       "ensembl_canonical_promoters",
       resolve_path("data/raw/regulatory/ensembl_promoters.tsv"),
       output_dir / "ensembl_canonical_promoters.tsv",
-      "Promoter coordinates are canonical-transcript TSS windows and are not proof of TF occupancy.",
+      "Promoter coordinates are canonical-transcript TSS windows and are "
+      "not proof of TF occupancy.",
     ),
     (
       "jaspar_promoter_motif_predictions",
-      resolve_path("data/processed/regulatory/jaspar_promoter_tf_summary.tsv"),
+      resolve_path(
+        "data/processed/regulatory/jaspar_promoter_tf_summary.tsv"
+      ),
       output_dir / "jaspar_promoter_tf_summary.tsv",
-      "JASPAR/FIMO motif occurrence is predicted cis-regulatory support, not direct binding or causality.",
+      "JASPAR/FIMO motif occurrence is predicted cis-regulatory support, "
+      "not direct binding or causality.",
     ),
   ]
   rows = []
   for family, source, output, boundary in specifications:
     frame = read_optional(source)
     if frame.empty:
-      raise FileNotFoundError(f"Missing or empty WGCNA/regulatory source: {source}")
+      raise FileNotFoundError(
+        f"Missing or empty WGCNA/regulatory source: {source}"
+      )
     atomic_tsv(frame, output)
     rows.append({
       "evidence_family": family,
@@ -98,9 +135,14 @@ def main() -> None:
     })
   manifest = pd.DataFrame(rows)
   manifest["generated_at_utc"] = datetime.now(timezone.utc).isoformat()
-  manifest_path = output_dir / "wgcna_regulatory_supporting_evidence_manifest.tsv"
+  manifest_path = (
+    output_dir / "wgcna_regulatory_supporting_evidence_manifest.tsv"
+  )
   atomic_tsv(manifest, manifest_path)
-  print(manifest[["evidence_family", "rows", "output_path"]].to_string(index=False))
+  print(
+    manifest[["evidence_family", "rows", "output_path"]]
+      .to_string(index=False)
+  )
   print(f"Wrote {manifest_path}")
 
 

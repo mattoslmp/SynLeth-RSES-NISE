@@ -209,6 +209,21 @@ def run_wgcna(
 ) -> pd.DataFrame:
   cancer_dir = work_dir / cancer
   cancer_dir.mkdir(parents=True, exist_ok=True)
+  completed_outputs = (
+    cancer_dir / "wgcna_gene_modules.tsv",
+    cancer_dir / "wgcna_module_eigengenes.tsv",
+    cancer_dir / "wgcna_pair_metrics.tsv",
+    cancer_dir / "wgcna_soft_threshold_diagnostics.tsv",
+    cancer_dir / "wgcna_run_diagnostics.tsv",
+    cancer_dir / "wgcna_correlation_fallback.tsv",
+  )
+  if all(path.exists() and path.stat().st_size > 0 for path in completed_outputs):
+    print(f"[WGCNA] Reusing completed outputs for {cancer}: {cancer_dir}")
+    return pd.read_csv(
+      cancer_dir / "wgcna_pair_metrics.tsv",
+      sep="\t",
+      low_memory=False,
+    )
   expression_path = cancer_dir / "wgcna_expression_input.tsv"
   pair_path = cancer_dir / "wgcna_candidate_pairs.tsv"
   expression.to_csv(expression_path, sep="\t", index=False)
@@ -300,6 +315,34 @@ def main() -> None:
     )
     prep_diagnostics.append(diagnostics)
   wgcna = pd.concat(wgcna_frames, ignore_index=True)
+  fallback_frames = []
+  diagnostic_frames = []
+  for cancer in CANCERS:
+    cancer_dir = work_dir / cancer
+    fallback_frames.append(
+      pd.read_csv(
+        cancer_dir / "wgcna_correlation_fallback.tsv",
+        sep="\t",
+        low_memory=False,
+      )
+    )
+    diagnostic_frames.append(
+      pd.read_csv(
+        cancer_dir / "wgcna_run_diagnostics.tsv",
+        sep="\t",
+        low_memory=False,
+      )
+    )
+  pd.concat(fallback_frames, ignore_index=True).to_csv(
+    work_dir / "wgcna_correlation_fallback_all_cancers.tsv",
+    sep="\t",
+    index=False,
+  )
+  pd.concat(diagnostic_frames, ignore_index=True).to_csv(
+    work_dir / "wgcna_run_diagnostics_all_cancers.tsv",
+    sep="\t",
+    index=False,
+  )
   wgcna_components = []
   for record in wgcna.to_dict("records"):
     score = weighted_subscore(
@@ -445,12 +488,12 @@ def main() -> None:
   enriched["component_regulatory_network"] = enriched[
     "component_regulatory_network_composite"
   ]
-  enriched["expression_network_method"] = "pairwise_Spearman_plus_signed_WGCNA"
+  enriched["expression_network_method"] = "pairwise_Spearman_plus_signed_WGCNA_bicor_individual_Pearson_fallback"
   enriched["regulatory_network_method"] = (
     "DoRothEA_TF_target_plus_TF_expression_consistency_plus_"
     "JASPAR_promoter_motif_prediction"
   )
-  enriched["regulatory_layer_version"] = "wgcna-promoter-regulatory-v1"
+  enriched["regulatory_layer_version"] = "wgcna-promoter-regulatory-v2"
   enriched["regulatory_layer_generated_at_utc"] = datetime.now(timezone.utc).isoformat()
 
   output = resolve_path(args.output)
@@ -459,7 +502,7 @@ def main() -> None:
   enriched.to_csv(temporary, sep="\t", index=False)
   temporary.replace(output)
   status = {
-    "version": "wgcna-promoter-regulatory-v1",
+    "version": "wgcna-promoter-regulatory-v2",
     "output_rows": len(enriched),
     "pair_count": int(enriched["pair_id"].nunique()),
     "cancers": list(CANCERS),

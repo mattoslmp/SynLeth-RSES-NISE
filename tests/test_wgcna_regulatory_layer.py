@@ -116,6 +116,35 @@ def test_resume_pipeline_requires_actual_wgcna_and_fimo() -> None:
   )
 
 
+def test_wgcna_correlation_policy_is_explicit_and_auditable() -> None:
+  implementation = (
+    ROOT / "scripts/run_wgcna_expression_network.R"
+  ).read_text(encoding="utf-8")
+  builder = (
+    ROOT / "scripts/build_wgcna_regulatory_layer.py"
+  ).read_text(encoding="utf-8")
+  assert 'correlation_method <- "bicor"' in implementation
+  assert 'correlation_max_p_outliers <- 0.10' in implementation
+  assert 'correlation_pearson_fallback <- "individual"' in implementation
+  assert "corOptions = correlation_options" in implementation
+  assert "corOptions = kme_correlation_options" in implementation
+  assert "wgcna_correlation_fallback.tsv" in implementation
+  assert "wgcna_correlation_fallback_all_cancers.tsv" in builder
+  assert "wgcna_run_diagnostics_all_cancers.tsv" in builder
+  assert "gene_index[[" not in implementation
+  assert "lost_index <- match(lost, genes)" in implementation
+  assert "target_index <- match(target, genes)" in implementation
+
+
+def test_wgcna_builder_reuses_only_complete_cancer_outputs() -> None:
+  builder = (
+    ROOT / "scripts/build_wgcna_regulatory_layer.py"
+  ).read_text(encoding="utf-8")
+  assert "[WGCNA] Reusing completed outputs" in builder
+  assert "wgcna_correlation_fallback.tsv" in builder
+  assert "all(path.exists() and path.stat().st_size > 0" in builder
+
+
 def test_consensus_aggregation_prevents_cancer_triplication(
   tmp_path: Path,
 ) -> None:
@@ -247,5 +276,5 @@ def test_recompute_matches_cancer_specific_network_evidence(
   assert set(
     result["expression_regulatory_semantics_version"]
   ) == {
-    "eligibility-aware-wgcna-regulatory-v2"
+    "eligibility-aware-wgcna-regulatory-v3"
   }

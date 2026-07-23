@@ -10,7 +10,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_ELIGIBILITY_SEMANTICS = "eligibility-aware-v1"
 EXPECTED_EXPRESSION_REGULATORY_SEMANTICS = (
-  "eligibility-aware-wgcna-regulatory-v2"
+  "eligibility-aware-wgcna-regulatory-v3"
 )
 
 
@@ -60,6 +60,7 @@ def main() -> None:
     {
       "scoring_semantics_version",
       "expression_regulatory_semantics_version",
+      "score_version",
       "pairwise_expression_context",
       "wgcna_expression_network",
       "expression_context_subcoverage",
@@ -91,6 +92,12 @@ def main() -> None:
       "Unexpected expression/regulatory semantics "
       f"{sorted(expression_regulatory_versions)}; expected "
       f"{EXPECTED_EXPRESSION_REGULATORY_SEMANTICS}"
+    )
+  score_versions = set(ranking["score_version"].dropna().astype(str))
+  if score_versions != {"RSES-Onco-expanded-v0.10.9"}:
+    raise ValueError(
+      f"Unexpected score versions {sorted(score_versions)}; "
+      "expected RSES-Onco-expanded-v0.10.9"
     )
   if ranking["direct_promoter_binding_claim"].astype(str).str.casefold().isin(
     {"1", "true", "yes"}
@@ -164,6 +171,8 @@ def main() -> None:
   required_families = {
     "cancer_specific_wgcna_pair_metrics",
     "wgcna_input_preparation",
+    "wgcna_correlation_fallback_audit",
+    "wgcna_run_diagnostics",
     "promoter_tf_regulatory_pair_metrics",
     "ensembl_canonical_promoters",
     "jaspar_promoter_motif_predictions",
@@ -173,11 +182,100 @@ def main() -> None:
   )
   if missing_families:
     raise ValueError(f"WGCNA/regulatory manifest missing: {missing_families}")
-  for value in manifest["output_path"].astype(str):
-    path = Path(value)
+  exported = {}
+  for record in manifest.to_dict("records"):
+    path = Path(str(record["output_path"]))
     if not path.is_absolute():
       path = ROOT / path
-    read(path)
+    exported[str(record["evidence_family"])] = read(path)
+
+  diagnostics = exported["wgcna_run_diagnostics"]
+  require_columns(
+    diagnostics,
+    {
+      "cancer",
+      "correlation",
+      "correlation_policy",
+      "max_p_outliers",
+      "pearson_fallback",
+      "signed_kme_correlation",
+      "signed_kme_max_p_outliers",
+      "signed_kme_pearson_fallback",
+      "zero_mad_gene_count",
+      "zero_mad_module_eigengene_count",
+      "pearson_fallback_entity_count",
+    },
+    "WGCNA run diagnostics",
+  )
+  expected_policy = (
+    "bicor_primary_with_individual_Pearson_fallback_for_zero_MAD_only"
+  )
+  if not diagnostics["correlation"].astype(str).eq("bicor").all():
+    raise ValueError("WGCNA primary correlation must be bicor")
+  if not diagnostics["correlation_policy"].astype(str).eq(
+    expected_policy
+  ).all():
+    raise ValueError("Unexpected WGCNA correlation policy")
+  if not diagnostics["pearson_fallback"].astype(str).eq(
+    "individual"
+  ).all():
+    raise ValueError("WGCNA Pearson fallback must be individual")
+  if not diagnostics["signed_kme_correlation"].astype(str).eq(
+    "bicor"
+  ).all():
+    raise ValueError("signedKME primary correlation must be bicor")
+  if not diagnostics["signed_kme_pearson_fallback"].astype(str).eq(
+    "individual"
+  ).all():
+    raise ValueError("signedKME Pearson fallback must be individual")
+  for column in ("max_p_outliers", "signed_kme_max_p_outliers"):
+    values = pd.to_numeric(diagnostics[column], errors="coerce")
+    if not values.eq(0.10).all():
+      raise ValueError(f"{column} must equal 0.10")
+
+  fallback = exported["wgcna_correlation_fallback_audit"]
+  require_columns(
+    fallback,
+    {
+      "cancer",
+      "entity_type",
+      "entity",
+      "mad",
+      "pearson_fallback_expected",
+      "fallback_reason",
+      "primary_correlation",
+      "fallback_correlation",
+      "pearson_fallback_policy",
+      "max_p_outliers",
+    },
+    "WGCNA correlation fallback audit",
+  )
+  if not fallback["primary_correlation"].astype(str).eq("bicor").all():
+    raise ValueError("Fallback audit primary correlation must be bicor")
+  if not fallback["fallback_correlation"].astype(str).eq(
+    "pearson"
+  ).all():
+    raise ValueError("Fallback audit fallback correlation must be Pearson")
+  if not fallback["pearson_fallback_policy"].astype(str).eq(
+    "individual"
+  ).all():
+    raise ValueError("Fallback audit policy must be individual")
+  fallback_expected = (
+    fallback["pearson_fallback_expected"]
+      .astype(str)
+      .str.casefold()
+      .isin({"1", "true", "yes"})
+  )
+  invalid_reason = (
+    fallback_expected
+    & fallback["fallback_reason"]
+      .fillna("")
+      .astype(str)
+      .str.strip()
+      .eq("")
+  )
+  if invalid_reason.any():
+    raise ValueError("Fallback-eligible entities lack a zero-MAD reason")
 
   print("WGCNA/promoter regulatory evidence validation passed.")
   print(f"Ranking rows: {len(ranking):,}")
