@@ -11,6 +11,9 @@ import pandas as pd
 import yaml
 
 from scripts.build_genomic_circos_inputs import TRACKS
+from scripts.enrich_genomic_circos_internal_layers import (
+  ADDITIONAL_TRACKS,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -68,7 +71,7 @@ def test_all_circos_score_rings_pass_strict_layout(
     "link_color": "#C62828",
   }])
   tracks = pd.DataFrame(
-    TRACKS,
+    [*TRACKS, *ADDITIONAL_TRACKS],
     columns=[
       "track_id",
       "track_label",
@@ -78,7 +81,8 @@ def test_all_circos_score_rings_pass_strict_layout(
       "parent_domain",
       "ring_order",
     ],
-  )
+  ).sort_values(["panel", "ring_order"])
+  assert len(tracks) == 35
   tracks["aggregation"] = "maximum"
   rings = pd.DataFrame([
     {
