@@ -56,13 +56,29 @@ if (nrow(datExpr) < 20 || ncol(datExpr) < 50) {
   )
 }
 
+correlation_method <- "bicor"
+correlation_max_p_outliers <- 0.10
+correlation_pearson_fallback <- "individual"
+correlation_options <- list(
+  use = "p",
+  maxPOutliers = correlation_max_p_outliers,
+  pearsonFallback = correlation_pearson_fallback
+)
+kme_correlation_options <- paste0(
+  "use = 'p', maxPOutliers = ",
+  correlation_max_p_outliers,
+  ", pearsonFallback = '",
+  correlation_pearson_fallback,
+  "'"
+)
+
 powers <- c(1:12, seq(14, 20, by = 2))
 soft <- pickSoftThreshold(
   datExpr,
   powerVector = powers,
   networkType = "signed",
-  corFnc = "bicor",
-  corOptions = list(use = "p", maxPOutliers = 0.10),
+  corFnc = correlation_method,
+  corOptions = correlation_options,
   verbose = 0
 )
 fit <- soft$fitIndices
@@ -90,8 +106,8 @@ adjacency_matrix <- adjacency(
   datExpr,
   power = power,
   type = "signed",
-  corFnc = "bicor",
-  corOptions = list(use = "p", maxPOutliers = 0.10)
+  corFnc = correlation_method,
+  corOptions = correlation_options
 )
 TOM <- TOMsimilarity(adjacency_matrix, TOMType = "signed", verbose = 0)
 dissTOM <- 1 - TOM
@@ -114,7 +130,13 @@ merged <- mergeCloseModules(
 module_colors <- merged$colors
 MEs <- orderMEs(merged$newMEs)
 
-kme <- signedKME(datExpr, MEs, outputColumnName = "kME", corFnc = "bicor")
+kme <- signedKME(
+  datExpr,
+  MEs,
+  outputColumnName = "kME",
+  corFnc = correlation_method,
+  corOptions = kme_correlation_options
+)
 connectivity <- intramodularConnectivity(adjacency_matrix, module_colors)
 module_names <- sub("^ME", "", names(MEs))
 module_column <- match(module_colors, module_names)
@@ -126,6 +148,22 @@ for (index in seq_along(module_colors)) {
 }
 
 genes <- colnames(datExpr)
+gene_mad <- vapply(
+  datExpr,
+  function(values) suppressWarnings(mad(values, na.rm = TRUE)),
+  numeric(1)
+)
+gene_zero_mad <- !is.finite(gene_mad) | gene_mad == 0
+module_eigengene_mad <- vapply(
+  MEs,
+  function(values) suppressWarnings(mad(values, na.rm = TRUE)),
+  numeric(1)
+)
+module_eigengene_zero_mad <- (
+  !is.finite(module_eigengene_mad)
+  | module_eigengene_mad == 0
+)
+
 gene_table <- data.frame(
   cancer = cancer,
   gene = genes,
@@ -133,6 +171,8 @@ gene_table <- data.frame(
   kME_own = kme_own,
   kTotal = connectivity$kTotal,
   kWithin = connectivity$kWithin,
+  expression_mad = unname(gene_mad[genes]),
+  pearson_fallback_expected = unname(gene_zero_mad[genes]),
   stringsAsFactors = FALSE
 )
 write.table(
@@ -157,15 +197,14 @@ required_pair_columns <- c("pair_id", "lost_gene", "target_gene")
 if (!all(required_pair_columns %in% names(pairs))) {
   stop("Pair input lacks pair_id, lost_gene or target_gene")
 }
-gene_index <- setNames(seq_along(genes), genes)
 gene_lookup <- split(gene_table, gene_table$gene)
 rows <- lapply(seq_len(nrow(pairs)), function(i) {
   record <- pairs[i, , drop = FALSE]
   lost <- as.character(record$lost_gene)
   target <- as.character(record$target_gene)
-  lost_index <- gene_index[[lost]]
-  target_index <- gene_index[[target]]
-  if (is.null(lost_index) || is.null(target_index)) {
+  lost_index <- match(lost, genes)
+  target_index <- match(target, genes)
+  if (is.na(lost_index) || is.na(target_index)) {
     return(data.frame(
       cancer = cancer,
       pair_id = record$pair_id,
@@ -226,6 +265,52 @@ write.table(
   quote = FALSE
 )
 
+fallback_audit <- rbind(
+  data.frame(
+    cancer = cancer,
+    entity_type = "gene",
+    entity = genes,
+    mad = unname(gene_mad[genes]),
+    pearson_fallback_expected = unname(gene_zero_mad[genes]),
+    fallback_reason = ifelse(
+      unname(gene_zero_mad[genes]),
+      "zero_or_nonfinite_MAD",
+      ""
+    ),
+    primary_correlation = correlation_method,
+    fallback_correlation = "pearson",
+    pearson_fallback_policy = correlation_pearson_fallback,
+    max_p_outliers = correlation_max_p_outliers,
+    stringsAsFactors = FALSE
+  ),
+  data.frame(
+    cancer = cancer,
+    entity_type = "module_eigengene",
+    entity = names(MEs),
+    mad = unname(module_eigengene_mad[names(MEs)]),
+    pearson_fallback_expected = unname(
+      module_eigengene_zero_mad[names(MEs)]
+    ),
+    fallback_reason = ifelse(
+      unname(module_eigengene_zero_mad[names(MEs)]),
+      "zero_or_nonfinite_MAD",
+      ""
+    ),
+    primary_correlation = correlation_method,
+    fallback_correlation = "pearson",
+    pearson_fallback_policy = correlation_pearson_fallback,
+    max_p_outliers = correlation_max_p_outliers,
+    stringsAsFactors = FALSE
+  )
+)
+write.table(
+  fallback_audit,
+  file.path(output_dir, "wgcna_correlation_fallback.tsv"),
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+
 diagnostics <- data.frame(
   cancer = cancer,
   samples = nrow(datExpr),
@@ -233,7 +318,20 @@ diagnostics <- data.frame(
   selected_power = power,
   power_selection_rule = power_rule,
   network_type = "signed",
-  correlation = "bicor",
+  correlation = correlation_method,
+  correlation_policy = (
+    "bicor_primary_with_individual_Pearson_fallback_for_zero_MAD_only"
+  ),
+  max_p_outliers = correlation_max_p_outliers,
+  pearson_fallback = correlation_pearson_fallback,
+  signed_kme_correlation = correlation_method,
+  signed_kme_max_p_outliers = correlation_max_p_outliers,
+  signed_kme_pearson_fallback = correlation_pearson_fallback,
+  zero_mad_gene_count = sum(gene_zero_mad),
+  zero_mad_module_eigengene_count = sum(module_eigengene_zero_mad),
+  pearson_fallback_entity_count = (
+    sum(gene_zero_mad) + sum(module_eigengene_zero_mad)
+  ),
   tom_type = "signed",
   min_module_size = minimum_module_size,
   merge_cut_height = 0.25,
