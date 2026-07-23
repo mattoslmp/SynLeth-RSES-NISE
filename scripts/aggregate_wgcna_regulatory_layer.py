@@ -81,7 +81,8 @@ def main() -> None:
     "component_regulatory_network_composite"
   ]
   merged["expression_network_method"] = (
-    "pairwise_Spearman_plus_consensus_signed_WGCNA"
+    "pairwise_Spearman_plus_consensus_signed_WGCNA_bicor_"
+    "individual_Pearson_fallback"
   )
   merged["regulatory_network_method"] = (
     "DoRothEA_TF_target_plus_TF_expression_consistency_plus_"
@@ -91,7 +92,7 @@ def main() -> None:
     "JASPAR_motif_prediction_not_direct_binding"
   )
   merged["regulatory_layer_version"] = (
-    "wgcna-promoter-regulatory-v1"
+    "wgcna-promoter-regulatory-v2"
   )
 
   output = resolve_path(args.output)
