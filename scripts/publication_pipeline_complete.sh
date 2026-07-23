@@ -52,12 +52,10 @@ require_file() {
 }
 
 build_extended_supporting_evidence() {
-  require_file "$RANKING"
-  require_file "$FUNCTIONAL_EVIDENCE"
-  require_file "$GENE_EFFECT"
-  require_file "$COPY_NUMBER"
-  require_file "$MODELS"
-  require_file "$EXPRESSION"
+  for path in "$RANKING" "$FUNCTIONAL_EVIDENCE" "$GENE_EFFECT" \
+    "$COPY_NUMBER" "$MODELS" "$EXPRESSION"; do
+    require_file "$path"
+  done
 
   log_stage "Build model-level expression, copy-number, coexpression and CRISPR evidence"
   run_logged "$LOG_DIR/04e_build_model_level_supporting_evidence.log" \
@@ -91,11 +89,10 @@ build_extended_supporting_evidence() {
 }
 
 build_repository_documentation_and_circos_data() {
-  require_file "$RANKING"
-  require_file "$CANDIDATES"
-  require_file "$PROMOTERS"
-  require_file "$EXPRESSION"
-  require_file "$MODELS"
+  for path in "$RANKING" "$CANDIDATES" "$PROMOTERS" \
+    "$EXPRESSION" "$MODELS"; do
+    require_file "$path"
+  done
 
   log_stage "Document every Python, Bash and R pipeline script/module"
   run_logged "$LOG_DIR/04k_build_script_documentation.log" \
@@ -114,6 +111,33 @@ build_repository_documentation_and_circos_data() {
       --expression "$EXPRESSION" \
       --models "$MODELS" \
       --output-dir data/processed/circos
+}
+
+run_core_without_terminal_validation() {
+  local requested_stage="$1"
+  if [[ "$requested_stage" == "all" ]]; then
+    bash "$CORE" acquire-pharmacology
+    bash "$CORE" standardize-sensitivity
+    bash "$CORE" analyze-sensitivity
+    bash "$CORE" prioritize
+    bash "$CORE" evidence-audit
+    bash "$CORE" robustness
+    bash "$CORE" supporting-evidence
+    bash "$CORE" extended-tables
+    bash "$CORE" structures
+  else
+    bash "$CORE" prioritize
+    bash "$CORE" evidence-audit
+    bash "$CORE" robustness
+    bash "$CORE" supporting-evidence
+    bash "$CORE" extended-tables
+  fi
+  bash "$CORE" tables
+  bash "$CORE" figures
+  bash "$CORE" figure-data
+  bash "$CORE" scientific-validate
+  bash "$CORE" workbook
+  bash "$CORE" manifests
 }
 
 integrate_genomic_circos_assets() {
@@ -191,7 +215,7 @@ case "$stage" in
   all|assets-only)
     build_extended_supporting_evidence
     build_repository_documentation_and_circos_data
-    bash "$CORE" "$stage"
+    run_core_without_terminal_validation "$stage"
     integrate_genomic_circos_assets
     finalize_extended_publication_assets
     ;;
