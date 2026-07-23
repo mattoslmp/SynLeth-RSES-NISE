@@ -1,0 +1,60 @@
+name: Generate genomic Circos documentation assets
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "docs/GENOMIC_CIRCOS_WORKFLOW_V0112.md"
+      - "scripts/sync_circos_documentation_v0112.py"
+      - ".github/workflows/generate-circos-documentation-assets.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Install document dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pandoc \
+            libreoffice-writer \
+            graphviz
+
+      - name: Synchronize canonical sources
+        run: python -u scripts/sync_circos_documentation_v0112.py
+
+      - name: Regenerate Word PDF SVG and PNG documentation assets
+        run: |
+          chmod +x scripts/generate_repository_documentation_assets.sh
+          bash scripts/generate_repository_documentation_assets.sh
+
+      - name: Commit synchronized documentation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            docs/END_TO_END_ARTICLE_PROTOCOL.md \
+            docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md \
+            supplementary/Supplementary_Methods_RSES_Onco_v0110.md \
+            supplementary/Supplementary_Methods_RSES_Onco_v0110.docx \
+            supplementary/Supplementary_Methods_RSES_Onco_v0110.pdf \
+            manuscript/RSES_Onco_intro_methods_draft_v0110.md \
+            manuscript/RSES_Onco_intro_methods_draft_v0110.docx \
+            manuscript/RSES_Onco_intro_methods_draft_v0110.pdf \
+            docs/figures/RSES_Onco_workflow_and_applications.svg \
+            docs/figures/RSES_Onco_workflow_and_applications.png
+          if git diff --cached --quiet; then
+            echo "Circos documentation is current."
+            exit 0
+          fi
+          git commit -m "Synchronize genomic Circos tutorials methods and documents"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
