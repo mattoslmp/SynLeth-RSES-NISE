@@ -25,4 +25,5 @@ dependencies:
   - meme
   - pip
   - pip:
+      - xenaPython==1.0.14
       - -e .

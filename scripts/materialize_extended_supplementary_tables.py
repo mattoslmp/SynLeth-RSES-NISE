@@ -64,6 +64,9 @@ def main() -> None:
     "Table_S40_tcga_gene_event_summary.tsv": article_root / "tables/supporting_evidence/genomic_context/tcga_gene_event_summary.tsv",
     "Table_S41_pharmacology_evidence_long_support.tsv": article_root / "tables/supporting_evidence/pharmacology/pharmacology_evidence_long.tsv",
     "Table_S42_pharmacology_source_coverage.tsv": ROOT / "results/expanded_26Q1/pharmacology/pharmacology_source_coverage.tsv",
+    "Table_S45_tcga_nise_methylation_gene_summary.tsv": ROOT / "data/processed/epigenetics/methylation/tcga_nise_methylation_gene_summary.tsv",
+    "Table_S46_tcga_nise_methylation_pair_metrics.tsv": ROOT / "data/processed/epigenetics/methylation/tcga_nise_methylation_pair_metrics.tsv",
+    "Table_S47_tcga_nise_methylation_source_status.tsv": ROOT / "data/processed/epigenetics/methylation/tcga_nise_methylation_source_status.tsv",
   }
   for name, source in mapping.items():
     atomic_copy(source, destination / name)

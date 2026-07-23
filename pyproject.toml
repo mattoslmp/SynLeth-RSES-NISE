@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rses-onco"
-version = "0.11.0"
-description = "Coverage-aware all-NISE cancer vulnerability with WGCNA expression networks, promoter-aware TF regulation, evidence audit, robustness, pharmacology, structural atlas and scripted publication assets"
+version = "0.11.1"
+description = "Coverage-aware all-NISE cancer vulnerability with WGCNA, TCGA/GDC methylation, promoter-aware TF regulation, evidence audit, robustness, pharmacology, structural atlas and scripted publication assets"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{name = "Leandro de Mattos Pereira"}]
@@ -20,6 +20,7 @@ dependencies = [
   "openpyxl>=3.1",
   "pillow>=10.0",
   "python-docx>=1.1",
+  "xenaPython==1.0.14",
 ]
 
 [project.scripts]

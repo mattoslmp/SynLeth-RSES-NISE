@@ -87,12 +87,12 @@ def main() -> None:
 
   figures = pd.read_csv(manifest_path, sep="\t")
   tables = pd.read_csv(table_manifest_path, sep="\t")
-  if len(figures) != 77:
-    errors.append(f"figure_count:{len(figures)}:expected_77")
+  if len(figures) != 80:
+    errors.append(f"figure_count:{len(figures)}:expected_80")
   if figures["figure_id"].duplicated().any():
     errors.append("duplicate_figure_ids")
   expected_main = {f"Figure_{index}" for index in range(1, 9)}
-  expected_supplementary = {f"Figure_S{index}" for index in range(1, 70)}
+  expected_supplementary = {f"Figure_S{index}" for index in range(1, 73)}
   observed = set(figures["figure_id"].astype(str))
   if expected_main - observed:
     errors.append(f"missing_main_figures:{sorted(expected_main - observed)}")
@@ -116,14 +116,14 @@ def main() -> None:
     source_path = Path(str(record["source_data_path"])); source_path = source_path if source_path.is_absolute() else ROOT / source_path
     require(source_path, errors); freshness_targets.append(source_path)
 
-  if len(tables) != 48:
-    errors.append(f"table_count:{len(tables)}:expected_48")
+  if len(tables) != 51:
+    errors.append(f"table_count:{len(tables)}:expected_51")
   main_count = int(tables["category"].astype(str).eq("main").sum())
   supplementary_count = int(tables["category"].astype(str).eq("supplementary").sum())
   if main_count != 4:
     errors.append(f"main_table_count:{main_count}:expected_4")
-  if supplementary_count != 44:
-    errors.append(f"supplementary_table_count:{supplementary_count}:expected_44")
+  if supplementary_count != 47:
+    errors.append(f"supplementary_table_count:{supplementary_count}:expected_47")
   for path_value in tables["path"].astype(str):
     path = Path(path_value); path = path if path.is_absolute() else ROOT / path
     require(path, errors); freshness_targets.append(path)
@@ -144,6 +144,11 @@ def main() -> None:
     article_root / "tables/supplementary/Table_S44_asset_reproduction_registry.tsv",
     ROOT / "data/processed/regulatory/wgcna/wgcna_correlation_fallback_all_cancers.tsv",
     ROOT / "data/processed/regulatory/wgcna/wgcna_run_diagnostics_all_cancers.tsv",
+    ROOT / "data/processed/epigenetics/methylation/tcga_nise_methylation_pair_metrics.tsv",
+    ROOT / "data/processed/epigenetics/methylation/tcga_nise_methylation_source_status.tsv",
+    article_root / "tables/supplementary/Table_S45_tcga_nise_methylation_gene_summary.tsv",
+    article_root / "tables/supplementary/Table_S46_tcga_nise_methylation_pair_metrics.tsv",
+    article_root / "tables/supplementary/Table_S47_tcga_nise_methylation_source_status.tsv",
     article_root / "manifests/scientific_integrity_validation.json",
   ]
   for path in required_audit_outputs:
@@ -167,8 +172,8 @@ def main() -> None:
   if errors:
     raise SystemExit("Publication package validation failed:\n" + "\n".join(f"- {error}" for error in errors))
   print("Publication package validation passed.")
-  print("Main figures: 8; supplementary figures: 69; exported image files: 231")
-  print("Main tables: 4; supplementary tables: 44")
+  print("Main figures: 8; supplementary figures: 72; exported image files: 240")
+  print("Main tables: 4; supplementary tables: 47")
   print("All 70 curated NISE proteins have whole and site structural renders.")
   print("All registered figures passed automated layout audits.")
   print("Coverage, missingness, overlap, robustness and exact figure-source tables are present.")

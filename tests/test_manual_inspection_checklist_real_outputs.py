@@ -32,9 +32,9 @@ def test_manual_inspection_checklist_when_real_outputs_exist() -> None:
   )
   checklist = pd.read_csv(checklist_path, sep="\t", low_memory=False)
   figures = pd.read_csv(figure_manifest, sep="\t", low_memory=False)
-  if len(figures) != 77:
+  if len(figures) != 80:
     pytest.skip("Existing real outputs predate the v0.11.0 publication contract")
-  assert len(checklist) == len(figures) == 77
+  assert len(checklist) == len(figures) == 80
   assert set(checklist["figure_id"].astype(str)) == set(
     figures["figure_id"].astype(str)
   )

@@ -157,6 +157,6 @@ def test_article_registry_includes_complete_structural_and_audit_atlas() -> None
   main_ids = {record["id"] for record in config["main_figures"]}
   supplementary_ids = {record["id"] for record in config["supplementary_figures"]}
   assert main_ids == {f"Figure_{index}" for index in range(1, 9)}
-  assert supplementary_ids == {f"Figure_S{index}" for index in range(1, 70)}
+  assert supplementary_ids == {f"Figure_S{index}" for index in range(1, 73)}
   assert len(config["main_tables"]) == 4
-  assert len(config["supplementary_tables"]) == 44
+  assert len(config["supplementary_tables"]) == 47

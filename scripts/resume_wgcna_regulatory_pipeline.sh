@@ -28,6 +28,9 @@ PROMOTERS="${PROMOTERS:-data/raw/regulatory/ensembl_promoters.tsv}"
 PROMOTER_FASTA="${PROMOTER_FASTA:-data/raw/regulatory/ensembl_promoters.fa}"
 JASPAR_MEME="${JASPAR_MEME:-data/raw/regulatory/JASPAR2026_CORE_vertebrates_non-redundant.meme}"
 PROMOTER_MOTIFS="${PROMOTER_MOTIFS:-$PROCESSED_DIR/regulatory/jaspar_promoter_tf_summary.tsv}"
+METHYLATION_DIR="${METHYLATION_DIR:-$PROCESSED_DIR/epigenetics/methylation}"
+METHYLATION_METRICS="${METHYLATION_METRICS:-$METHYLATION_DIR/tcga_nise_methylation_pair_metrics.tsv}"
+METHYLATION_STRICT="${METHYLATION_STRICT:-0}"
 LOSS_THRESHOLD="${LOSS_THRESHOLD:-0.30}"
 MIN_GROUP_SIZE="${MIN_GROUP_SIZE:-3}"
 PUBLICATION_STAGE="${PUBLICATION_STAGE:-assets-only}"
@@ -70,6 +73,7 @@ check_runtime() {
     echo "FIMO from the MEME suite is missing." >&2
     return 1
   }
+  python -c "import xenaPython; print('xenaPython methylation client: OK')"
   bash -n scripts/resume_wgcna_regulatory_pipeline.sh
   python -m compileall -q src scripts tests
   echo "WGCNA/promoter regulatory runtime is ready."
@@ -110,6 +114,19 @@ build_regulatory_layer() {
       --promoters "$PROMOTER_FASTA" \
       --summary-output "$PROMOTER_MOTIFS"
 
+  log_stage "Acquire TCGA/GDC candidate-gene methylation through UCSC Xena"
+  methylation_command=(
+    python -u scripts/acquire_tcga_nise_methylation.py
+      --candidates "$CANDIDATES"
+      --output-dir "$METHYLATION_DIR"
+      --min-samples 20
+  )
+  if [[ "$METHYLATION_STRICT" == "1" ]]; then
+    methylation_command+=(--strict)
+  fi
+  run_logged "$LOG_DIR/03b_tcga_methylation.log" "${methylation_command[@]}"
+  require_file "$METHYLATION_METRICS"
+
   log_stage "Build cancer-specific signed WGCNA and TF regulatory evidence"
   run_logged "$LOG_DIR/04_wgcna_regulatory_layer.log" \
     python -u scripts/build_wgcna_regulatory_layer.py \
@@ -121,6 +138,13 @@ build_regulatory_layer() {
       --functional-evidence "$BASE_FUNCTIONAL_EVIDENCE" \
       --dorothea "$DOROTHEA" \
       --promoter-motifs "$PROMOTER_MOTIFS" \
+      --output "$CANCER_SPECIFIC_EVIDENCE"
+
+  log_stage "Integrate methylation into the regulatory microniche domain"
+  run_logged "$LOG_DIR/04b_methylation_regulatory_integration.log" \
+    python -u scripts/integrate_methylation_regulatory_layer.py \
+      --regulatory-evidence "$CANCER_SPECIFIC_EVIDENCE" \
+      --methylation-metrics "$METHYLATION_METRICS" \
       --output "$CANCER_SPECIFIC_EVIDENCE"
 
   log_stage "Build pair-level consensus for source compatibility"

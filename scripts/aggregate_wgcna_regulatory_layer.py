@@ -58,6 +58,14 @@ def main() -> None:
     "regulatory_tf_association_divergence",
     "regulatory_tf_expression_profile_divergence",
     "regulatory_promoter_motif_divergence",
+    "regulatory_promoter_methylation_context",
+    "component_promoter_methylation_context",
+    "methylation_context_raw",
+    "methylation_context_coverage",
+    "methylation_primary_tumor_overlap_n",
+    "methylation_pair_spearman_rho",
+    "methylation_pair_median_absolute_beta_difference",
+    "methylation_tumor_normal_delta_divergence",
     "regulatory_lost_regulator_count",
     "regulatory_target_regulator_count",
     "regulatory_lost_promoter_tf_count",
@@ -86,13 +94,13 @@ def main() -> None:
   )
   merged["regulatory_network_method"] = (
     "DoRothEA_TF_target_plus_TF_expression_consistency_plus_"
-    "JASPAR_promoter_motif_prediction"
+    "JASPAR_promoter_motif_prediction_plus_TCGA_GDC_methylation"
   )
   merged["promoter_evidence_type"] = (
     "JASPAR_motif_prediction_not_direct_binding"
   )
   merged["regulatory_layer_version"] = (
-    "wgcna-promoter-regulatory-v2"
+    "wgcna-promoter-methylation-regulatory-v3"
   )
 
   output = resolve_path(args.output)

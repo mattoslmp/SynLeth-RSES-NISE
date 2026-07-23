@@ -29,7 +29,7 @@ from rses_onco.expanded import (
 
 ELIGIBILITY_SEMANTICS_VERSION = "eligibility-aware-v1"
 EXPRESSION_REGULATORY_SEMANTICS_VERSION = (
-  "eligibility-aware-wgcna-regulatory-v3"
+  "eligibility-aware-wgcna-regulatory-methylation-v4"
 )
 EXPRESSION_SUBWEIGHTS = {
   "pairwise_expression_context": 0.50,
@@ -204,6 +204,21 @@ def main() -> None:
       "regulatory_promoter_motif_divergence": pair_evidence.get(
         "regulatory_promoter_motif_divergence"
       ),
+      "regulatory_promoter_methylation_context": pair_evidence.get(
+        "regulatory_promoter_methylation_context"
+      ),
+      "methylation_context_raw": pair_evidence.get(
+        "methylation_context_raw"
+      ),
+      "methylation_context_subcoverage": pair_evidence.get(
+        "methylation_context_coverage"
+      ),
+      "methylation_primary_tumor_overlap_n": pair_evidence.get(
+        "methylation_primary_tumor_overlap_n"
+      ),
+      "methylation_source_status": pair_evidence.get(
+        "methylation_source_status"
+      ),
       "regulatory_network_raw": pair_evidence.get(
         "regulatory_network_raw"
       ),
@@ -245,18 +260,20 @@ def main() -> None:
       "expression_regulatory_semantics_version": (
         EXPRESSION_REGULATORY_SEMANTICS_VERSION
       ),
-      "score_version": "RSES-Onco-expanded-v0.10.9",
+      "score_version": "RSES-Onco-expanded-v0.11.1",
       "expression_context_formula": (
         "0.5*pairwise_expression_context + 0.5*WGCNA_context, "
         "coverage-adjusted within the existing expression-context domain"
       ),
       "regulatory_network_formula": (
-        "0.40*DoRothEA_regulator_divergence + "
-        "0.35*TF_expression_profile_divergence + "
-        "0.25*JASPAR_promoter_motif_divergence, coverage-adjusted "
+        "0.32*DoRothEA_regulator_divergence + "
+        "0.28*TF_expression_profile_divergence + "
+        "0.20*JASPAR_promoter_motif_divergence + "
+        "0.20*TCGA_GDC_methylation_context, eligibility- and coverage-adjusted "
         "within the existing regulatory-network domain"
       ),
       "direct_promoter_binding_claim": False,
+      "direct_methylation_silencing_claim": False,
     })
     rows.append(updated)
 

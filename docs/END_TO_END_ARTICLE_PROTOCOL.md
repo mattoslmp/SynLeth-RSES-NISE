@@ -494,3 +494,17 @@ sha256sum -c "$PACKAGE.sha256"
 - [`../manuscript/RSES_Onco_intro_methods_draft_v0110.md`](../manuscript/RSES_Onco_intro_methods_draft_v0110.md)
 - [`figures/RSES_Onco_workflow_and_applications.svg`](figures/RSES_Onco_workflow_and_applications.svg)
 - `figures/RSES_Onco_workflow_and_applications.png`
+
+## TCGA/GDC DNA methylation layer (v0.11.1)
+
+RSES-Onco now acquires gene-associated CpG methylation beta values from the NCI Genomic Data Commons through the UCSC Xena GDC hub. Repbase is not used because it is a reference library of repetitive DNA sequences rather than a sample-level methylation resource.
+
+```bash
+python -u scripts/acquire_tcga_nise_methylation.py \
+  --candidates data/processed/expanded_candidate_universe.tsv \
+  --output-dir data/processed/epigenetics/methylation
+```
+
+Methylation is integrated inside the existing regulatory-network microniche weight. It does not receive a new independent top-level RSES-Onco domain. Regulatory subweights are DoRothEA regulator divergence 0.32, TF-expression-profile divergence 0.28, JASPAR motif divergence 0.20 and TCGA/GDC methylation context 0.20. A technical source failure makes methylation non-eligible and preserves the original three-component regulatory score. Available source data with missing pair-level probes or samples reduce internal regulatory coverage.
+
+New outputs are Figures S70-S72 and Supplementary Tables S45-S47.

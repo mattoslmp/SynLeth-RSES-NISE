@@ -94,7 +94,7 @@ def test_publication_registry_matches_expanded_contract() -> None:
   }
   assert supplementary_ids == {
     f"Figure_S{index}"
-    for index in range(1, 70)
+    for index in range(1, 73)
   }
   assert len(config["main_tables"]) == 4
-  assert len(config["supplementary_tables"]) == 44
+  assert len(config["supplementary_tables"]) == 47
