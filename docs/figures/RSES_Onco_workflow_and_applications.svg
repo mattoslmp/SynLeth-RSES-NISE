@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="850" viewBox="0 0 1600 850" role="img" aria-labelledby="title desc">
+  <title id="title">RSES-Onco workflow, functional microniche and practical applications</title>
+  <desc id="desc">A reproducible vector diagram showing data acquisition, candidate construction, supporting analyses, coverage-aware scoring, publication outputs, the functional microniche concept and practical validation applications.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#53657a"/></marker>
+    <style>
+      .heading{font:700 28px Arial,sans-serif;fill:#20364f}.label{font:700 20px Arial,sans-serif;fill:#20364f}.body{font:16px Arial,sans-serif;fill:#243342}.small{font:15px Arial,sans-serif;fill:#243342}.box{stroke-width:2;rx:18;ry:18}.arrow{stroke:#53657a;stroke-width:3;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1600" height="850" fill="#ffffff"/>
+  <text x="60" y="55" class="heading">RSES-Onco computational workflow</text>
+
+  <g id="workflow">
+    <rect class="box" x="50" y="95" width="270" height="160" fill="#eaf2ff" stroke="#2b4c7e"/>
+    <text x="185" y="130" text-anchor="middle" class="label">1. Data acquisition</text>
+    <text x="75" y="165" class="body">Curated NISEs and paralogs</text>
+    <text x="75" y="192" class="body">DepMap and TCGA/GDC</text>
+    <text x="75" y="219" class="body">Networks, promoters, structures</text>
+    <text x="75" y="246" class="body">Pharmacology and provenance</text>
+
+    <rect class="box" x="365" y="95" width="270" height="160" fill="#eaf2ff" stroke="#2b4c7e"/>
+    <text x="500" y="130" text-anchor="middle" class="label">2. Candidate universe</text>
+    <text x="390" y="170" class="body">Directional NISE hypotheses</text>
+    <text x="390" y="199" class="body">Homologous paralogs</text>
+    <text x="390" y="228" class="body">Collateral and discovery classes</text>
+
+    <rect class="box" x="680" y="95" width="300" height="160" fill="#eaf2ff" stroke="#2b4c7e"/>
+    <text x="830" y="130" text-anchor="middle" class="label">3. Supporting analyses</text>
+    <text x="705" y="165" class="body">Dependency and selectivity</text>
+    <text x="705" y="192" class="body">Expression, compensation, WGCNA</text>
+    <text x="705" y="219" class="body">Regulatory, STRING, localization</text>
+    <text x="705" y="246" class="body">Biochemical and structural context</text>
+
+    <rect class="box" x="1025" y="95" width="250" height="160" fill="#eaf2ff" stroke="#2b4c7e"/>
+    <text x="1150" y="130" text-anchor="middle" class="label">4. RSES-Onco score</text>
+    <text x="1050" y="175" class="body">Eligible-domain score</text>
+    <text x="1050" y="205" class="body">Weighted coverage</text>
+    <text x="1050" y="235" class="body">Coverage-adjusted ranking</text>
+
+    <rect class="box" x="1320" y="95" width="230" height="160" fill="#eaf2ff" stroke="#2b4c7e"/>
+    <text x="1435" y="130" text-anchor="middle" class="label">5. Reproducible outputs</text>
+    <text x="1345" y="170" class="body">Source-data tables</text>
+    <text x="1345" y="199" class="body">PNG, SVG and PDF</text>
+    <text x="1345" y="228" class="body">DOCX, manifests and audits</text>
+
+    <path class="arrow" d="M320 175 H355"/><path class="arrow" d="M635 175 H670"/><path class="arrow" d="M980 175 H1015"/><path class="arrow" d="M1275 175 H1310"/>
+  </g>
+
+  <g id="microniche">
+    <rect x="55" y="330" width="875" height="430" rx="24" fill="#f2f9ec" stroke="#7d9b5d" stroke-width="3"/>
+    <text x="90" y="375" class="heading">Functional microniche</text>
+    <text x="90" y="412" class="body">The local, context-dependent evidence environment of a directional candidate pair</text>
+    <text x="90" y="440" class="body">within a specific tumor setting. Missing evidence remains missing and is not treated as zero.</text>
+
+    <rect class="box" x="95" y="485" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="212" y="523" text-anchor="middle" class="label">Dependency</text><text x="212" y="552" text-anchor="middle" class="small">General and conditional</text>
+    <rect class="box" x="370" y="485" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="487" y="523" text-anchor="middle" class="label">Expression</text><text x="487" y="552" text-anchor="middle" class="small">Compensation and WGCNA</text>
+    <rect class="box" x="645" y="485" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="762" y="523" text-anchor="middle" class="label">Regulation</text><text x="762" y="552" text-anchor="middle" class="small">TF context and motifs</text>
+    <rect class="box" x="95" y="620" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="212" y="658" text-anchor="middle" class="label">Networks</text><text x="212" y="687" text-anchor="middle" class="small">STRING and phenotype</text>
+    <rect class="box" x="370" y="620" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="487" y="658" text-anchor="middle" class="label">Localization</text><text x="487" y="687" text-anchor="middle" class="small">Shared or distinct compartments</text>
+    <rect class="box" x="645" y="620" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="762" y="658" text-anchor="middle" class="label">Structure</text><text x="762" y="687" text-anchor="middle" class="small">Biochemical and residue evidence</text>
+  </g>
+
+  <g id="applications">
+    <rect x="980" y="330" width="570" height="430" rx="24" fill="#fff5eb" stroke="#b47d4b" stroke-width="3"/>
+    <text x="1015" y="375" class="heading">Practical applications</text>
+    <rect class="box" x="1020" y="425" width="490" height="65" fill="#ffffff" stroke="#b47d4b"/><text x="1265" y="466" text-anchor="middle" class="body">Prioritize CRISPR, knockdown and rescue experiments</text>
+    <rect class="box" x="1020" y="515" width="490" height="65" fill="#ffffff" stroke="#b47d4b"/><text x="1265" y="556" text-anchor="middle" class="body">Detect context-dependent backup or collateral vulnerabilities</text>
+    <rect class="box" x="1020" y="605" width="490" height="65" fill="#ffffff" stroke="#b47d4b"/><text x="1265" y="646" text-anchor="middle" class="body">Guide expression perturbation and exploratory pharmacology</text>
+    <rect class="box" x="1020" y="695" width="490" height="45" fill="#ffffff" stroke="#b47d4b"/><text x="1265" y="724" text-anchor="middle" class="small">Organize evidence for mechanistic follow-up, not clinical proof</text>
+  </g>
+
+  <path class="arrow" d="M830 255 V315"/><path class="arrow" d="M1150 255 V315"/>
+</svg>
