@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Materialize source-backed supplementary Tables S26-S43.
+"""Materialize source-backed supplementary Tables S26-S47.
 
 Every table is copied or generated from a traceable pipeline source. Missing or
-empty sources remain explicitly empty/unavailable and are never replaced with
+empty optional sources remain explicitly unavailable and are never replaced with
 invented biological evidence.
 """
 from __future__ import annotations
@@ -25,11 +25,30 @@ def resolve_path(value: str | Path) -> Path:
 
 def atomic_copy(source: Path, destination: Path) -> None:
   if not source.exists() or source.stat().st_size == 0:
-    raise FileNotFoundError(f"Required supplementary source is missing or empty: {source}")
+    raise FileNotFoundError(
+      f"Required supplementary source is missing or empty: {source}"
+    )
   destination.parent.mkdir(parents=True, exist_ok=True)
   temporary = destination.with_suffix(destination.suffix + ".tmp")
   shutil.copy2(source, temporary)
   temporary.replace(destination)
+
+
+def atomic_optional_copy(source: Path, destination: Path) -> None:
+  if source.exists() and source.stat().st_size > 0:
+    atomic_copy(source, destination)
+    return
+  atomic_tsv(
+    pd.DataFrame([{
+      "evidence_status": "unavailable_or_not_acquired",
+      "source_path": str(source),
+      "absence_reason": "Optional methylation source was not available for this run.",
+      "interpretation_boundary": (
+        "Unavailable promoter methylation is not negative biological evidence."
+      ),
+    }]),
+    destination,
+  )
 
 
 def atomic_tsv(frame: pd.DataFrame, destination: Path) -> None:
@@ -42,6 +61,18 @@ def atomic_tsv(frame: pd.DataFrame, destination: Path) -> None:
 def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument("--article-root", default="article_outputs")
+  parser.add_argument(
+    "--methylation-evidence",
+    default="data/processed/methylation/pair_promoter_methylation_evidence.tsv",
+  )
+  parser.add_argument(
+    "--methylation-gene-summary",
+    default="data/processed/methylation/gdc_promoter_methylation_gene_summary.tsv",
+  )
+  parser.add_argument(
+    "--methylation-source-status",
+    default="data/processed/methylation/gdc_promoter_methylation_aggregation_status.tsv",
+  )
   args = parser.parse_args()
   article_root = resolve_path(args.article_root)
   destination = article_root / "tables/supplementary"
@@ -72,7 +103,25 @@ def main() -> None:
     evidence_category_definitions(),
     destination / "Table_S43_evidence_category_definitions.tsv",
   )
-  print(f"Materialized {len(mapping) + 1} extended supplementary tables in {destination}")
+
+  optional_mapping = {
+    "Table_S45_pair_promoter_methylation_evidence.tsv": resolve_path(
+      args.methylation_evidence
+    ),
+    "Table_S46_gene_promoter_methylation_summary.tsv": resolve_path(
+      args.methylation_gene_summary
+    ),
+    "Table_S47_methylation_source_status.tsv": resolve_path(
+      args.methylation_source_status
+    ),
+  }
+  for name, source in optional_mapping.items():
+    atomic_optional_copy(source, destination / name)
+
+  print(
+    f"Materialized {len(mapping) + 1 + len(optional_mapping)} extended "
+    f"supplementary tables in {destination}"
+  )
 
 
 if __name__ == "__main__":
