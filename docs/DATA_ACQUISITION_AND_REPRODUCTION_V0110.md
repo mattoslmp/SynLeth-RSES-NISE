@@ -408,3 +408,53 @@ known_limitations
 - `PUBLICATION_PHARMACOLOGY_WORKFLOW.md`
 - `STRUCTURAL_ATLAS_WORKFLOW.md`
 - `PUBLICATION_EVIDENCE_AUDIT_AND_REPRODUCTION.md`
+
+
+<!-- BEGIN V0.11.1 METHYLATION ADDENDUM -->
+
+## GDC/TCGA promoter methylation acquisition
+
+RSES-Onco v0.11.1 supports open GDC `Methylation Beta Value` files for primary tumors in TCGA-COAD, TCGA-READ, TCGA-STAD, TCGA-LUAD and TCGA-LUSC. The downloader retains file UUID, file name, size, MD5, platform, project, case and sample provenance and retrieves official GDC GENCODE-v36 HM27, HM450 and EPIC probe annotations.
+
+Create the manifest:
+
+```bash
+python -u scripts/download_gdc_methylation.py \
+  --stage manifest \
+  --output-dir data/raw/methylation
+```
+
+Download and validate open files:
+
+```bash
+python -u scripts/download_gdc_methylation.py \
+  --stage all \
+  --output-dir data/raw/methylation \
+  --workers 4 \
+  --retries 4
+```
+
+Aggregate promoter beta-values:
+
+```bash
+python -u scripts/aggregate_gdc_methylation.py \
+  --manifest data/raw/methylation/gdc_methylation_manifest.tsv \
+  --annotation-dir data/raw/methylation/annotations \
+  --output data/processed/methylation/gdc_promoter_methylation_gene_sample.tsv \
+  --gene-summary data/processed/methylation/gdc_promoter_methylation_gene_summary.tsv \
+  --status-output data/processed/methylation/gdc_promoter_methylation_aggregation_status.tsv
+```
+
+Build candidate-pair evidence:
+
+```bash
+python -u scripts/build_methylation_pair_evidence.py \
+  --candidates data/processed/expanded_candidate_universe.tsv \
+  --gene-sample data/processed/methylation/gdc_promoter_methylation_gene_sample.tsv \
+  --output data/processed/methylation/pair_promoter_methylation_evidence.tsv \
+  --min-samples 10
+```
+
+Beta-values are epigenetic context and are not direct proof of transcriptional silencing. Missing methylation remains missing and is not converted to zero. The complete methodology is documented in [`METHYLATION_INTEGRATION_V0111.md`](METHYLATION_INTEGRATION_V0111.md).
+
+<!-- END V0.11.1 METHYLATION ADDENDUM -->

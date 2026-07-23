@@ -1,4 +1,4 @@
-# RSES-Onco v0.11.0: canonical end-to-end data, analysis and article protocol
+# RSES-Onco v0.11.1: canonical end-to-end data, analysis and article protocol
 
 **Author:** Leandro de Mattos Pereira  
 **Affiliation:** Databiomics, Laboratório de Bioinformática e Ciências de Dados, WBPereira  
@@ -13,16 +13,16 @@ RSES-Onco prioritizes experimental hypotheses. It does not establish clinical ef
 ## Current version contract
 
 ```text
-Repository and publication framework: 0.11.0
-Scientific score: RSES-Onco-expanded-v0.10.9
-WGCNA/regulatory semantics: eligibility-aware-wgcna-regulatory-v3
+Repository and publication framework: 0.11.1
+Scientific score: RSES-Onco-expanded-v0.11.1 (integrated ranking)
+Expression/regulatory semantics: eligibility-aware-wgcna-regulatory-methylation-v4
 8 main figures
 69 supplementary figures
 77 registered figures
 231 PNG/PDF/SVG exports
 4 main tables
-44 supplementary tables
-48 registered tables
+47 supplementary tables
+51 registered tables
 ```
 
 Supplementary Figures S68 and S69 must be rendered on different pages.
@@ -117,6 +117,7 @@ python -m pytest -q -p no:cacheprovider
 The source-specific commands, expected files, provenance rules and recovery procedures are documented in:
 
 - [`DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](DATA_ACQUISITION_AND_REPRODUCTION_V0110.md)
+- [`METHYLATION_INTEGRATION_V0111.md`](METHYLATION_INTEGRATION_V0111.md)
 - [`STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md`](STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md)
 - [`DOROTHEA_RECOVERY_WORKFLOW.md`](DOROTHEA_RECOVERY_WORKFLOW.md)
 - [`STRUCTURAL_ATLAS_WORKFLOW.md`](STRUCTURAL_ATLAS_WORKFLOW.md)
@@ -229,7 +230,7 @@ Release-specific sample counts may change and must be reported as observed rathe
 
 ```bash
 STAMP="$(date +%Y%m%d_%H%M%S)"
-BACKUP="$NEW/backups/pre_v0110_${STAMP}"
+BACKUP="$NEW/backups/pre_v0111_${STAMP}"
 mkdir -p "$BACKUP/results" "$BACKUP/regulatory" "$BACKUP/article_outputs"
 
 [[ -d results/expanded_26Q1 ]] && rsync -a results/expanded_26Q1/ "$BACKUP/results/"
@@ -297,10 +298,10 @@ validation_tractability   0.18
 
 ```bash
 STAMP="$(date +%Y%m%d_%H%M%S)"
-SESSION="rses_v0110_${STAMP}"
-RUNNER="$NEW/logs/run_rses_v0110_${STAMP}.sh"
-RUN_LOG="$NEW/logs/run_rses_v0110_${STAMP}.log"
-EXITCODE_FILE="$NEW/logs/run_rses_v0110_${STAMP}.exitcode"
+SESSION="rses_v0111_${STAMP}"
+RUNNER="$NEW/logs/run_rses_v0111_${STAMP}.sh"
+RUN_LOG="$NEW/logs/run_rses_v0111_${STAMP}.log"
+EXITCODE_FILE="$NEW/logs/run_rses_v0111_${STAMP}.exitcode"
 
 cat > "$RUNNER" <<EOF
 #!/usr/bin/env bash
@@ -314,6 +315,7 @@ export PYTHONDONTWRITEBYTECODE=1
 export MPLBACKEND=Agg
 export STRICT_LAYOUT=1
 export PUBLICATION_STAGE=assets-only
+export METHYLATION_MODE=download
 export DEPMAP_DIR="$NEW/data/raw/depmap"
 export GENE_EFFECT="\$DEPMAP_DIR/CRISPRGeneEffect.csv"
 export COPY_NUMBER="\$DEPMAP_DIR/OmicsCNGeneWGS.csv"
@@ -331,9 +333,9 @@ exit "\$status"
 EOF
 
 chmod +x "$RUNNER"
-printf '%s\n' "$SESSION" > logs/last_rses_v0110_session.txt
-printf '%s\n' "$RUN_LOG" > logs/last_rses_v0110_log.txt
-printf '%s\n' "$EXITCODE_FILE" > logs/last_rses_v0110_exitcode_path.txt
+printf '%s\n' "$SESSION" > logs/last_rses_v0111_session.txt
+printf '%s\n' "$RUN_LOG" > logs/last_rses_v0111_log.txt
+printf '%s\n' "$EXITCODE_FILE" > logs/last_rses_v0111_exitcode_path.txt
 
 tmux new-session -d -s "$SESSION" "bash '$RUNNER'"
 ```
@@ -341,7 +343,7 @@ tmux new-session -d -s "$SESSION" "bash '$RUNNER'"
 Attach with:
 
 ```bash
-tmux attach -t "$(cat logs/last_rses_v0110_session.txt)"
+tmux attach -t "$(cat logs/last_rses_v0111_session.txt)"
 ```
 
 Detach without stopping the run with `Ctrl+B`, then `D`.
@@ -349,15 +351,15 @@ Detach without stopping the run with `Ctrl+B`, then `D`.
 Monitor with:
 
 ```bash
-RUN_LOG="$(cat logs/last_rses_v0110_log.txt)"
+RUN_LOG="$(cat logs/last_rses_v0111_log.txt)"
 tail -f "$RUN_LOG"
 ```
 
 ## 9. Completion and WGCNA checks
 
 ```bash
-EXITCODE_FILE="$(cat logs/last_rses_v0110_exitcode_path.txt)"
-RUN_LOG="$(cat logs/last_rses_v0110_log.txt)"
+EXITCODE_FILE="$(cat logs/last_rses_v0111_exitcode_path.txt)"
+RUN_LOG="$(cat logs/last_rses_v0111_log.txt)"
 cat "$EXITCODE_FILE"
 tail -n 300 "$RUN_LOG"
 ```
@@ -460,7 +462,7 @@ Do not auto-fill the checklist.
 ## 14. Final verification
 
 ```bash
-PIPELINE_EXITCODE_FILE="$(cat logs/last_rses_v0110_exitcode_path.txt)" \
+PIPELINE_EXITCODE_FILE="$(cat logs/last_rses_v0111_exitcode_path.txt)" \
 GDC_DIR="$GDC_DIR" \
 MPLBACKEND=Agg \
 bash scripts/verify_complete_article_run.sh \
@@ -490,7 +492,36 @@ sha256sum -c "$PACKAGE.sha256"
 ## 16. Companion documentation and manuscript sources
 
 - [`DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](DATA_ACQUISITION_AND_REPRODUCTION_V0110.md)
+- [`METHYLATION_INTEGRATION_V0111.md`](METHYLATION_INTEGRATION_V0111.md)
 - [`../supplementary/Supplementary_Methods_RSES_Onco_v0110.md`](../supplementary/Supplementary_Methods_RSES_Onco_v0110.md)
 - [`../manuscript/RSES_Onco_intro_methods_draft_v0110.md`](../manuscript/RSES_Onco_intro_methods_draft_v0110.md)
 - [`figures/RSES_Onco_workflow_and_applications.svg`](figures/RSES_Onco_workflow_and_applications.svg)
 - `figures/RSES_Onco_workflow_and_applications.png`
+
+
+<!-- BEGIN V0.11.1 METHYLATION ADDENDUM -->
+
+## GDC promoter methylation extension
+
+The v0.11.1 integrated ranking may include open GDC/TCGA promoter methylation beta-values. Methylation is not a new global score domain. It is integrated inside the existing expression-compensation domain with internal weights of 0.70 for event-stratified expression compensation and 0.30 for directional promoter methylation context. The DepMap-only ranking remains free of TCGA methylation.
+
+Acquire, aggregate and integrate methylation with:
+
+```bash
+METHYLATION_MODE=download \
+MPLBACKEND=Agg \
+STRICT_LAYOUT=1 \
+bash scripts/resume_wgcna_regulatory_pipeline.sh resume-regulatory
+```
+
+Validate the integrated ranking with:
+
+```bash
+python -u scripts/validate_methylation_evidence.py \
+  --evidence data/processed/methylation/pair_promoter_methylation_evidence.tsv \
+  --ranking results/expanded_26Q1/full/expanded_rses_onco.tsv
+```
+
+Detailed source UUIDs, promoter rules, formulas, missingness semantics and stage-specific commands are provided in [`METHYLATION_INTEGRATION_V0111.md`](METHYLATION_INTEGRATION_V0111.md).
+
+<!-- END V0.11.1 METHYLATION ADDENDUM -->
