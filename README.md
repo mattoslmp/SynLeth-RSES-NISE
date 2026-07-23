@@ -6,6 +6,10 @@ isofunctional enzymes (NISEs), homologous paralogs, pathway backups, collateral
 deletions and downstream vulnerabilities. The initial disease scope is
 colorectal, gastric and lung cancer.
 
+**Author:** Leandro de Mattos Pereira  
+**Affiliation:** Databiomics, Laboratório de Bioinformática e Ciências de Dados, WBPereira  
+**Address:** Av. Coronel José Bastos, Itaperuna, RJ, Brazil
+
 The repository combines curated NISE and paralog hypotheses, DepMap/TCGA evidence,
 functional and regulatory networks, pharmacology, structural context, explicit
 missingness and overlap control, and a completely scripted publication package.
@@ -24,6 +28,22 @@ conda env create -f environment.yml
 conda activate rses-onco
 python -m pip install -e .
 python -m pytest -q -p no:cacheprovider
+```
+
+## Complete execution and data acquisition
+
+The repository contains a complete protocol from source acquisition to final article packaging:
+
+- [`docs/END_TO_END_ARTICLE_PROTOCOL.md`](docs/END_TO_END_ARTICLE_PROTOCOL.md) — canonical command-by-command pipeline tutorial;
+- [`docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md) — source acquisition, provenance, validation and recovery;
+- [`supplementary/Supplementary_Methods_RSES_Onco_v0110.md`](supplementary/Supplementary_Methods_RSES_Onco_v0110.md) — scientific methods, formulas, evidence rules and references;
+- [`manuscript/RSES_Onco_intro_methods_draft_v0110.md`](manuscript/RSES_Onco_intro_methods_draft_v0110.md) — editable Introduction and Materials and Methods draft;
+- [`docs/figures/RSES_Onco_workflow_and_applications.svg`](docs/figures/RSES_Onco_workflow_and_applications.svg) — vector workflow and practical-application figure.
+
+The repository versions the corresponding DOCX, PDF and PNG derivatives. They are generated reproducibly with:
+
+```bash
+bash scripts/generate_repository_documentation_assets.sh
 ```
 
 ## Publication workflow
@@ -53,9 +73,11 @@ bash scripts/verify_complete_article_run.sh
 ```text
 8 main figures
 69 supplementary figures
+77 registered figures
 231 PNG/PDF/SVG files
 4 main tables
 44 supplementary tables
+48 registered tables
 ```
 
 Every registered figure has an exact source TSV, generator script, input list,
@@ -91,12 +113,14 @@ article_outputs/
 └── manifests/
 ```
 
-## Documentation
+## Additional documentation
 
-- [`docs/END_TO_END_ARTICLE_PROTOCOL.md`](docs/END_TO_END_ARTICLE_PROTOCOL.md)
 - [`docs/PUBLICATION_EVIDENCE_AUDIT_AND_REPRODUCTION.md`](docs/PUBLICATION_EVIDENCE_AUDIT_AND_REPRODUCTION.md)
 - [`docs/PUBLICATION_COMPLETENESS_V0110.md`](docs/PUBLICATION_COMPLETENESS_V0110.md)
 - [`docs/WGCNA_CORRELATION_POLICY_V0109.md`](docs/WGCNA_CORRELATION_POLICY_V0109.md)
+- [`docs/STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md`](docs/STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md)
+- [`docs/DOROTHEA_RECOVERY_WORKFLOW.md`](docs/DOROTHEA_RECOVERY_WORKFLOW.md)
+- [`docs/STRUCTURAL_ATLAS_WORKFLOW.md`](docs/STRUCTURAL_ATLAS_WORKFLOW.md)
 
 ## License
 
