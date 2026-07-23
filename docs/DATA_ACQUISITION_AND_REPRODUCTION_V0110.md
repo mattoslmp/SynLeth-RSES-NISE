@@ -440,7 +440,7 @@ python -u scripts/integrate_methylation_regulatory_layer.py \
   --copy-number "$DEPMAP_DIR/OmicsCNGeneWGS.csv" \
   --models "$DEPMAP_DIR/Model.csv" \
   --candidates data/processed/expanded_candidate_universe.tsv \
-  --input data/processed/regulatory/expanded_pair_functional_evidence_by_cancer_pre_methylation.tsv \
+  --input data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv \
   --output data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv
 ```
 

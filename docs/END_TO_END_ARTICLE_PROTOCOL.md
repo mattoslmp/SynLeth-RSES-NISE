@@ -465,13 +465,13 @@ PIPELINE_EXITCODE_FILE="$(cat logs/last_rses_v0111_exitcode_path.txt)" \
 GDC_DIR="$GDC_DIR" \
 MPLBACKEND=Agg \
 bash scripts/verify_complete_article_run.sh \
-  2>&1 | tee logs/verify_complete_article_run_v0110.log
+  2>&1 | tee logs/verify_complete_article_run_v0111.log
 ```
 
 ## 15. Final package
 
 ```bash
-PACKAGE="RSES_Onco_v0110_complete_submission_package.zip"
+PACKAGE="RSES_Onco_v0111_complete_submission_package.zip"
 rm -f "$PACKAGE" "$PACKAGE.sha256"
 
 zip -r -9 "$PACKAGE" \
@@ -503,7 +503,7 @@ sha256sum -c "$PACKAGE.sha256"
 
 Promoter methylation is an epigenetic subcomponent of the existing functional-microniche regulatory-network domain. It is not a new top-level RSES-Onco domain and therefore cannot receive an additional independent global weight.
 
-The supported sources are the DepMap custom-download dataset `Methylation (1kb upstream TSS)` and the traceable historical `CCLE_RRBS_TSS1kb_20181022` matrix. The resume workflow searches under `DEPMAP_DIR`, or the user may provide an explicit file:
+The supported sources are the DepMap custom-download dataset `Methylation (1kb upstream TSS)` and the traceable historical `CCLE_RRBS_TSS1kb_20181022` matrix. The resume workflow automatically searches under `DEPMAP_DIR`, or the user may provide an explicit file:
 
 ```bash
 export DEPMAP_DIR="$NEW/data/raw/depmap"
@@ -521,7 +521,7 @@ promoter-methylation context             0.20
 
 The methylation context itself combines pair promoter-profile divergence (0.50) and conditional target-promoter hypomethylation in lost-gene-loss versus intact models (0.50). Missing methylation remains NA and lowers regulatory subcoverage; it is not converted to zero.
 
-Run the complete recalculation after setting `METHYLATION`:
+Run the complete recalculation after placing the methylation file under `DEPMAP_DIR` or setting `METHYLATION`:
 
 ```bash
 MPLBACKEND=Agg \
