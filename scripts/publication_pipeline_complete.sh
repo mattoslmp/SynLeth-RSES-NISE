@@ -17,6 +17,7 @@ COPY_NUMBER="${COPY_NUMBER:-$DEPMAP_DIR/OmicsCNGeneWGS.csv}"
 MODELS="${MODELS:-$DEPMAP_DIR/Model.csv}"
 EXPRESSION="${EXPRESSION:-$DEPMAP_DIR/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv}"
 PROMOTERS="${PROMOTERS:-data/raw/regulatory/ensembl_promoters.tsv}"
+WGCNA_PAIR_METRICS="${WGCNA_PAIR_METRICS:-data/processed/regulatory/wgcna/wgcna_pair_metrics_all_cancers.tsv}"
 FUNCTIONAL_RAW_DIR="${FUNCTIONAL_RAW_DIR:-data/raw/human_functional_evidence}"
 LOSS_THRESHOLD="${LOSS_THRESHOLD:-0.30}"
 STRICT_LAYOUT="${STRICT_LAYOUT:-1}"
@@ -75,7 +76,7 @@ build_extended_supporting_evidence() {
 
 build_repository_documentation_and_circos_data() {
   for path in "$RANKING" "$CANDIDATES" "$PROMOTERS" \
-    "$EXPRESSION" "$MODELS"; do
+    "$EXPRESSION" "$MODELS" "$WGCNA_PAIR_METRICS"; do
     require_file "$path"
   done
   log_stage "Document every Python, Bash and R pipeline script/module"
@@ -90,6 +91,14 @@ build_repository_documentation_and_circos_data() {
       --ranking "$RANKING" --candidates "$CANDIDATES" \
       --promoters "$PROMOTERS" --expression "$EXPRESSION" \
       --models "$MODELS" --output-dir data/processed/circos
+  log_stage "Add WGCNA, methylation and validation internal layers to Circos rings"
+  run_logged "$LOG_DIR/04l1_enrich_genomic_circos_internal_layers.log" \
+    python -u scripts/enrich_genomic_circos_internal_layers.py \
+      --ranking "$RANKING" --candidates "$CANDIDATES" \
+      --wgcna "$WGCNA_PAIR_METRICS" \
+      --coordinates data/processed/circos/genomic_circos_gene_coordinates.tsv \
+      --rings data/processed/circos/genomic_circos_ring_values.tsv \
+      --tracks data/processed/circos/genomic_circos_track_definitions.tsv
   log_stage "Complete expression availability for every Circos gene and cancer"
   run_logged "$LOG_DIR/04la_complete_genomic_circos_expression.log" \
     python -u scripts/complete_genomic_circos_expression_summary.py \
@@ -152,7 +161,7 @@ integrate_genomic_circos_assets() {
   log_stage "Validate genomic Circos coordinates, links, rings, expression and script catalogue"
   run_logged "$LOG_DIR/06m_validate_genomic_circos_integrity.log" \
     python -u scripts/validate_genomic_circos_integrity.py \
-      --article-root "$ARTICLE_ROOT"
+      --article-root "$ARTICLE_ROOT" --candidates "$CANDIDATES"
 }
 
 finalize_extended_publication_assets() {
