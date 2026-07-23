@@ -1,181 +1,130 @@
-# RSES-Onco v0.10.1: end-to-end real-data and article-generation protocol
+# RSES-Onco v0.11.0: canonical end-to-end data, analysis and article protocol
 
-This is the canonical execution protocol for acquiring the required public data,
-validating every input, running the complete RSES-Onco analysis, generating every
-main and supplementary figure, building all tables and workbooks, and validating
-the final publication package.
+**Author:** Leandro de Mattos Pereira  
+**Affiliation:** Databiomics, Laboratório de Bioinformática e Ciências de Dados, WBPereira  
+**Address:** Av. Coronel José Bastos, Itaperuna, RJ, Brazil
 
-The commands are designed for Linux or WSL. Run them from the repository root.
-The example paths below match the validated WSL execution used during development:
+## Purpose and scientific boundary
 
-```text
-Repository: /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010
-Existing large-data directory: /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-NISE
-Conda environment: rses-onco
-```
+This is the canonical command-by-command protocol for obtaining or validating the required public data, constructing the candidate universe, calculating the coverage-aware RSES-Onco score, generating all supporting analyses, producing every publication table and figure, building the editable documents, rendering the PDFs, performing manual inspection and generating the final package.
 
-A fresh installation may keep all data inside the repository. The `DEPMAP_DIR` and
-`GDC_DIR` environment variables permit large source data to remain outside the Git
-working tree.
+RSES-Onco prioritizes experimental hypotheses. It does not establish clinical efficacy, treatment suitability, safety, patient benefit or cure. Missing evidence is not converted to biological zero, and a non-eligible domain does not enter the eligible score denominator.
 
-## 1. What the complete protocol produces
-
-A successful run performs:
-
-1. validation and fingerprinting of the required DepMap matrices;
-2. construction of all 202 directed human NISE hypotheses;
-3. preservation of curated composite biomarkers without inventing single-gene loss calls;
-4. expansion of explicit multi-target fields such as `CDK4/CDK6` into traceable atomic targets;
-5. resumable Ensembl Compara human-paralog acquisition;
-6. all-target DepMap conditional-dependency discovery;
-7. STRING, DoRothEA, Human Protein Atlas and UniProt functional evidence acquisition;
-8. DepMap-only scoring;
-9. validation and aggregation of TCGA/GDC ASCAT3 gene-level copy-number files;
-10. integrated TCGA plus DepMap scoring for colorectal, gastric and lung cancer;
-11. Open Targets, ChEMBL, DGIdb, MyChem, Pharos/TCRD and CIViC evidence acquisition;
-12. optional PRISM, GDSC and CTRP drug-response standardization and analysis;
-13. AlphaFold DB acquisition for all 70 curated human NISE proteins;
-14. exact-numbered M-CSA, UniProt and PDBe residue annotation;
-15. PyMOL generation of whole-structure and functional-site renders;
-16. generation of all article tables, figures, legends, source-data files and layout audits;
-17. generation of the article workbook, provenance inventory and SHA-256 manifests;
-18. final publication-package validation and the complete software test suite.
-
-The validated publication target is:
+## Current version contract
 
 ```text
+Repository and publication framework: 0.11.0
+Scientific score: RSES-Onco-expanded-v0.10.9
+WGCNA/regulatory semantics: eligibility-aware-wgcna-regulatory-v3
 8 main figures
-32 supplementary figures
-40 registered figures total
-120 figure exports: PNG, PDF and SVG
+69 supplementary figures
+77 registered figures
+231 PNG/PDF/SVG exports
 4 main tables
-18 supplementary tables
-at least 140 individual AlphaFold/PyMOL PNG renders
+44 supplementary tables
+48 registered tables
 ```
 
-## 2. Clone or update the repository
+Supplementary Figures S68 and S69 must be rendered on different pages.
 
-### Fresh clone
+## 1. Repository preparation
+
+Do not update the working tree while a pipeline from that same directory is active.
+
+```bash
+NEW="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010"
+OLD="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-NISE"
+
+cd "$NEW" || exit 1
+
+git status --short --branch
+git fetch origin
+git switch main
+git pull --ff-only origin main
+git log -1 --decorate --oneline
+
+git rev-parse HEAD | tee logs/analysis_git_commit.txt
+```
+
+For a fresh clone:
 
 ```bash
 git clone https://github.com/mattoslmp/SynLeth-RSES-Onco.git \
   /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010
-
-cd /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010
 ```
 
-### Existing clone
-
-Do not update files while a pipeline from the same working tree is running. After
-that process finishes:
+## 2. Environment preparation
 
 ```bash
-cd /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010
-
-git status --short
-git fetch origin
-git checkout main
-git pull --ff-only origin main
-
-git log -1 --oneline
-```
-
-Record the exact commit used for a release-specific analysis:
-
-```bash
-git rev-parse HEAD | tee logs/analysis_git_commit.txt
-```
-
-## 3. Create and validate the software environment
-
-### New environment
-
-```bash
-cd /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010
-
-conda env create -f environment.yml
-conda activate rses-onco
-python -m pip install -e .
-```
-
-### Existing environment
-
-```bash
-cd /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010
-
+cd "$NEW" || exit 1
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate rses-onco
 python -m pip install -e .
 ```
 
-Confirm the installed version and PyMOL availability:
+For a new environment:
 
 ```bash
-python - <<'PY'
-from importlib.metadata import version
-print("RSES-Onco:", version("rses-onco"))
-PY
+conda env create -f environment.yml
+conda activate rses-onco
+python -m pip install -e .
+```
 
+Required external executables include R/Rscript, WGCNA, FIMO/MEME, PyMOL, LibreOffice, Graphviz and Poppler utilities.
+
+```bash
+Rscript -e 'cat(R.version.string, "\n"); cat("WGCNA ", as.character(packageVersion("WGCNA")), "\n", sep="")'
+fimo --version
 pymol -cq <<'PYMOL'
 reinitialize
 print "PyMOL headless execution: OK"
 quit
 PYMOL
+command -v libreoffice
+command -v pdftotext
+command -v pdftoppm
+command -v dot
 ```
 
-Run the complete test suite before using real data:
+## 3. Syntax and test validation
 
 ```bash
+python -m compileall -q src scripts tests
+
+for script in \
+  scripts/run_real_data_pipeline.sh \
+  scripts/run_expanded_pipeline.sh \
+  scripts/run_expanded_pipeline_portable.sh \
+  scripts/resume_wgcna_regulatory_pipeline.sh \
+  scripts/run_publication_pipeline.sh \
+  scripts/publication_pipeline_complete.sh \
+  scripts/publication_pipeline_steps.sh \
+  scripts/run_structural_pipeline.sh \
+  scripts/verify_complete_article_run.sh
+  do
+  bash -n "$script" || exit 1
+  done
+
+Rscript -e 'parse(file="scripts/run_wgcna_expression_network.R"); cat("R syntax OK\n")'
+
 PYTHONDONTWRITEBYTECODE=1 \
 MPLBACKEND=Agg \
 python -m pytest -q -p no:cacheprovider
 ```
 
-The command must return exit code `0`.
+## 4. Data-acquisition protocol
 
-## 4. Prepare directories and environment variables
+The source-specific commands, expected files, provenance rules and recovery procedures are documented in:
 
-### Validated WSL layout with large data in the previous directory
+- [`DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](DATA_ACQUISITION_AND_REPRODUCTION_V0110.md)
+- [`STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md`](STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md)
+- [`DOROTHEA_RECOVERY_WORKFLOW.md`](DOROTHEA_RECOVERY_WORKFLOW.md)
+- [`STRUCTURAL_ATLAS_WORKFLOW.md`](STRUCTURAL_ATLAS_WORKFLOW.md)
+- [`PUBLICATION_PHARMACOLOGY_WORKFLOW.md`](PUBLICATION_PHARMACOLOGY_WORKFLOW.md)
 
-```bash
-OLD="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-NISE"
-NEW="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010"
+### 4.1 Required DepMap matrices
 
-cd "$NEW" || exit 1
-
-export DEPMAP_DIR="$OLD/data/raw/depmap"
-export GDC_DIR="$OLD/data/raw/gdc"
-
-mkdir -p \
-  "$DEPMAP_DIR" \
-  "$GDC_DIR" \
-  data/raw/ensembl \
-  data/raw/pharmacology \
-  data/raw/structures \
-  data/processed \
-  results \
-  article_outputs \
-  logs
-```
-
-### Self-contained layout
-
-```bash
-cd /path/to/SynLeth-RSES-Onco
-
-export DEPMAP_DIR="$PWD/data/raw/depmap"
-export GDC_DIR="$PWD/data/raw/gdc"
-
-mkdir -p "$DEPMAP_DIR" "$GDC_DIR" logs
-```
-
-Keep these variables exported in the same shell used to launch the pipeline.
-
-## 5. Acquire the required DepMap release files
-
-The repository validates DepMap files but does not bypass the official DepMap
-download process. Download the current release through the official DepMap data
-portal and place these four required files in `$DEPMAP_DIR`:
+Place or symlink these files under `data/raw/depmap/` or set `DEPMAP_DIR`:
 
 ```text
 CRISPRGeneEffect.csv
@@ -184,155 +133,34 @@ Model.csv
 OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv
 ```
 
-The validator also accepts the documented legacy or compressed filenames listed in
-`scripts/download_depmap.py`.
-
-Recommended release metadata files may be archived beside the matrices, but they do
-not replace the four required inputs.
-
-Validate file presence, schemas and SHA-256 fingerprints:
+Validate them:
 
 ```bash
-mkdir -p logs/expanded_26Q1
+export DEPMAP_DIR="$NEW/data/raw/depmap"
 
-set -o pipefail
-PYTHONUNBUFFERED=1 \
 python -u scripts/download_depmap.py \
   --input-dir "$DEPMAP_DIR" \
-  --write-checksums \
-  2>&1 | tee logs/expanded_26Q1/01_validate_depmap_files.log
+  --write-checksums
 
-status=${PIPESTATUS[0]}
-echo "DepMap validation exit code: $status"
-test "$status" -eq 0
-```
-
-Verify the generated checksums:
-
-```bash
-(
-  cd "$DEPMAP_DIR"
-  sha256sum -c SHA256SUMS.txt
-)
-```
-
-Validate model identifiers, matrix crosswalks and cancer cohorts:
-
-```bash
-set -o pipefail
-PYTHONUNBUFFERED=1 \
 python -u scripts/validate_real_inputs.py \
   --gene-effect "$DEPMAP_DIR/CRISPRGeneEffect.csv" \
   --copy-number "$DEPMAP_DIR/OmicsCNGeneWGS.csv" \
   --models "$DEPMAP_DIR/Model.csv" \
-  --expression "$DEPMAP_DIR/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv" \
-  2>&1 | tee logs/expanded_26Q1/02_validate_depmap_crosswalk.log
-
-status=${PIPESTATUS[0]}
-echo "DepMap crosswalk exit code: $status"
-test "$status" -eq 0
+  --expression "$DEPMAP_DIR/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv"
 ```
 
-Release-specific model counts may change. They must be recorded, not forced to match
-an older release.
-
-## 6. Optional local drug-sensitivity releases
-
-Open Targets, ChEMBL, DGIdb, MyChem, Pharos/TCRD and CIViC are queried by the
-publication pipeline. PRISM, GDSC and CTRP are optional local releases.
-
-Place optional files under:
-
-```text
-data/raw/pharmacology/prism/
-data/raw/pharmacology/gdsc/
-data/raw/pharmacology/ctrp/
-```
-
-Accepted filename patterns and column aliases are defined in:
-
-```text
-config/drug_sensitivity_sources.yaml
-```
-
-Absence of these optional local releases must remain explicit. The pipeline writes a
-source-status table and does not invent drug-response measurements.
-
-## 7. Create and review the GDC manifest
-
-The target projects are:
-
-```text
-TCGA-COAD
-TCGA-READ
-TCGA-STAD
-TCGA-LUAD
-TCGA-LUSC
-```
-
-The workflow requests open, primary-tumor, gene-level copy-number files produced by
-ASCAT3.
-
-Create the manifest without downloading files:
+### 4.2 GDC/TCGA acquisition
 
 ```bash
+export GDC_DIR="$OLD/data/raw/gdc"
 mkdir -p "$GDC_DIR" logs/expanded_26Q1
 
-set -o pipefail
-PYTHONUNBUFFERED=1 \
 python -u scripts/download_gdc.py \
   --manifest-only \
   --workflow ASCAT3 \
   --output-dir "$GDC_DIR" \
   2>&1 | tee logs/expanded_26Q1/03_gdc_manifest.log
 
-status=${PIPESTATUS[0]}
-echo "GDC manifest exit code: $status"
-test "$status" -eq 0
-```
-
-Preserve a dated copy before downloading:
-
-```bash
-cp -av \
-  "$GDC_DIR/gdc_gene_level_copy_number_manifest.json" \
-  "$GDC_DIR/gdc_gene_level_copy_number_manifest_$(date +%Y%m%d).json"
-```
-
-Summarize the reviewed manifest:
-
-```bash
-python - "$GDC_DIR/gdc_gene_level_copy_number_manifest.json" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-path = Path(sys.argv[1])
-data = json.loads(path.read_text(encoding="utf-8"))
-total_files = 0
-total_bytes = 0
-for project, records in data.items():
-  count = len(records)
-  size = sum(int(record.get("file_size") or 0) for record in records)
-  total_files += count
-  total_bytes += size
-  print(f"{project}: {count} files; {size / 1024**3:.3f} GiB")
-print(f"Total: {total_files} files; {total_bytes / 1024**3:.3f} GiB")
-PY
-```
-
-For the manifest reviewed on 21 July 2026, the counts were 422 COAD, 153 READ,
-429 STAD, 503 LUAD and 490 LUSC, for 1,997 files. Later GDC releases may differ and
-must be reported using their actual reviewed manifest.
-
-## 8. Download or resume the reviewed GDC manifest
-
-Use the existing reviewed manifest rather than silently querying a different cohort
-mid-download:
-
-```bash
-set -o pipefail
-PYTHONUNBUFFERED=1 \
 python -u scripts/download_gdc.py \
   --use-existing-manifest \
   --manifest "$GDC_DIR/gdc_gene_level_copy_number_manifest.json" \
@@ -341,602 +169,328 @@ python -u scripts/download_gdc.py \
   --retries 3 \
   2>&1 | tee logs/expanded_26Q1/04_gdc_download.log
 
-status=${PIPESTATUS[0]}
-echo "GDC download exit code: $status"
-test "$status" -eq 0
-```
-
-The downloader skips valid files, retries failed requests, writes temporary `.part`
-files and validates size plus MD5 before accepting each file.
-
-Do not start a second downloader while this process is active.
-
-Monitor from a second terminal:
-
-```bash
-watch -n 15 "
-  echo -n 'Complete files: '
-  find '$GDC_DIR'/TCGA-* -type f ! -name '*.part' 2>/dev/null | wc -l
-  echo -n 'Partial files:  '
-  find '$GDC_DIR'/TCGA-* -type f -name '*.part' 2>/dev/null | wc -l
-  echo -n 'Current volume:  '
-  du -sh '$GDC_DIR' 2>/dev/null
-"
-```
-
-Validate the completed download:
-
-```bash
-set -o pipefail
-PYTHONUNBUFFERED=1 \
 python -u scripts/download_gdc.py \
   --validate-only \
   --manifest "$GDC_DIR/gdc_gene_level_copy_number_manifest.json" \
-  --output-dir "$GDC_DIR" \
-  2>&1 | tee logs/expanded_26Q1/05_gdc_validate.log
+  --output-dir "$GDC_DIR"
 
-status=${PIPESTATUS[0]}
-echo "GDC validation exit code: $status"
-test "$status" -eq 0
-```
-
-Confirm that no partial file remains:
-
-```bash
 find "$GDC_DIR" -type f -name '*.part'
 ```
 
-The command must print nothing.
+No `.part` file may remain before downstream aggregation.
 
-## 9. Start the complete analysis after the reviewed GDC download
+### 4.3 Candidate and evidence acquisition
 
-Use `tmux` for the long execution. Do not nest a new session when `$TMUX` is already
-set.
-
-Outside tmux:
+The full acquisition sequence includes:
 
 ```bash
-tmux new-session -A -s rses_v010_full
+python -u scripts/download_human_nise.py
+python -u scripts/build_expanded_candidate_universe.py
+python -u scripts/download_ensembl_paralogs.py
+python -u scripts/discover_conditional_dependencies.py
+python -u scripts/download_human_functional_evidence_resilient.py
+python -u scripts/download_hpa_subcellular_current.py
+python -u scripts/download_ensembl_promoters.py
+python -u scripts/download_jaspar_core_vertebrates.py
+python -u scripts/scan_promoter_motifs.py
 ```
 
-Already inside tmux:
+Use the source-specific documents for required arguments and recovery modes. Source failures must be recorded as missing or technical failure, never as biological zero.
+
+## 5. Required input check before the final run
 
 ```bash
-tmux display-message -p 'Session: #S | Window: #I:#W | Pane: #P'
-```
-
-Before launching, verify that no other copy of the pipeline is active:
-
-```bash
-pgrep -af \
-  'run_expanded_pipeline|discover_conditional_dependencies|run_expanded_rses_onco|run_publication_pipeline|render_nise_structures' \
-  || true
-```
-
-Launch the canonical complete workflow:
-
-```bash
-OLD="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-NISE"
-NEW="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010"
-
-cd "$NEW" || exit 1
-
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate rses-onco
-
-export DEPMAP_DIR="$OLD/data/raw/depmap"
-export GDC_DIR="$OLD/data/raw/gdc"
-
-mkdir -p logs
-
-RUN_LOG="logs/run_expanded_after_download_v0101.log"
-EXITCODE_FILE="logs/run_expanded_after_download_v0101.exitcode"
-
-printf 'Project: %s\n' "$PWD"
-printf 'Conda environment: %s\n' "$CONDA_DEFAULT_ENV"
-printf 'DepMap: %s\n' "$DEPMAP_DIR"
-printf 'GDC: %s\n' "$GDC_DIR"
-printf 'Start: %s\n' "$(date -Iseconds)"
-
-set -o pipefail
-
-MPLBACKEND=Agg \
-PYTHONUNBUFFERED=1 \
-DEPMAP_DIR="$DEPMAP_DIR" \
-GDC_DIR="$GDC_DIR" \
-bash scripts/run_expanded_pipeline.sh after-download \
-  2>&1 | tee "$RUN_LOG"
-
-status=${PIPESTATUS[0]}
-printf '%s\n' "$status" > "$EXITCODE_FILE"
-printf 'Finish: %s\n' "$(date -Iseconds)"
-printf 'Pipeline exit code: %s\n' "$status"
-
-test "$status" -eq 0
-```
-
-To detach without stopping the run, press `Ctrl+B`, release, then press `D`.
-
-Monitor from another terminal:
-
-```bash
-tail -f \
-  /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010/logs/run_expanded_after_download_v0101.log
-```
-
-Return to the session with:
-
-```bash
-tmux attach -t rses_v010_full
-```
-
-## 10. Complete pipeline stage order
-
-`scripts/run_expanded_pipeline.sh after-download` runs these stages:
-
-```text
-01  Validate DepMap files and write checksums
-02  Validate DepMap model crosswalks and cancer cohorts
-03  Build the curated directed NISE and benchmark universe
-04  Acquire/cache Ensembl Compara paralogs
-05  Rebuild the universe with Ensembl paralogs
-06  Screen every measured DepMap CRISPR target
-07  Rebuild the universe with supported discoveries
-08  Acquire STRING, DoRothEA, HPA and UniProt evidence
-09  Run expanded DepMap-only scoring
-10  Validate all GDC files against the reviewed manifest
-11  Aggregate ASCAT3 gene-level copy-number files
-12  Validate combined colorectal, gastric and lung matrices
-13  Run integrated TCGA plus DepMap scoring
-14  Run pharmacology, structures and publication assets
-15  Re-run tests and write expanded-result checksums
-```
-
-The publication subpipeline then runs:
-
-```text
-01  Acquire pharmacology evidence
-02  Standardize optional PRISM/GDSC/CTRP releases
-03  Analyze biomarker-matched drug response
-04  Build coverage-aware target-drug priorities
-05  Download all 70 AlphaFold structures
-06  Collect exact-numbered structural annotations
-07  Render whole and functional-site PyMOL views
-08  Export all main and supplementary tables
-09  Generate all main, supplementary and structural figures
-10  Build the organized Excel workbook
-11  Build inventories, provenance and SHA-256 manifests
-12  Validate all publication outputs and run tests
-```
-
-## 11. Ensembl completeness requirement
-
-The Ensembl downloader caches each seed-gene response and resolves target identifiers
-in batches. Explicit target lists are expanded into atomic symbols before acquisition.
-
-After the Ensembl stage, verify:
-
-```bash
-python - <<'PY'
-import json
-from pathlib import Path
-
-path = Path("data/raw/ensembl/ensembl_acquisition_metadata.json")
-data = json.loads(path.read_text(encoding="utf-8"))
-for key in (
-  "seed_gene_count",
-  "successful_seed_homology_queries",
-  "failed_seed_homology_queries",
-  "target_identifier_count",
-  "resolved_target_identifier_count",
-  "unresolved_target_identifier_count",
-  "directed_paralog_count",
-  "complete",
-):
-  print(f"{key}: {data.get(key)}")
-PY
-```
-
-A complete run requires:
-
-```text
-failed_seed_homology_queries: 0
-unresolved_target_identifier_count: 0
-complete: True
-```
-
-The validated v0.10.1 execution contained 95 seed genes, 471 resolved target
-identifiers and 719 directed Ensembl paralog candidates. These values are
-release-specific and may change when the curated inputs or Ensembl release changes.
-
-## 12. Exact commands to execute after the complete pipeline finishes
-
-Do not assume that a returned prompt means success. Execute every command below.
-
-### 12.1 Read the recorded exit code and final log
-
-```bash
-cd /mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010
-conda activate rses-onco
-
-cat logs/run_expanded_after_download_v0101.exitcode
-
-tail -n 120 logs/run_expanded_after_download_v0101.log
-```
-
-The recorded exit code must be exactly:
-
-```text
-0
-```
-
-Search for failures:
-
-```bash
-grep -nEi \
-  'traceback|error|exception|failed|failure|fatal|command failed|no such file' \
-  logs/run_expanded_after_download_v0101.log \
-  | tail -n 100 \
-  || true
-```
-
-Warnings from optional unavailable sources must be interpreted using their source
-status tables; they must not be silently treated as observed evidence.
-
-### 12.2 Run the canonical final verifier
-
-For the validated WSL layout:
-
-```bash
-OLD="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-NISE"
-NEW="/mnt/c/Users/Microsoft/Desktop/SynLeth-RSES-Onco-v010"
-
-cd "$NEW" || exit 1
-conda activate rses-onco
-
-export GDC_DIR="$OLD/data/raw/gdc"
-export PIPELINE_EXITCODE_FILE="logs/run_expanded_after_download_v0101.exitcode"
-
-mkdir -p logs
-set -o pipefail
-
-MPLBACKEND=Agg \
-GDC_DIR="$GDC_DIR" \
-PIPELINE_EXITCODE_FILE="$PIPELINE_EXITCODE_FILE" \
-bash scripts/verify_complete_article_run.sh \
-  2>&1 | tee logs/verify_complete_article_run.log
-
-status=${PIPESTATUS[0]}
-echo "Final verification exit code: $status"
-test "$status" -eq 0
-```
-
-This command verifies:
-
-- the recorded pipeline exit code;
-- Ensembl completeness;
-- absence of GDC `.part` files;
-- all figure/table/manuscript assets;
-- publication and expanded-result SHA-256 checksums;
-- the full test suite;
-- 8 main and 32 supplementary figures;
-- 120 PNG/PDF/SVG figure exports;
-- 4 main and 18 supplementary tables;
-- at least 140 individual structural renders.
-
-### 12.3 Independently validate publication outputs
-
-The helper already performs this command, but it is retained here for transparent
-manual reproduction:
-
-```bash
-python -u scripts/validate_publication_outputs.py \
-  --article-root article_outputs
-```
-
-Expected final messages:
-
-```text
-Publication package validation passed.
-Main figures: 8; supplementary figures: 32; exported image files: 120
-Main tables: 4; supplementary tables: 18
-All 70 curated NISE proteins have whole and site structural renders.
-All registered figures passed automated layout audits.
-```
-
-### 12.4 Independently verify checksums
-
-Publication assets:
-
-```bash
-(
-  cd article_outputs
-  sha256sum -c manifests/SHA256SUMS.txt
+REQUIRED_INPUTS=(
+  "data/raw/depmap/CRISPRGeneEffect.csv"
+  "data/raw/depmap/OmicsCNGeneWGS.csv"
+  "data/raw/depmap/Model.csv"
+  "data/raw/depmap/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv"
+  "data/processed/expanded_candidate_universe.tsv"
+  "data/processed/expanded_class_member_inventory.tsv"
+  "data/processed/expanded_pair_functional_evidence_pre_wgcna.tsv"
+  "data/processed/TCGA_COLON_homdel_discrete.tsv"
+  "data/processed/TCGA_STOMACH_homdel_discrete.tsv"
+  "data/processed/TCGA_LUNG_homdel_discrete.tsv"
+  "data/raw/human_functional_evidence/omnipath_dorothea.tsv"
+  "data/raw/regulatory/ensembl_promoters.tsv"
+  "data/raw/regulatory/ensembl_promoters.fa"
+  "results/expanded_26Q1/discovery/all_target_dependency_screen.tsv"
 )
+
+for path in "${REQUIRED_INPUTS[@]}"; do
+  [[ -s "$path" ]] || { echo "Missing or empty: $path" >&2; exit 1; }
+  ls -lh "$path"
+done
 ```
 
-Integrated analysis outputs:
+Release-specific sample counts may change and must be reported as observed rather than forced to match an older release.
+
+## 6. Safe backup and removal of derived outputs
 
 ```bash
-sha256sum -c \
+STAMP="$(date +%Y%m%d_%H%M%S)"
+BACKUP="$NEW/backups/pre_v0110_${STAMP}"
+mkdir -p "$BACKUP/results" "$BACKUP/regulatory" "$BACKUP/article_outputs"
+
+[[ -d results/expanded_26Q1 ]] && rsync -a results/expanded_26Q1/ "$BACKUP/results/"
+[[ -d data/processed/regulatory ]] && rsync -a data/processed/regulatory/ "$BACKUP/regulatory/"
+[[ -d article_outputs ]] && rsync -a --exclude 'structure_atlas/' article_outputs/ "$BACKUP/article_outputs/"
+
+cp -f \
+  data/processed/expanded_pair_functional_evidence_pre_wgcna.tsv \
+  data/processed/expanded_pair_functional_evidence.tsv
+
+rm -rf data/processed/regulatory/wgcna
+rm -f \
+  data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv \
+  data/processed/regulatory/promoter_tf_regulatory_pair_metrics.tsv \
+  data/processed/regulatory/wgcna_regulatory_layer_status.json
+rm -f \
+  results/expanded_26Q1/depmap_only/expanded_rses_onco.tsv \
+  results/expanded_26Q1/full/expanded_rses_onco.tsv \
   results/expanded_26Q1/full/SHA256SUMS.txt
+
+for directory in figures tables source_data manifests workbooks manuscript_assets review_records documents; do
+  rm -rf "article_outputs/$directory"
+done
 ```
 
-Every listed file must report `OK`.
+The cached promoter, JASPAR/FIMO, pharmacology and structural resources may be preserved when valid.
 
-### 12.5 Inspect the output inventory
+## 7. Corrected WGCNA/regulatory policy
 
-```bash
-column -t -s $'\t' \
-  article_outputs/manifests/figure_manifest.tsv \
-  | less -S
+The primary WGCNA correlation is `bicor` with:
+
+```text
+maxPOutliers=0.10
+pearsonFallback=individual
+networkType=signed
+TOMType=signed
 ```
 
-```bash
-column -t -s $'\t' \
-  article_outputs/manifests/table_manifest.tsv \
-  | less -S
+Pearson is used only for an individual gene or module eigengene where bicor is undefined because the MAD is zero or non-finite. Every fallback is exported in an audit table.
+
+The functional-microniche weights are:
+
+```text
+expression_context        0.20
+localization              0.15
+biochemical_structural    0.15
+genetic_phenotype         0.20
+interaction_network       0.15
+regulatory_network        0.15
 ```
 
-```bash
-python - <<'PY'
-import pandas as pd
+The final RSES-Onco weights are:
 
-figures = pd.read_csv(
-  "article_outputs/manifests/figure_manifest.tsv",
-  sep="\t",
-)
-tables = pd.read_csv(
-  "article_outputs/manifests/table_manifest.tsv",
-  sep="\t",
-)
-
-print("Registered figures:", len(figures))
-print("Layout pass:", int(figures["layout_status"].eq("pass").sum()))
-print("Registered tables:", len(tables))
-print("Main tables:", int(tables["category"].eq("main").sum()))
-print(
-  "Supplementary tables:",
-  int(tables["category"].eq("supplementary").sum()),
-)
-PY
+```text
+tumor_event               0.16
+dependency                0.22
+selectivity               0.14
+expression_compensation   0.08
+functional_relation       0.06
+functional_microniche     0.16
+validation_tractability   0.18
 ```
 
-### 12.6 Record final provenance
+## 8. Execute the complete workflow in tmux
 
 ```bash
-cat article_outputs/manifests/publication_provenance.json
-```
+STAMP="$(date +%Y%m%d_%H%M%S)"
+SESSION="rses_v0110_${STAMP}"
+RUNNER="$NEW/logs/run_rses_v0110_${STAMP}.sh"
+RUN_LOG="$NEW/logs/run_rses_v0110_${STAMP}.log"
+EXITCODE_FILE="$NEW/logs/run_rses_v0110_${STAMP}.exitcode"
 
-```bash
-git rev-parse HEAD
-
-git status --short
-```
-
-The generated provenance records the commit, branch, Python/platform information,
-key package versions and working-tree status. A dirty working tree must be explained
-before archiving or publication.
-
-## 13. Mandatory manual inspection at 100% zoom
-
-Automated layout validation is necessary but does not replace scientific and visual
-review. Inspect every main and supplementary PDF at 100% zoom.
-
-Open the directories:
-
-```bash
-explorer.exe "$(wslpath -w "$PWD/article_outputs/figures/main")"
-explorer.exe "$(wslpath -w "$PWD/article_outputs/figures/supplementary")"
-```
-
-For every figure verify:
-
-- all panel letters are present and correctly ordered;
-- axis labels, tick labels, sample names and gene names are readable at 100% zoom;
-- legends and color bars are readable and are not clipped;
-- heatmap values, dendrogram labels and statistical annotations are legible;
-- no text overlaps another text element, axis, panel or structure;
-- no scientific label has been truncated;
-- PNG, PDF and SVG show the same scientific content;
-- the displayed values agree with the associated source-data TSV;
-- the figure legend accurately describes every panel and symbol;
-- missing evidence is displayed as missing and not as zero;
-- AlphaFold figures do not imply experimental ligand poses that were not observed.
-
-Record the inspection in a dated text file:
-
-```bash
-cat > article_outputs/manifests/MANUAL_VISUAL_INSPECTION.txt <<EOF
-RSES-Onco manual visual inspection
-Date: $(date -Iseconds)
-Git commit: $(git rev-parse HEAD)
-Zoom: 100%
-Main figures inspected: Figure 1 through Figure 8
-Supplementary figures inspected: Figure S1 through Figure S32
-PNG/PDF/SVG correspondence checked: yes
-Source-data correspondence checked: yes
-Clipping/overlap detected: no
-Reviewer: Leandro de Mattos Pereira
+cat > "$RUNNER" <<EOF
+#!/usr/bin/env bash
+set -Eeuo pipefail
+set -o pipefail
+cd "$NEW" || exit 1
+source "\$(conda info --base)/etc/profile.d/conda.sh"
+conda activate rses-onco
+export PYTHONUNBUFFERED=1
+export PYTHONDONTWRITEBYTECODE=1
+export MPLBACKEND=Agg
+export STRICT_LAYOUT=1
+export PUBLICATION_STAGE=assets-only
+export DEPMAP_DIR="$NEW/data/raw/depmap"
+export GENE_EFFECT="\$DEPMAP_DIR/CRISPRGeneEffect.csv"
+export COPY_NUMBER="\$DEPMAP_DIR/OmicsCNGeneWGS.csv"
+export MODELS="\$DEPMAP_DIR/Model.csv"
+export EXPRESSION="\$DEPMAP_DIR/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv"
+export OPENBLAS_NUM_THREADS=4
+export OMP_NUM_THREADS=4
+export MKL_NUM_THREADS=4
+set +e
+bash scripts/resume_wgcna_regulatory_pipeline.sh resume-regulatory 2>&1 | tee "$RUN_LOG"
+status=\${PIPESTATUS[0]}
+set -e
+printf '%s\n' "\$status" > "$EXITCODE_FILE"
+exit "\$status"
 EOF
+
+chmod +x "$RUNNER"
+printf '%s\n' "$SESSION" > logs/last_rses_v0110_session.txt
+printf '%s\n' "$RUN_LOG" > logs/last_rses_v0110_log.txt
+printf '%s\n' "$EXITCODE_FILE" > logs/last_rses_v0110_exitcode_path.txt
+
+tmux new-session -d -s "$SESSION" "bash '$RUNNER'"
 ```
 
-Edit the statements before saving when any problem is detected. Do not mark the
-package as submission-ready until all problems are corrected by the generating
-scripts and the complete publication workflow is rerun.
-
-Because this manual record is created after the generated checksum manifest, rebuild
-the inventory and checksums after adding it:
+Attach with:
 
 ```bash
-RANKING="results/expanded_26Q1/full/expanded_rses_onco.tsv" \
-CANDIDATES="data/processed/expanded_candidate_universe.tsv" \
-DISCOVERY="results/expanded_26Q1/discovery/all_target_dependency_screen.tsv" \
-FUNCTIONAL_EVIDENCE="data/processed/expanded_pair_functional_evidence.tsv" \
-PHARMACOLOGY_DATA="data/processed/pharmacology" \
-PHARMACOLOGY_RESULTS="results/expanded_26Q1/pharmacology" \
-STRUCTURE_MANIFEST="data/processed/structures/alphafold_structure_manifest.tsv" \
-STRUCTURAL_ANNOTATIONS="data/processed/structures/nise_structural_residue_annotations.tsv" \
-STRUCTURE_RENDER_MANIFEST="data/processed/structures/nise_structure_render_manifest.tsv" \
-bash scripts/run_publication_pipeline.sh manifests
+tmux attach -t "$(cat logs/last_rses_v0110_session.txt)"
 ```
 
-Then re-run:
+Detach without stopping the run with `Ctrl+B`, then `D`.
+
+Monitor with:
+
+```bash
+RUN_LOG="$(cat logs/last_rses_v0110_log.txt)"
+tail -f "$RUN_LOG"
+```
+
+## 9. Completion and WGCNA checks
+
+```bash
+EXITCODE_FILE="$(cat logs/last_rses_v0110_exitcode_path.txt)"
+RUN_LOG="$(cat logs/last_rses_v0110_log.txt)"
+cat "$EXITCODE_FILE"
+tail -n 300 "$RUN_LOG"
+```
+
+The exit code must be `0`.
+
+For each cancer (`colon`, `stomach`, `lung`), the following must exist:
+
+```text
+wgcna_gene_modules.tsv
+wgcna_module_eigengenes.tsv
+wgcna_pair_metrics.tsv
+wgcna_soft_threshold_diagnostics.tsv
+wgcna_run_diagnostics.tsv
+wgcna_correlation_fallback.tsv
+```
+
+## 10. Publication assets
+
+The regulatory resume workflow calls the publication workflow. To regenerate the publication assets independently from existing rankings and caches:
 
 ```bash
 MPLBACKEND=Agg \
-GDC_DIR="$GDC_DIR" \
-bash scripts/verify_complete_article_run.sh
-```
-
-## 14. Regenerate only publication assets from completed scores and caches
-
-When the integrated ranking, pharmacology caches and structural renders already
-exist, rebuild tables, figures, workbook and manifests with:
-
-```bash
-MPLBACKEND=Agg \
+STRICT_LAYOUT=1 \
 PYTHONUNBUFFERED=1 \
-bash scripts/run_publication_pipeline.sh assets-only \
-  2>&1 | tee logs/run_publication_assets_only.log
+bash scripts/run_publication_pipeline.sh assets-only
 ```
 
-Regenerate only the 40 registered figures:
+The `assets-only` command must generate all figures and tables, exact figure-source TSVs, score-component tables, coverage/missingness audits, overlap controls, robustness analyses, networks, expression and phenotype tables, manifests, workbooks and validation reports.
+
+## 11. Automated validation
 
 ```bash
-MPLBACKEND=Agg \
-PYTHONUNBUFFERED=1 \
-bash scripts/run_publication_pipeline.sh figures \
-  2>&1 | tee logs/regenerate_all_article_figures.log
-```
+python -u scripts/validate_wgcna_regulatory_evidence.py \
+  --ranking results/expanded_26Q1/full/expanded_rses_onco.tsv \
+  --functional-evidence data/processed/expanded_pair_functional_evidence.tsv \
+  --article-root article_outputs
 
-Run the publication validator afterward:
+python -u scripts/validate_extended_supporting_evidence.py \
+  --article-root article_outputs
 
-```bash
+python -u scripts/validate_publication_scientific_integrity.py \
+  --article-root article_outputs \
+  --run-marker logs/publication_26Q1/assets_only_run.marker
+
 python -u scripts/validate_publication_outputs.py \
+  --article-root article_outputs \
+  --run-marker logs/publication_26Q1/assets_only_run.marker
+
+PYTHONDONTWRITEBYTECODE=1 \
+MPLBACKEND=Agg \
+python -m pytest -q -p no:cacheprovider
+```
+
+## 12. Build and render the article documents
+
+```bash
+bash scripts/run_publication_pipeline.sh documents
+```
+
+Expected outputs:
+
+```text
+article_outputs/documents/RSES_Onco_manuscript.docx
+article_outputs/documents/RSES_Onco_manuscript.pdf
+article_outputs/documents/RSES_Onco_supplementary_material.docx
+article_outputs/documents/RSES_Onco_supplementary_material.pdf
+article_outputs/documents/RSES_Onco_manuscript_pages/
+article_outputs/documents/RSES_Onco_supplementary_material_pages/
+```
+
+Validate them:
+
+```bash
+python -u scripts/validate_publication_documents.py \
+  --article-root article_outputs \
+  --document-dir article_outputs/documents \
+  --require-page-renders
+```
+
+Confirm S68 and S69 are on different pages using `article_outputs/documents/document_figure_page_map.tsv`.
+
+## 13. Manual inspection
+
+Inspect every rendered figure and document page at 100% zoom. Complete:
+
+```text
+article_outputs/review_records/MANUAL_VISUAL_INSPECTION_CHECKLIST.tsv
+```
+
+Then run:
+
+```bash
+python -u scripts/validate_manual_inspection_completion.py \
   --article-root article_outputs
 ```
 
-## 15. Re-run selected stages after interruption
+Do not auto-fill the checklist.
 
-### Ensembl
-
-The per-seed homology cache is stored in:
-
-```text
-data/raw/ensembl/homology_cache/
-```
-
-Re-run without `--refresh` to reuse successful responses:
+## 14. Final verification
 
 ```bash
-python -u scripts/download_ensembl_paralogs.py \
-  --candidates data/processed/expanded_candidate_universe.tsv \
-  --output data/raw/ensembl/human_seed_paralogs.tsv \
-  --retries 10 \
-  --batch-size 500 \
-  --strict-completeness
-```
-
-### GDC
-
-Re-run the reviewed manifest command from Section 8. Existing valid files are
-skipped; invalid or partial files are replaced.
-
-### Pharmacology
-
-API responses are cached under:
-
-```text
-data/raw/pharmacology/api_cache/
-```
-
-Re-run:
-
-```bash
-bash scripts/run_publication_pipeline.sh acquire-pharmacology
-bash scripts/run_publication_pipeline.sh prioritize
-```
-
-### Structures
-
-AlphaFold structures and annotation caches are stored under:
-
-```text
-data/raw/structures/
-data/processed/structures/
-```
-
-Re-run selected structural stages:
-
-```bash
-bash scripts/run_structural_pipeline.sh download
-bash scripts/run_structural_pipeline.sh annotations
-bash scripts/run_structural_pipeline.sh render
-bash scripts/run_structural_pipeline.sh figures
-```
-
-## 16. Output locations
-
-```text
-results/expanded_26Q1/
-├── depmap_only/
-├── discovery/
-├── full/
-└── pharmacology/
-
-article_outputs/
-├── figures/main/
-├── figures/supplementary/
-├── structure_atlas/individual/
-├── tables/main/
-├── tables/supplementary/
-├── source_data/
-├── manuscript_assets/
-├── workbooks/
-└── manifests/
-```
-
-Important final files include:
-
-```text
-results/expanded_26Q1/full/expanded_rses_onco.tsv
-results/expanded_26Q1/discovery/all_target_dependency_screen.tsv
-results/expanded_26Q1/pharmacology/pharmacology_ranked_hypotheses.tsv
-article_outputs/workbooks/RSES_Onco_Article_Tables_and_Evidence.xlsx
-article_outputs/manuscript_assets/all_figure_legends.md
-article_outputs/manifests/figure_manifest.tsv
-article_outputs/manifests/table_manifest.tsv
-article_outputs/manifests/publication_file_inventory.tsv
-article_outputs/manifests/publication_provenance.json
-article_outputs/manifests/SHA256SUMS.txt
-```
-
-## 17. Minimal command summary
-
-After the four required DepMap files and the reviewed GDC download are present:
-
-```bash
-export DEPMAP_DIR=/absolute/path/to/data/raw/depmap
-export GDC_DIR=/absolute/path/to/data/raw/gdc
-
-MPLBACKEND=Agg \
-PYTHONUNBUFFERED=1 \
-DEPMAP_DIR="$DEPMAP_DIR" \
+PIPELINE_EXITCODE_FILE="$(cat logs/last_rses_v0110_exitcode_path.txt)" \
 GDC_DIR="$GDC_DIR" \
-bash scripts/run_expanded_pipeline.sh after-download
+MPLBACKEND=Agg \
+bash scripts/verify_complete_article_run.sh \
+  2>&1 | tee logs/verify_complete_article_run_v0110.log
 ```
 
-After it finishes:
+## 15. Final package
 
 ```bash
-export PIPELINE_EXITCODE_FILE=logs/run_expanded_after_download_v0101.exitcode
+PACKAGE="RSES_Onco_v0110_complete_submission_package.zip"
+rm -f "$PACKAGE" "$PACKAGE.sha256"
 
-MPLBACKEND=Agg \
-GDC_DIR="$GDC_DIR" \
-PIPELINE_EXITCODE_FILE="$PIPELINE_EXITCODE_FILE" \
-bash scripts/verify_complete_article_run.sh
+zip -r -9 "$PACKAGE" \
+  article_outputs \
+  results/expanded_26Q1 \
+  data/processed \
+  data/curated \
+  data/raw/regulatory \
+  config docs manuscript supplementary scripts src tests \
+  README.md CITATION.cff pyproject.toml environment.yml LICENSE \
+  -x '*/__pycache__/*' '*.pyc' '.git/*' 'backups/*'
+
+sha256sum "$PACKAGE" > "$PACKAGE.sha256"
+sha256sum -c "$PACKAGE.sha256"
 ```
 
-The second command does not replace manual inspection of all 40 figures at 100%
-zoom.
+## 16. Companion documentation and manuscript sources
+
+- [`DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](DATA_ACQUISITION_AND_REPRODUCTION_V0110.md)
+- [`../supplementary/Supplementary_Methods_RSES_Onco_v0110.md`](../supplementary/Supplementary_Methods_RSES_Onco_v0110.md)
+- [`../manuscript/RSES_Onco_intro_methods_draft_v0110.md`](../manuscript/RSES_Onco_intro_methods_draft_v0110.md)
+- [`figures/RSES_Onco_workflow_and_applications.svg`](figures/RSES_Onco_workflow_and_applications.svg)
+- `figures/RSES_Onco_workflow_and_applications.png`
