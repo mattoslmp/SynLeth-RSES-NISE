@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify that the complete real-data, evidence-audit, structural and publication workflow finished correctly.
+# Verify that the complete real-data, methylation, evidence-audit, structural and publication workflow finished correctly.
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -8,6 +8,8 @@ cd "$ROOT"
 ARTICLE_ROOT="${ARTICLE_ROOT:-article_outputs}"
 RESULT_ROOT="${RESULT_ROOT:-results/expanded_26Q1}"
 GDC_DIR="${GDC_DIR:-data/raw/gdc}"
+METHYLATION_DIR="${METHYLATION_DIR:-data/raw/methylation}"
+METHYLATION_EVIDENCE="${METHYLATION_EVIDENCE:-data/processed/methylation/pair_promoter_methylation_evidence.tsv}"
 ENSEMBL_METADATA="${ENSEMBL_METADATA:-data/raw/ensembl/ensembl_acquisition_metadata.json}"
 PIPELINE_EXITCODE_FILE="${PIPELINE_EXITCODE_FILE:-}"
 
@@ -49,16 +51,36 @@ for key, expected in required.items():
   print(f"{key}: {observed}")
   if observed != expected:
     raise SystemExit(
-      f"Ensembl completeness check failed: {key}={observed!r}, expected {expected!r}"
+      f"Ensembl completeness check failed: {key}={observed!r}, "
+      f"expected {expected!r}"
     )
 print(f"seed_gene_count: {data.get('seed_gene_count')}")
 print(f"directed_paralog_count: {data.get('directed_paralog_count')}")
 PY
 
 log_stage "Verify that no GDC partial download remains"
-partial_count="$(find "$GDC_DIR" -type f -name '*.part' 2>/dev/null | wc -l | tr -d '[:space:]')"
-echo "GDC .part files: $partial_count"
+partial_count="$(
+  find "$GDC_DIR" -type f -name '*.part' 2>/dev/null \
+    | wc -l \
+    | tr -d '[:space:]'
+)"
+echo "GDC copy-number .part files: $partial_count"
 test "$partial_count" -eq 0
+
+methylation_partial_count="$(
+  find "$METHYLATION_DIR" -type f -name '*.part' 2>/dev/null \
+    | wc -l \
+    | tr -d '[:space:]'
+)"
+echo "GDC methylation .part files: $methylation_partial_count"
+test "$methylation_partial_count" -eq 0
+
+if [[ -s "$METHYLATION_EVIDENCE" ]]; then
+  log_stage "Validate promoter methylation evidence and integrated score"
+  python -u scripts/validate_methylation_evidence.py \
+    --evidence "$METHYLATION_EVIDENCE" \
+    --ranking "$RESULT_ROOT/full/expanded_rses_onco.tsv"
+fi
 
 log_stage "Validate scientific integrity and exact figure-source correspondence"
 MPLBACKEND=Agg \
@@ -99,26 +121,41 @@ from pathlib import Path
 import pandas as pd
 
 root = Path(sys.argv[1])
-figures = pd.read_csv(root / "manifests/figure_manifest.tsv", sep="\t")
-tables = pd.read_csv(root / "manifests/table_manifest.tsv", sep="\t")
+figures = pd.read_csv(
+  root / "manifests/figure_manifest.tsv",
+  sep="\t",
+)
+tables = pd.read_csv(
+  root / "manifests/table_manifest.tsv",
+  sep="\t",
+)
 
 main_figures = int(
-  figures["figure_id"].astype(str).str.match(r"^Figure_[1-8]$").sum()
+  figures["figure_id"]
+  .astype(str)
+  .str.match(r"^Figure_[1-8]$")
+  .sum()
 )
 supplementary_figures = int(
-  figures["figure_id"].astype(str).str.match(r"^Figure_S(?:[1-9]|[1-5][0-9]|6[0-9])$").sum()
+  figures["figure_id"]
+  .astype(str)
+  .str.match(r"^Figure_S(?:[1-9]|[1-5][0-9]|6[0-9])$")
+  .sum()
 )
 image_files = sum(
   1
   for path in (root / "figures").rglob("*")
-  if path.is_file() and path.suffix.lower() in {".png", ".pdf", ".svg"}
+  if path.is_file()
+  and path.suffix.lower() in {".png", ".pdf", ".svg"}
 )
 structure_renders = sum(
   1
   for path in (root / "structure_atlas/individual").rglob("*.png")
   if path.is_file()
 )
-main_tables = int(tables["category"].astype(str).eq("main").sum())
+main_tables = int(
+  tables["category"].astype(str).eq("main").sum()
+)
 supplementary_tables = int(
   tables["category"].astype(str).eq("supplementary").sum()
 )
@@ -139,17 +176,19 @@ expected = {
   "supplementary_figures": 69,
   "exported_figure_files": 231,
   "main_tables": 4,
-  "supplementary_tables": 44,
+  "supplementary_tables": 47,
 }
 for key, value in expected.items():
   if summary[key] != value:
     raise SystemExit(
-      f"Final asset count failed: {key}={summary[key]}, expected {value}"
+      f"Final asset count failed: {key}={summary[key]}, "
+      f"expected {value}"
     )
 if structure_renders < 140:
   raise SystemExit(
     "Final asset count failed: "
-    f"individual_structure_renders={structure_renders}, expected at least 140"
+    f"individual_structure_renders={structure_renders}, "
+    "expected at least 140"
   )
 
 required = [
@@ -160,8 +199,11 @@ required = [
   root / "tables/figure_data/figure_source_data_inventory.tsv",
   root / "tables/supporting_evidence/supporting_evidence_manifest.tsv",
   root / "tables/supplementary/Table_S44_asset_reproduction_registry.tsv",
+  root / "tables/supplementary/Table_S45_pair_promoter_methylation_evidence.tsv",
+  root / "tables/supplementary/Table_S46_gene_promoter_methylation_summary.tsv",
+  root / "tables/supplementary/Table_S47_methylation_source_status.tsv",
   root / "source_data/figures/supplementary/Figure_S68_wgcna_module_eigengene_context_source_data.tsv",
-  root / "source_data/figures/supplementary/Figure_S69_integrated_regulatory_context_source_data.tsv",
+  root / "source_data/figures/supplementary/Figure_S69_promoter_methylation_context_source_data.tsv",
   root / "manifests/scientific_integrity_validation.json",
 ]
 for path in required:
@@ -170,9 +212,14 @@ for path in required:
 
 provenance_path = root / "manifests/publication_provenance.json"
 if provenance_path.exists():
-  provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+  provenance = json.loads(
+    provenance_path.read_text(encoding="utf-8")
+  )
   print(f"git_commit: {provenance.get('git_commit')}")
-  print(f"git_status_porcelain: {provenance.get('git_status_porcelain')!r}")
+  print(
+    "git_status_porcelain: "
+    f"{provenance.get('git_status_porcelain')!r}"
+  )
 PY
 
 log_stage "Complete run validation passed"
