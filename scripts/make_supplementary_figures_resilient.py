@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
   sys.path.insert(0, str(ROOT))
 
 import scripts.make_supplementary_figures as target
-from scripts.publication_audit_figures import expanded_coverage_s1
+from scripts.publication_figure_s1_resilience import expanded_coverage_s1
 from scripts.publication_layout_resilience import (
   dense_simple_bar,
   save_figure_triplet,
@@ -47,7 +47,14 @@ def pair_label(frame, width=32):
   return pair_labels(frame, width)
 
 
-def figure_s1(item, ranking, output_dir, source_dir, strict, input_path):
+def figure_s1(
+  item,
+  ranking,
+  output_dir,
+  source_dir,
+  strict,
+  input_path,
+):
   return expanded_coverage_s1(
     target,
     item,
