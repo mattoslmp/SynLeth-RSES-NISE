@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Resume from cached STRING/DoRothEA/HPA/UniProt evidence and rebuild RSES-Onco
-# with cancer-specific signed WGCNA, TF-expression consistency and promoter motifs.
+# with signed WGCNA, TF-expression, promoter motifs and optional methylation.
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -18,6 +18,7 @@ GENE_EFFECT="${GENE_EFFECT:-$DEPMAP_DIR/CRISPRGeneEffect.csv}"
 COPY_NUMBER="${COPY_NUMBER:-$DEPMAP_DIR/OmicsCNGeneWGS.csv}"
 MODELS="${MODELS:-$DEPMAP_DIR/Model.csv}"
 EXPRESSION="${EXPRESSION:-$DEPMAP_DIR/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv}"
+METHYLATION="${METHYLATION:-}"
 CANDIDATES="${CANDIDATES:-$PROCESSED_DIR/expanded_candidate_universe.tsv}"
 MEMBERS="${MEMBERS:-$PROCESSED_DIR/expanded_class_member_inventory.tsv}"
 FUNCTIONAL_EVIDENCE="${FUNCTIONAL_EVIDENCE:-$PROCESSED_DIR/expanded_pair_functional_evidence.tsv}"
@@ -28,9 +29,25 @@ PROMOTERS="${PROMOTERS:-data/raw/regulatory/ensembl_promoters.tsv}"
 PROMOTER_FASTA="${PROMOTER_FASTA:-data/raw/regulatory/ensembl_promoters.fa}"
 JASPAR_MEME="${JASPAR_MEME:-data/raw/regulatory/JASPAR2026_CORE_vertebrates_non-redundant.meme}"
 PROMOTER_MOTIFS="${PROMOTER_MOTIFS:-$PROCESSED_DIR/regulatory/jaspar_promoter_tf_summary.tsv}"
+METHYLATION_METRICS="${METHYLATION_METRICS:-$PROCESSED_DIR/regulatory/promoter_methylation_pair_metrics.tsv}"
+METHYLATION_STATUS="${METHYLATION_STATUS:-$PROCESSED_DIR/regulatory/promoter_methylation_status.json}"
 LOSS_THRESHOLD="${LOSS_THRESHOLD:-0.30}"
 MIN_GROUP_SIZE="${MIN_GROUP_SIZE:-3}"
+METHYLATION_DIFFERENCE_SATURATION="${METHYLATION_DIFFERENCE_SATURATION:-0.25}"
 PUBLICATION_STAGE="${PUBLICATION_STAGE:-assets-only}"
+
+if [[ -z "$METHYLATION" ]]; then
+  for candidate in \
+    "$DEPMAP_DIR/Methylation_(1kb_upstream_TSS)_subsetted_NAsdropped.csv" \
+    "$DEPMAP_DIR/Methylation_1kb_upstream_TSS.csv" \
+    "$DEPMAP_DIR/CCLE_RRBS_TSS1kb_20181022.txt.gz" \
+    "$DEPMAP_DIR/CCLE_RRBS_TSS1kb_20181022.txt"; do
+    if [[ -s "$candidate" ]]; then
+      METHYLATION="$candidate"
+      break
+    fi
+  done
+fi
 
 mkdir -p "$LOG_DIR" "$DEPMAP_RESULTS" "$FULL_RESULTS" \
   "$PROCESSED_DIR/regulatory"
@@ -72,7 +89,12 @@ check_runtime() {
   }
   bash -n scripts/resume_wgcna_regulatory_pipeline.sh
   python -m compileall -q src scripts tests
-  echo "WGCNA/promoter regulatory runtime is ready."
+  if [[ -n "$METHYLATION" ]]; then
+    echo "Promoter methylation source: $METHYLATION"
+  else
+    echo "Promoter methylation source is absent; methylation remains eligible-missing and is not scored as zero."
+  fi
+  echo "WGCNA/promoter/methylation regulatory runtime is ready."
 }
 
 preserve_base_functional_evidence() {
@@ -123,8 +145,27 @@ build_regulatory_layer() {
       --promoter-motifs "$PROMOTER_MOTIFS" \
       --output "$CANCER_SPECIFIC_EVIDENCE"
 
+  local methylation_args=()
+  if [[ -n "$METHYLATION" ]]; then
+    methylation_args=(--methylation "$METHYLATION")
+  fi
+  log_stage "Integrate promoter methylation into the existing regulatory domain"
+  run_logged "$LOG_DIR/05_methylation_regulatory_layer.log" \
+    python -u scripts/integrate_methylation_regulatory_layer.py \
+      "${methylation_args[@]}" \
+      --copy-number "$COPY_NUMBER" \
+      --models "$MODELS" \
+      --candidates "$CANDIDATES" \
+      --input "$CANCER_SPECIFIC_EVIDENCE" \
+      --output "$CANCER_SPECIFIC_EVIDENCE" \
+      --metrics-output "$METHYLATION_METRICS" \
+      --status-output "$METHYLATION_STATUS" \
+      --loss-threshold "$LOSS_THRESHOLD" \
+      --min-group-size "$MIN_GROUP_SIZE" \
+      --difference-saturation "$METHYLATION_DIFFERENCE_SATURATION"
+
   log_stage "Build pair-level consensus for source compatibility"
-  run_logged "$LOG_DIR/05_consensus_regulatory_layer.log" \
+  run_logged "$LOG_DIR/06_consensus_regulatory_layer.log" \
     python -u scripts/aggregate_wgcna_regulatory_layer.py \
       --base "$BASE_FUNCTIONAL_EVIDENCE" \
       --cancer-specific "$CANCER_SPECIFIC_EVIDENCE" \
@@ -158,8 +199,8 @@ score_one() {
 score_depmap() {
   log_stage "Recalculate DepMap-only RSES-Onco"
   score_one \
-    "$LOG_DIR/06_depmap_score_base.log" \
-    "$LOG_DIR/07_depmap_score_wgcna.log" \
+    "$LOG_DIR/07_depmap_score_base.log" \
+    "$LOG_DIR/08_depmap_score_wgcna_methylation.log" \
     "$DEPMAP_RESULTS/expanded_rses_onco.tsv"
 }
 
@@ -172,8 +213,8 @@ score_full() {
   done
   log_stage "Recalculate integrated TCGA-DepMap RSES-Onco"
   score_one \
-    "$LOG_DIR/08_full_score_base.log" \
-    "$LOG_DIR/09_full_score_wgcna.log" \
+    "$LOG_DIR/09_full_score_base.log" \
+    "$LOG_DIR/10_full_score_wgcna_methylation.log" \
     "$FULL_RESULTS/expanded_rses_onco.tsv" \
     --tcga "colon=$colon" \
     --tcga "stomach=$stomach" \
@@ -203,17 +244,18 @@ publication() {
   COPY_NUMBER="$COPY_NUMBER" \
   MODELS="$MODELS" \
   EXPRESSION="$EXPRESSION" \
+  METHYLATION="$METHYLATION" \
   LOSS_THRESHOLD="$LOSS_THRESHOLD" \
   MIN_GROUP_SIZE="$MIN_GROUP_SIZE" \
   bash scripts/run_publication_pipeline.sh "$stage" \
-    2>&1 | tee "$LOG_DIR/10_publication_pipeline.log"
+    2>&1 | tee "$LOG_DIR/11_publication_pipeline.log"
   local status=${PIPESTATUS[0]}
   [[ $status -eq 0 ]]
 }
 
 finalize() {
   log_stage "Run tests and rebuild expanded checksums"
-  run_logged "$LOG_DIR/11_pytest.log" \
+  run_logged "$LOG_DIR/12_pytest.log" \
     python -m pytest -q -p no:cacheprovider
   find "$RESULT_ROOT" article_outputs \
     -type f ! -name SHA256SUMS.txt -print0 \

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export WGCNA, promoter and TF regulatory source tables into article outputs."""
+"""Export WGCNA, promoter, TF and methylation source tables into article outputs."""
 from __future__ import annotations
 
 import argparse
@@ -52,12 +52,11 @@ def main() -> None:
     (
       "cancer_specific_wgcna_pair_metrics",
       resolve_path(
-        "data/processed/regulatory/wgcna/"
-        "wgcna_pair_metrics_all_cancers.tsv"
+        "data/processed/regulatory/wgcna/wgcna_pair_metrics_all_cancers.tsv"
       ),
       output_dir / "wgcna_pair_metrics_all_cancers.tsv",
-      "Signed WGCNA TOM, modules and kME are expression-derived "
-      "subcomponents and do not receive an independent full-domain weight.",
+      "Signed WGCNA TOM, modules and kME are expression-derived subcomponents "
+      "and do not receive an independent full-domain weight.",
     ),
     (
       "wgcna_input_preparation",
@@ -65,8 +64,8 @@ def main() -> None:
         "data/processed/regulatory/wgcna/wgcna_input_preparation.tsv"
       ),
       output_dir / "wgcna_input_preparation.tsv",
-      "All candidate genes plus cancer-specific highly variable genes "
-      "were used; median imputation is reported only for network estimation.",
+      "All candidate genes plus cancer-specific highly variable genes were used; "
+      "median imputation is reported only for network estimation.",
     ),
     (
       "wgcna_correlation_fallback_audit",
@@ -75,19 +74,17 @@ def main() -> None:
         "wgcna_correlation_fallback_all_cancers.tsv"
       ),
       output_dir / "wgcna_correlation_fallback_all_cancers.tsv",
-      "Biweight midcorrelation is primary; Pearson is used only for "
-      "individual genes or module eigengenes with zero or non-finite MAD, "
-      "and every affected entity is recorded.",
+      "Biweight midcorrelation is primary; Pearson is used only for individual "
+      "genes or eigengenes with zero or non-finite MAD.",
     ),
     (
       "wgcna_run_diagnostics",
       resolve_path(
-        "data/processed/regulatory/wgcna/"
-        "wgcna_run_diagnostics_all_cancers.tsv"
+        "data/processed/regulatory/wgcna/wgcna_run_diagnostics_all_cancers.tsv"
       ),
       output_dir / "wgcna_run_diagnostics_all_cancers.tsv",
-      "Correlation settings, zero-MAD counts, fallback policy, selected "
-      "power and module counts are reported per cancer.",
+      "Correlation settings, fallback policy, selected power and module counts "
+      "are reported per cancer.",
     ),
     (
       "promoter_tf_regulatory_pair_metrics",
@@ -95,24 +92,32 @@ def main() -> None:
         "data/processed/regulatory/promoter_tf_regulatory_pair_metrics.tsv"
       ),
       output_dir / "promoter_tf_regulatory_pair_metrics.tsv",
-      "DoRothEA associations, TF-expression consistency and promoter "
-      "motif predictions are distinct subcomponents.",
+      "DoRothEA associations, TF-expression consistency and promoter motifs are "
+      "distinct subcomponents.",
+    ),
+    (
+      "promoter_methylation_pair_metrics",
+      resolve_path(
+        "data/processed/regulatory/promoter_methylation_pair_metrics.tsv"
+      ),
+      output_dir / "promoter_methylation_pair_metrics.tsv",
+      "CCLE/DepMap promoter methylation is a weighted 1-kb-upstream-TSS ratio. "
+      "Pair-profile divergence and event-conditioned target hypomethylation are "
+      "association evidence, not causal silencing proof. Missing values remain NA.",
     ),
     (
       "ensembl_canonical_promoters",
       resolve_path("data/raw/regulatory/ensembl_promoters.tsv"),
       output_dir / "ensembl_canonical_promoters.tsv",
-      "Promoter coordinates are canonical-transcript TSS windows and are "
-      "not proof of TF occupancy.",
+      "Promoter coordinates are canonical-transcript TSS windows and are not "
+      "proof of TF occupancy.",
     ),
     (
       "jaspar_promoter_motif_predictions",
-      resolve_path(
-        "data/processed/regulatory/jaspar_promoter_tf_summary.tsv"
-      ),
+      resolve_path("data/processed/regulatory/jaspar_promoter_tf_summary.tsv"),
       output_dir / "jaspar_promoter_tf_summary.tsv",
-      "JASPAR/FIMO motif occurrence is predicted cis-regulatory support, "
-      "not direct binding or causality.",
+      "JASPAR/FIMO motif occurrence is predicted cis-regulatory support, not "
+      "direct binding or causality.",
     ),
   ]
   rows = []
@@ -120,7 +125,7 @@ def main() -> None:
     frame = read_optional(source)
     if frame.empty:
       raise FileNotFoundError(
-        f"Missing or empty WGCNA/regulatory source: {source}"
+        f"Missing or empty WGCNA/regulatory/methylation source: {source}"
       )
     atomic_tsv(frame, output)
     rows.append({
@@ -139,10 +144,7 @@ def main() -> None:
     output_dir / "wgcna_regulatory_supporting_evidence_manifest.tsv"
   )
   atomic_tsv(manifest, manifest_path)
-  print(
-    manifest[["evidence_family", "rows", "output_path"]]
-      .to_string(index=False)
-  )
+  print(manifest[["evidence_family", "rows", "output_path"]].to_string(index=False))
   print(f"Wrote {manifest_path}")
 
 
