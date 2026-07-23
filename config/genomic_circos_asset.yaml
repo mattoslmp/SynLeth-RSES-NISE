@@ -1,0 +1,11 @@
+supplementary_figures:
+  - id: Figure_S70
+    file: Figure_S70_genomic_circos_rses_onco
+    title: Genomic Circos of NISE and homologous-paralog hypotheses
+    caption: >-
+      GRCh38 genomic positions for every coordinate-complete NISE and
+      homologous-paralog gene, with red NISE links, black homologous-paralog
+      links, and rings for every top-level RSES-Onco, functional-microniche,
+      expression-network, regulatory, promoter-methylation and coverage
+      component. Missing and non-eligible evidence remain explicit and are not
+      rendered as numeric zero.
