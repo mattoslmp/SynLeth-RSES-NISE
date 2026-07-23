@@ -145,13 +145,7 @@ def _in_view_tick_bboxes(
   orientation: str,
   renderer: object,
 ) -> list[Bbox]:
-  """Return rendered tick-label boxes only for ticks inside current view limits.
-
-  Matplotlib may create major ticks just outside an axis view range. Those labels
-  are normally clipped and not part of the visible figure, so treating them as
-  canvas overflow creates false layout failures. The audit therefore filters by
-  tick location before checking clipping and collisions.
-  """
+  """Return rendered tick-label boxes only for ticks inside current view limits."""
   if orientation == "x":
     locations = axis.get_xticks()
     labels = axis.get_xticklabels()
@@ -198,12 +192,7 @@ def audit_figure_layout(
   figure_id: str,
   tolerance_pixels: float = 2.0,
 ) -> FigureAudit:
-  """Audit panel overlap, clipping and visible tick-label collisions.
-
-  This is a conservative automated safeguard. It does not replace scientific
-  review, but it converts common publication defects into machine-detectable
-  failures when ``strict_layout`` is enabled.
-  """
+  """Audit panel overlap, clipping and visible tick-label collisions."""
   fig.canvas.draw()
   renderer = fig.canvas.get_renderer()
   figure_bbox = fig.bbox
@@ -222,8 +211,6 @@ def audit_figure_layout(
           f"{second.get_label() or axes.index(second)}"
         )
 
-  # Deliberately exclude tick labels here. They are audited separately after
-  # filtering out Matplotlib ticks that lie outside the current data view.
   text_objects: list[mpl.text.Text] = list(fig.texts)
   for axis in axes:
     text_objects.extend([
@@ -288,6 +275,12 @@ def save_figure_triplet(
 ) -> FigureAudit:
   base_path = Path(base_path)
   base_path.parent.mkdir(parents=True, exist_ok=True)
+  if getattr(fig, "_suptitle", None) is not None:
+    fig._suptitle.set_text("")
+  for axis in fig.axes:
+    if not axis.axison:
+      axis.set_xticks([])
+      axis.set_yticks([])
   audit = audit_figure_layout(fig, figure_id)
   if strict_layout and audit.warnings:
     raise RuntimeError(
@@ -303,7 +296,6 @@ def save_figure_triplet(
       "bbox_inches": "tight",
       "pad_inches": 0.08,
     }
-    # Matplotlib backend support for metadata differs across output formats.
     if extension in {"png", "pdf", "svg"}:
       save_kwargs["metadata"] = metadata
     fig.savefig(base_path.with_suffix(f".{extension}"), **save_kwargs)

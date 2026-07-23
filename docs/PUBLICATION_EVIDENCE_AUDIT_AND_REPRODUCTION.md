@@ -77,7 +77,7 @@ python -u scripts/validate_publication_scientific_integrity.py \
 python -u scripts/validate_publication_outputs.py --article-root article_outputs
 ```
 
-The expected package contains 8 main figures, 38 supplementary figures, 138 PNG/PDF/SVG figure files, 4 main tables and 25 supplementary tables. Automated validation does not replace manual inspection of all rendered pages at 100% zoom.
+The expected package contains 8 main figures, 69 supplementary figures, 231 PNG/PDF/SVG figure files, 4 main tables and 44 supplementary tables. Automated validation does not replace manual inspection of all rendered pages at 100% zoom.
 
 ## Document rendering boundary
 

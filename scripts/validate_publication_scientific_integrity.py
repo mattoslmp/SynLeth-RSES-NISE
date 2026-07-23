@@ -87,8 +87,8 @@ def validate_overlap(article_root: Path) -> None:
 def validate_figures(article_root: Path) -> None:
   manifest = read_tsv(article_root / "manifests/figure_manifest.tsv")
   require_columns(manifest, {"figure_id", "category", "base_path", "source_data_path", "layout_status"}, "figure manifest")
-  if len(manifest) != 46:
-    raise ValueError(f"Expected 46 registered figures; observed {len(manifest)}")
+  if len(manifest) != 77:
+    raise ValueError(f"Expected 77 registered figures; observed {len(manifest)}")
   if manifest["figure_id"].duplicated().any():
     raise ValueError("Duplicated figure identifiers")
   if not manifest["layout_status"].eq("pass").all():
@@ -140,14 +140,29 @@ def validate_figures(article_root: Path) -> None:
   if invalid_text(fig7["compound_display"]).any() or fig7["compound_resolution"].eq("target_only").any():
     raise ValueError("Figure 7 main table contains unresolved/target-only compound evidence")
 
+  supplementary_source = article_root / "source_data/figures/supplementary"
+  fallback = read_tsv(
+    supplementary_source / "Figure_S48_wgcna_correlation_fallback_source_data.tsv"
+  )
+  if not fallback.empty and "fallback_count" in fallback:
+    if (pd.to_numeric(fallback["fallback_count"], errors="coerce") < 0).any():
+      raise ValueError("Figure S48 contains a negative fallback count")
+  for figure_name in (
+    "Figure_S68_wgcna_module_eigengene_context_source_data.tsv",
+    "Figure_S69_integrated_regulatory_context_source_data.tsv",
+  ):
+    path = supplementary_source / figure_name
+    if not path.exists() or path.stat().st_size == 0:
+      raise FileNotFoundError(f"Missing mandatory extended figure source data: {path}")
+
 
 def validate_tables(article_root: Path) -> None:
   manifest = read_tsv(article_root / "manifests/table_manifest.tsv")
   require_columns(manifest, {"table_id", "category", "path", "rows", "status"}, "table manifest")
   if int(manifest["category"].eq("main").sum()) != 4:
     raise ValueError("Expected four main tables")
-  if int(manifest["category"].eq("supplementary").sum()) != 25:
-    raise ValueError("Expected 25 supplementary tables")
+  if int(manifest["category"].eq("supplementary").sum()) != 44:
+    raise ValueError("Expected 44 supplementary tables")
   for record in manifest.to_dict("records"):
     path = Path(str(record["path"]))
     if not path.is_absolute():
@@ -237,6 +252,8 @@ def main() -> None:
     "figure_5_missingness_explicit": True,
     "fdr_semantics_checked": True,
     "clinical_efficacy_claimed": False,
+    "extended_supplementary_figures_complete": True,
+    "wgcna_fallback_audited": True,
   }
   report_path = article_root / "manifests/scientific_integrity_validation.json"
   report_path.parent.mkdir(parents=True, exist_ok=True)

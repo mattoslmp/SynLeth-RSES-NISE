@@ -10,6 +10,11 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT / "src") not in sys.path:
+  sys.path.insert(0, str(ROOT / "src"))
 
 import numpy as np
 import pandas as pd
@@ -22,7 +27,6 @@ from rses_onco.expanded import (
   functional_microniche_score,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
 ELIGIBILITY_SEMANTICS_VERSION = "eligibility-aware-v1"
 EXPRESSION_REGULATORY_SEMANTICS_VERSION = (
   "eligibility-aware-wgcna-regulatory-v3"

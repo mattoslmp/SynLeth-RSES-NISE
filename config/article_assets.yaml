@@ -1,198 +1,337 @@
 article:
   title: RSES-Onco expanded human functional-microniche and synthetic-lethality framework
   output_root: article_outputs
-
 main_figures:
-  - id: Figure_1
-    file: Figure_1_framework
-    title: Expanded RSES-Onco framework
-    caption: >-
-      Source-bounded candidate universe, functional-microniche evidence, cancer-selective dependency analysis,
-      pharmacological actionability and experimental-validation workflow.
-  - id: Figure_2
-    file: Figure_2_candidate_universe
-    title: Candidate universe across mechanistic classes
-    caption: >-
-      Complete directed-candidate counts with an explicit enlargement of low-frequency classes and all curated human NISE activity groups.
-  - id: Figure_3
-    file: Figure_3_cancer_specific_ranking
-    title: Cancer-specific RSES-Onco vulnerability ranking
-    caption: >-
-      Coverage-adjusted vulnerability rankings for colorectal, gastric and lung cancer; composite biomarkers,
-      prioritized hypotheses, nominal results and FDR-supported discoveries remain explicitly distinguished.
-  - id: Figure_4
-    file: Figure_4_tcga_depmap_integration
-    title: Integration of tumor events and conditional dependencies
-    caption: >-
-      Biologically bounded TCGA/GDC homozygous-deletion frequencies compared with DepMap conditional target selectivity,
-      with a separate exact-value key for numbered points.
-  - id: Figure_5
-    file: Figure_5_functional_microniches
-    title: Human functional-microniche evidence map
-    caption: >-
-      Observed expression, localization, biochemical/structural, CRISPR phenotype, STRING and regulatory-network
-      components; unavailable and non-eligible domains are explicitly marked and never imputed as zero.
-  - id: Figure_6
-    file: Figure_6_class_discoveries
-    title: Mechanistic classes and all-target discoveries
-    caption: >-
-      Class medians, maxima, sample sizes and exact FDR-supported all-target conditional-dependency results.
-  - id: Figure_7
-    file: Figure_7_pharmacology
-    title: Pharmacological actionability and experimental treatment hypotheses
-    caption: >-
-      Compound-resolved actionability hypotheses and the density of all scored pharmacology records; tractability is not clinical efficacy.
-  - id: Figure_8
-    file: Figure_8_human_nise_structures
-    title: Structural basis of representative human NISE vulnerabilities
-    caption: >-
-      AlphaFold DB models for representative ranked human NISE directions, with traceable exact-numbered functional residues.
-
+- id: Figure_1
+  file: Figure_1_framework
+  title: Expanded RSES-Onco framework
+  caption: Source-bounded candidate universe, functional-microniche evidence, cancer-selective dependency analysis,
+    pharmacological actionability and experimental-validation workflow.
+- id: Figure_2
+  file: Figure_2_candidate_universe
+  title: Candidate universe across mechanistic classes
+  caption: Complete directed-candidate counts with an explicit enlargement of low-frequency classes and all curated
+    human NISE activity groups.
+- id: Figure_3
+  file: Figure_3_cancer_specific_ranking
+  title: Cancer-specific RSES-Onco vulnerability ranking
+  caption: Coverage-adjusted vulnerability rankings for colorectal, gastric and lung cancer; composite biomarkers,
+    prioritized hypotheses, nominal results and FDR-supported discoveries remain explicitly distinguished.
+- id: Figure_4
+  file: Figure_4_tcga_depmap_integration
+  title: Integration of tumor events and conditional dependencies
+  caption: Biologically bounded TCGA/GDC homozygous-deletion frequencies compared with DepMap conditional target
+    selectivity, with a separate exact-value key for numbered points.
+- id: Figure_5
+  file: Figure_5_functional_microniches
+  title: Human functional-microniche evidence map
+  caption: Observed expression, localization, biochemical/structural, CRISPR phenotype, STRING and regulatory-network
+    components; unavailable and non-eligible domains are explicitly marked and never imputed as zero.
+- id: Figure_6
+  file: Figure_6_class_discoveries
+  title: Mechanistic classes and all-target discoveries
+  caption: Class medians, maxima, sample sizes and exact FDR-supported all-target conditional-dependency results.
+- id: Figure_7
+  file: Figure_7_pharmacology
+  title: Pharmacological actionability and experimental treatment hypotheses
+  caption: Compound-resolved actionability hypotheses and the density of all scored pharmacology records; tractability
+    is not clinical efficacy.
+- id: Figure_8
+  file: Figure_8_human_nise_structures
+  title: Structural basis of representative human NISE vulnerabilities
+  caption: AlphaFold DB models for representative ranked human NISE directions, with traceable exact-numbered functional
+    residues.
 supplementary_figures:
-  - id: Figure_S1
-    file: Figure_S1_data_coverage
-    title: Evidence coverage by domain, source, cancer, class and missingness reason
-  - id: Figure_S2
-    file: Figure_S2_all_nise_activities
-    title: Complete NISE catalogue and activity-group representation
-  - id: Figure_S3
-    file: Figure_S3_all_target_discovery
-    title: Complete all-target conditional-dependency screen
-  - id: Figure_S4
-    file: Figure_S4_dependency_heatmap
-    title: Conditional dependency effects for all eligible pairs
-  - id: Figure_S5
-    file: Figure_S5_expression_compensation
-    title: Expression compensation across cancers
-  - id: Figure_S6
-    file: Figure_S6_crispr_phenotype_profiles
-    title: CRISPR mutant-phenotype profile divergence
-  - id: Figure_S7
-    file: Figure_S7_expression_context_profiles
-    title: Cancer-specific expression-context divergence
-  - id: Figure_S8
-    file: Figure_S8_string_networks
-    title: STRING direct and neighborhood evidence
-  - id: Figure_S9
-    file: Figure_S9_regulatory_networks
-    title: DoRothEA regulatory-neighborhood evidence
-  - id: Figure_S10
-    file: Figure_S10_localization
-    title: Human Protein Atlas localization divergence
-  - id: Figure_S11
-    file: Figure_S11_tcga_events
-    title: Complete TCGA homozygous-deletion event landscape
-  - id: Figure_S12
-    file: Figure_S12_pharmacology_coverage
-    title: Pharmacology evidence coverage across sources
-  - id: Figure_S13
-    file: Figure_S13_drug_sensitivity
-    title: PRISM, GDSC and CTRP biomarker-selective response contrasts
-  - id: Figure_S14
-    file: Figure_S14_layout_and_reproducibility_qc
-    title: Figure-layout, source-data and reproducibility quality control
-  - id: Figure_S15
-    file: Figure_S15_HNISE01_structure_atlas
-    title: HNISE01 activity-specific AlphaFold structural atlas
-  - id: Figure_S16
-    file: Figure_S16_HNISE02_structure_atlas
-    title: HNISE02 activity-specific AlphaFold structural atlas
-  - id: Figure_S17
-    file: Figure_S17_HNISE03_structure_atlas
-    title: HNISE03 activity-specific AlphaFold structural atlas
-  - id: Figure_S18
-    file: Figure_S18_HNISE04_structure_atlas
-    title: HNISE04 activity-specific AlphaFold structural atlas
-  - id: Figure_S19
-    file: Figure_S19_HNISE05_structure_atlas
-    title: HNISE05 activity-specific AlphaFold structural atlas
-  - id: Figure_S20
-    file: Figure_S20_HNISE06_structure_atlas
-    title: HNISE06 activity-specific AlphaFold structural atlas
-  - id: Figure_S21
-    file: Figure_S21_HNISE07_structure_atlas
-    title: HNISE07 activity-specific AlphaFold structural atlas
-  - id: Figure_S22
-    file: Figure_S22_HNISE08_structure_atlas
-    title: HNISE08 activity-specific AlphaFold structural atlas
-  - id: Figure_S23
-    file: Figure_S23_HNISE09_structure_atlas
-    title: HNISE09 activity-specific AlphaFold structural atlas
-  - id: Figure_S24
-    file: Figure_S24_HNISE10_structure_atlas
-    title: HNISE10 activity-specific AlphaFold structural atlas
-  - id: Figure_S25
-    file: Figure_S25_HNISE11_structure_atlas
-    title: HNISE11 activity-specific AlphaFold structural atlas
-  - id: Figure_S26
-    file: Figure_S26_HNISE12_structure_atlas
-    title: HNISE12 activity-specific AlphaFold structural atlas
-  - id: Figure_S27
-    file: Figure_S27_HNISE13_structure_atlas
-    title: HNISE13 activity-specific AlphaFold structural atlas
-  - id: Figure_S28
-    file: Figure_S28_HNISE14_structure_atlas
-    title: HNISE14 activity-specific AlphaFold structural atlas
-  - id: Figure_S29
-    file: Figure_S29_HNISE15_structure_atlas
-    title: HNISE15 activity-specific AlphaFold structural atlas
-  - id: Figure_S30
-    file: Figure_S30_structure_confidence_coverage
-    title: AlphaFold confidence and functional-residue coverage
-  - id: Figure_S31
-    file: Figure_S31_structural_residue_provenance
-    title: Provenance of catalytic, binding and ligand-contact residue annotations
-  - id: Figure_S32
-    file: Figure_S32_pairwise_structural_evidence
-    title: Pairwise structural evidence across directed human NISE hypotheses
-  - id: Figure_S33
-    file: Figure_S33_complete_missingness_matrix
-    title: Complete evidence-state and missingness matrix
-  - id: Figure_S34
-    file: Figure_S34_raw_vs_coverage_adjusted
-    title: Observed-domain and coverage-adjusted RSES-Onco scores
-  - id: Figure_S35
-    file: Figure_S35_leave_one_domain_out
-    title: Leave-one-domain-out ranking robustness
-  - id: Figure_S36
-    file: Figure_S36_top_k_stability
-    title: Stability of high-priority candidates
-  - id: Figure_S37
-    file: Figure_S37_evidence_overlap_control
-    title: Evidence overlap and deduplication control
-  - id: Figure_S38
-    file: Figure_S38_evidence_categories
-    title: Explicit evidence-category assignments
-
+- id: Figure_S1
+  file: Figure_S1_data_coverage
+  title: Evidence coverage by domain, source, cancer, class and missingness reason
+- id: Figure_S2
+  file: Figure_S2_all_nise_activities
+  title: Complete NISE catalogue and activity-group representation
+- id: Figure_S3
+  file: Figure_S3_all_target_discovery
+  title: Complete all-target conditional-dependency screen
+- id: Figure_S4
+  file: Figure_S4_dependency_heatmap
+  title: Conditional dependency effects for all eligible pairs
+- id: Figure_S5
+  file: Figure_S5_expression_compensation
+  title: Expression compensation across cancers
+- id: Figure_S6
+  file: Figure_S6_crispr_phenotype_profiles
+  title: CRISPR mutant-phenotype profile divergence
+- id: Figure_S7
+  file: Figure_S7_expression_context_profiles
+  title: Cancer-specific expression-context divergence
+- id: Figure_S8
+  file: Figure_S8_string_networks
+  title: STRING direct and neighborhood evidence
+- id: Figure_S9
+  file: Figure_S9_regulatory_networks
+  title: DoRothEA regulatory-neighborhood evidence
+- id: Figure_S10
+  file: Figure_S10_localization
+  title: Human Protein Atlas localization divergence
+- id: Figure_S11
+  file: Figure_S11_tcga_events
+  title: Complete TCGA homozygous-deletion event landscape
+- id: Figure_S12
+  file: Figure_S12_pharmacology_coverage
+  title: Pharmacology evidence coverage across sources
+- id: Figure_S13
+  file: Figure_S13_drug_sensitivity
+  title: PRISM, GDSC and CTRP biomarker-selective response contrasts
+- id: Figure_S14
+  file: Figure_S14_layout_and_reproducibility_qc
+  title: Figure-layout, source-data and reproducibility quality control
+- id: Figure_S15
+  file: Figure_S15_HNISE01_structure_atlas
+  title: HNISE01 activity-specific AlphaFold structural atlas
+- id: Figure_S16
+  file: Figure_S16_HNISE02_structure_atlas
+  title: HNISE02 activity-specific AlphaFold structural atlas
+- id: Figure_S17
+  file: Figure_S17_HNISE03_structure_atlas
+  title: HNISE03 activity-specific AlphaFold structural atlas
+- id: Figure_S18
+  file: Figure_S18_HNISE04_structure_atlas
+  title: HNISE04 activity-specific AlphaFold structural atlas
+- id: Figure_S19
+  file: Figure_S19_HNISE05_structure_atlas
+  title: HNISE05 activity-specific AlphaFold structural atlas
+- id: Figure_S20
+  file: Figure_S20_HNISE06_structure_atlas
+  title: HNISE06 activity-specific AlphaFold structural atlas
+- id: Figure_S21
+  file: Figure_S21_HNISE07_structure_atlas
+  title: HNISE07 activity-specific AlphaFold structural atlas
+- id: Figure_S22
+  file: Figure_S22_HNISE08_structure_atlas
+  title: HNISE08 activity-specific AlphaFold structural atlas
+- id: Figure_S23
+  file: Figure_S23_HNISE09_structure_atlas
+  title: HNISE09 activity-specific AlphaFold structural atlas
+- id: Figure_S24
+  file: Figure_S24_HNISE10_structure_atlas
+  title: HNISE10 activity-specific AlphaFold structural atlas
+- id: Figure_S25
+  file: Figure_S25_HNISE11_structure_atlas
+  title: HNISE11 activity-specific AlphaFold structural atlas
+- id: Figure_S26
+  file: Figure_S26_HNISE12_structure_atlas
+  title: HNISE12 activity-specific AlphaFold structural atlas
+- id: Figure_S27
+  file: Figure_S27_HNISE13_structure_atlas
+  title: HNISE13 activity-specific AlphaFold structural atlas
+- id: Figure_S28
+  file: Figure_S28_HNISE14_structure_atlas
+  title: HNISE14 activity-specific AlphaFold structural atlas
+- id: Figure_S29
+  file: Figure_S29_HNISE15_structure_atlas
+  title: HNISE15 activity-specific AlphaFold structural atlas
+- id: Figure_S30
+  file: Figure_S30_structure_confidence_coverage
+  title: AlphaFold confidence and functional-residue coverage
+- id: Figure_S31
+  file: Figure_S31_structural_residue_provenance
+  title: Provenance of catalytic, binding and ligand-contact residue annotations
+- id: Figure_S32
+  file: Figure_S32_pairwise_structural_evidence
+  title: Pairwise structural evidence across directed human NISE hypotheses
+- id: Figure_S33
+  file: Figure_S33_complete_missingness_matrix
+  title: Complete evidence-state and missingness matrix
+- id: Figure_S34
+  file: Figure_S34_raw_vs_coverage_adjusted
+  title: Observed-domain and coverage-adjusted RSES-Onco scores
+- id: Figure_S35
+  file: Figure_S35_leave_one_domain_out
+  title: Leave-one-domain-out ranking robustness
+- id: Figure_S36
+  file: Figure_S36_top_k_stability
+  title: Stability of high-priority candidates
+- id: Figure_S37
+  file: Figure_S37_evidence_overlap_control
+  title: Evidence overlap and deduplication control
+- id: Figure_S38
+  file: Figure_S38_evidence_categories
+  title: Explicit evidence-category assignments
+- id: Figure_S39
+  file: Figure_S39_score_component_decomposition
+  title: RSES-Onco contribution by observed eligible component
+  caption: Weighted domain contributions for high-priority candidate-context rows; missing and non-eligible components
+    are not displayed as zero.
+- id: Figure_S40
+  file: Figure_S40_weight_perturbation_sensitivity
+  title: Ranking sensitivity to controlled domain-weight perturbation
+  caption: Candidate ranks under controlled weight perturbations compared with the baseline ranking.
+- id: Figure_S41
+  file: Figure_S41_missing_data_sensitivity
+  title: Sensitivity to alternative missing-data scenarios
+  caption: Coverage-aware ranking behavior under declared missing-data sensitivity scenarios.
+- id: Figure_S42
+  file: Figure_S42_ranking_correlation_matrix
+  title: Correlation among robustness rankings
+  caption: Spearman correlations among baseline and sensitivity-analysis rankings.
+- id: Figure_S43
+  file: Figure_S43_expression_loss_intact
+  title: Target expression in loss and intact model groups
+  caption: Operational comparison of target expression between biomarker-loss and intact models; this is not automatic
+    proof of compensation.
+- id: Figure_S44
+  file: Figure_S44_conditioned_coexpression
+  title: Coexpression conditioned on event state
+  caption: Pairwise expression correlations in all, loss and intact strata with sample-size and multiple-testing
+    context.
+- id: Figure_S45
+  file: Figure_S45_model_level_evidence_coverage
+  title: Model-level expression, copy-number and CRISPR coverage
+  caption: DepMap model counts supporting loss/intact expression, copy-number and CRISPR analyses by cancer.
+- id: Figure_S46
+  file: Figure_S46_wgcna_module_sizes
+  title: Cancer-specific WGCNA module sizes
+  caption: Module sizes for signed cancer-specific WGCNA networks.
+- id: Figure_S47
+  file: Figure_S47_wgcna_pair_metrics
+  title: Pairwise WGCNA topological divergence
+  caption: TOM, module-membership and kME divergence for directed candidate pairs.
+- id: Figure_S48
+  file: Figure_S48_wgcna_correlation_fallback
+  title: Audited bicor-to-Pearson fallback
+  caption: Entities for which the declared individual Pearson fallback was required because MAD was zero or non-finite.
+- id: Figure_S49
+  file: Figure_S49_wgcna_soft_threshold
+  title: WGCNA soft-threshold diagnostics
+  caption: Signed scale-free topology fit across candidate powers for each cancer.
+- id: Figure_S50
+  file: Figure_S50_regulatory_component_divergence
+  title: Regulatory subcomponent divergence
+  caption: DoRothEA regulator-set, TF-expression-profile and promoter-motif divergence within the regulatory domain.
+- id: Figure_S51
+  file: Figure_S51_promoter_motif_support
+  title: Predicted promoter-motif support
+  caption: JASPAR/FIMO promoter motif predictions; motif occurrence is not direct TF binding.
+- id: Figure_S52
+  file: Figure_S52_tf_expression_consistency
+  title: TF association and expression consistency
+  caption: Cancer-specific comparison of TF-target association divergence and TF-expression-profile divergence.
+- id: Figure_S53
+  file: Figure_S53_string_evidence_channels
+  title: STRING evidence-channel composition
+  caption: Candidate protein-network edges separated by experimental, database, coexpression, neighborhood, cooccurrence,
+    fusion and text-mining channels.
+- id: Figure_S54
+  file: Figure_S54_conditional_crispr_effects
+  title: Conditional CRISPR effects and sample sizes
+  caption: Loss-minus-intact CRISPR effects with explicit loss and intact model counts.
+- id: Figure_S55
+  file: Figure_S55_conditional_crispr_fdr
+  title: Conditional-dependency FDR landscape
+  caption: Effect size and Benjamini-Hochberg support for executable conditional-dependency contrasts.
+- id: Figure_S56
+  file: Figure_S56_localization_reliability
+  title: Localization evidence reliability
+  caption: Human Protein Atlas localization reliability for candidate proteins.
+- id: Figure_S57
+  file: Figure_S57_localization_compartment_breadth
+  title: Localization compartment breadth
+  caption: Numbers of main and additional annotated compartments, separated by annotation reliability.
+- id: Figure_S58
+  file: Figure_S58_biochemical_structural_missingness
+  title: Biochemical and structural evidence audit
+  caption: Observed, missing, non-eligible and technically unavailable biochemical/structural evidence states.
+- id: Figure_S59
+  file: Figure_S59_uniprot_functional_coverage
+  title: UniProt functional annotation coverage
+  caption: Candidate coverage for molecular function, catalytic activity, cofactor, EC and experimental-structure
+    cross-references.
+- id: Figure_S60
+  file: Figure_S60_tcga_homdel_counts
+  title: TCGA homozygous-deletion counts
+  caption: Observed homozygous-deletion counts by gene and cancer.
+- id: Figure_S61
+  file: Figure_S61_tcga_frequency_evaluable
+  title: TCGA event frequency and evaluable sample size
+  caption: Biologically bounded homozygous-deletion frequencies against evaluable tumor counts.
+- id: Figure_S62
+  file: Figure_S62_pharmacology_source_action
+  title: Pharmacology sources and action types
+  caption: Source- and mechanism-resolved pharmacology evidence; tractability is not clinical efficacy.
+- id: Figure_S63
+  file: Figure_S63_pharmacology_development_assays
+  title: Pharmacology development and assay evidence
+  caption: Available development, assay or evidence-status records for experimental prioritization.
+- id: Figure_S64
+  file: Figure_S64_nise_paralog_comparison
+  title: NISE and homologous-paralog comparison
+  caption: Coverage-adjusted score versus evidence coverage for NISE and Ensembl-paralog hypotheses.
+- id: Figure_S65
+  file: Figure_S65_class_cancer_stability
+  title: Mechanistic-class and cancer score stability
+  caption: Median coverage-adjusted scores by cancer and mechanistic source class.
+- id: Figure_S66
+  file: Figure_S66_registered_controls
+  title: Registered positive and negative controls
+  caption: Only explicitly registered, traceable controls are shown; controls are not inferred from high scores.
+- id: Figure_S67
+  file: Figure_S67_eligibility_coverage_relationship
+  title: Eligibility and evidence coverage by domain
+  caption: Relationship between the number of eligible hypotheses and observed evidence coverage.
+- id: Figure_S68
+  file: Figure_S68_wgcna_module_eigengene_context
+  title: WGCNA module and eigengene context
+  caption: Module size, intramodular connectivity and module-membership context for cancer-specific expression networks.
+- id: Figure_S69
+  file: Figure_S69_integrated_regulatory_context
+  title: Integrated regulatory evidence context
+  caption: Coverage-adjusted regulatory-network components across cancer-specific candidate pairs.
 main_tables:
-  - Table_1_candidate_class_summary.tsv
-  - Table_2_top_vulnerabilities_by_cancer.tsv
-  - Table_3_significant_conditional_dependencies.tsv
-  - Table_4_top_pharmacology_hypotheses.tsv
-
+- Table_1_candidate_class_summary.tsv
+- Table_2_top_vulnerabilities_by_cancer.tsv
+- Table_3_significant_conditional_dependencies.tsv
+- Table_4_top_pharmacology_hypotheses.tsv
 supplementary_tables:
-  - Table_S1_complete_candidate_universe.tsv
-  - Table_S2_all_nise_directions.tsv
-  - Table_S3_class_member_inventory.tsv
-  - Table_S4_rses_component_matrix.tsv
-  - Table_S5_dependency_contrasts.tsv
-  - Table_S6_expression_compensation.tsv
-  - Table_S7_crispr_phenotype_profiles.tsv
-  - Table_S8_expression_context_profiles.tsv
-  - Table_S9_string_and_regulatory_evidence.tsv
-  - Table_S10_tcga_event_summary.tsv
-  - Table_S11_all_target_dependency_screen.tsv
-  - Table_S12_pharmacology_evidence_long.tsv
-  - Table_S13_pharmacology_ranked_hypotheses.tsv
-  - Table_S14_drug_response_selectivity.tsv
-  - Table_S15_source_status_and_coverage.tsv
-  - Table_S16_alphafold_structure_manifest.tsv
-  - Table_S17_structural_residue_annotations.tsv
-  - Table_S18_structure_render_manifest.tsv
-  - Table_S19_coverage_domain_source_cancer_class.tsv
-  - Table_S20_score_decomposition_and_coverage.tsv
-  - Table_S21_evidence_overlap_and_roles.tsv
-  - Table_S22_candidate_domain_missingness_audit.tsv
-  - Table_S23_rses_ranking_stability.tsv
-  - Table_S24_leave_one_domain_out.tsv
-  - Table_S25_weight_sensitivity.tsv
+- Table_S1_complete_candidate_universe.tsv
+- Table_S2_all_nise_directions.tsv
+- Table_S3_class_member_inventory.tsv
+- Table_S4_rses_component_matrix.tsv
+- Table_S5_dependency_contrasts.tsv
+- Table_S6_expression_compensation.tsv
+- Table_S7_crispr_phenotype_profiles.tsv
+- Table_S8_expression_context_profiles.tsv
+- Table_S9_string_and_regulatory_evidence.tsv
+- Table_S10_tcga_event_summary.tsv
+- Table_S11_all_target_dependency_screen.tsv
+- Table_S12_pharmacology_evidence_long.tsv
+- Table_S13_pharmacology_ranked_hypotheses.tsv
+- Table_S14_drug_response_selectivity.tsv
+- Table_S15_source_status_and_coverage.tsv
+- Table_S16_alphafold_structure_manifest.tsv
+- Table_S17_structural_residue_annotations.tsv
+- Table_S18_structure_render_manifest.tsv
+- Table_S19_coverage_domain_source_cancer_class.tsv
+- Table_S20_score_decomposition_and_coverage.tsv
+- Table_S21_evidence_overlap_and_roles.tsv
+- Table_S22_candidate_domain_missingness_audit.tsv
+- Table_S23_rses_ranking_stability.tsv
+- Table_S24_leave_one_domain_out.tsv
+- Table_S25_weight_sensitivity.tsv
+- Table_S26_missing_data_sensitivity.tsv
+- Table_S27_evidence_category_assignments.tsv
+- Table_S28_coexpression_by_event_group.tsv
+- Table_S29_compensation_and_dependency_contrasts.tsv
+- Table_S30_model_level_expression_crispr_copy_number.tsv
+- Table_S31_string_candidate_edges_all_channels.tsv
+- Table_S32_dorothea_candidate_regulatory_edges.tsv
+- Table_S33_hpa_candidate_localization.tsv
+- Table_S34_uniprot_candidate_annotations.tsv
+- Table_S35_wgcna_pair_metrics_all_cancers.tsv
+- Table_S36_wgcna_correlation_fallback_audit.tsv
+- Table_S37_wgcna_run_diagnostics.tsv
+- Table_S38_jaspar_promoter_tf_summary.tsv
+- Table_S39_conditional_dependency_contrasts.tsv
+- Table_S40_tcga_gene_event_summary.tsv
+- Table_S41_pharmacology_evidence_long_support.tsv
+- Table_S42_pharmacology_source_coverage.tsv
+- Table_S43_evidence_category_definitions.tsv
+- Table_S44_asset_reproduction_registry.tsv
