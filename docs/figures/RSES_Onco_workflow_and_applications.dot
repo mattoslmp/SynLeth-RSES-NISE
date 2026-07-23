@@ -1,0 +1,44 @@
+digraph G {
+  graph [rankdir=LR, splines=ortho, bgcolor=white, pad=0.2, nodesep=0.45, ranksep=0.7];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=12, color="#2b4c7e", fillcolor="#eaf2ff", margin="0.18,0.1"];
+  edge [color="#5a6b7d", arrowsize=0.8, penwidth=1.4];
+
+  subgraph cluster_workflow {
+    label="RSES-Onco workflow";
+    fontsize=16;
+    color="#9db4d1";
+    style="rounded";
+    n1 [label="1. Data acquisition\nCurated NISEs, Ensembl paralogs,\nDepMap, TCGA/GDC, STRING,\nDoRothEA, HPA, AlphaFold, pharmacology"];
+    n2 [label="2. Candidate universe\nDirected NISE and paralog hypotheses\nplus tumor-context annotations"];
+    n3 [label="3. Supporting analyses\nDependency, selectivity, expression,\ncompensation, WGCNA, regulatory,\nnetwork, localization, structural evidence"];
+    n4 [label="4. Coverage-aware scoring\nEligible-domain score + coverage\nadjustment = RSES-Onco"];
+    n5 [label="5. Publication assets\nFigures, source-data tables,\nmanifests, DOCX/PDF outputs"];
+    n1 -> n2 -> n3 -> n4 -> n5;
+  }
+
+  subgraph cluster_microniche {
+    label="Functional microniche concept";
+    fontsize=16;
+    color="#b7c8aa";
+    style="rounded";
+    m1 [label="A functional microniche is the\nlocal evidence environment of a\ndirectional candidate pair in a\nspecific tumor context.", fillcolor="#eff8e8", color="#7d9b5d"];
+    m2 [label="Integrated layers:\n• dependency and selectivity\n• expression and compensation\n• WGCNA/coexpression\n• regulatory and STRING context\n• localization\n• biochemical/structural evidence", fillcolor="#eff8e8", color="#7d9b5d"];
+    m1 -> m2 [color="#7d9b5d"];
+  }
+
+  subgraph cluster_apps {
+    label="Practical applications";
+    fontsize=16;
+    color="#d1b49d";
+    style="rounded";
+    a1 [label="Prioritize hypotheses for\nCRISPR or knockdown validation", fillcolor="#fff3e8", color="#b47d4b"];
+    a2 [label="Detect context-dependent\nbackup or collateral vulnerabilities", fillcolor="#fff3e8", color="#b47d4b"];
+    a3 [label="Guide rescue experiments,\nexpression perturbation and\nexploratory pharmacology", fillcolor="#fff3e8", color="#b47d4b"];
+    a4 [label="Organize evidence for\nmechanistic interpretation and\nfollow-up study design", fillcolor="#fff3e8", color="#b47d4b"];
+    a1 -> a2 -> a3 -> a4 [style=invis];
+  }
+
+  n3 -> m1 [color="#698255"];
+  n4 -> a1 [color="#b47d4b"];
+  m2 -> a2 [color="#b47d4b"];
+}
