@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 
 from rses_onco.expanded import EXPANDED_ONCO_WEIGHTS, FUNCTIONAL_MICRONICHE_WEIGHTS
+from rses_onco.evidence_categories import evidence_category_definitions
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -113,19 +114,27 @@ A candidate in the universe is not automatically a discovery. A prioritized hypo
     )
   (methods_dir / "PUBLICATION_ASSET_REPRODUCTION.md").write_text("\n".join(markdown) + "\n", encoding="utf-8")
 
-  definitions = pd.DataFrame([
-    {"category": "candidate_universe", "criterion": "Included by a documented curated or systematic candidate-source rule."},
-    {"category": "computational_hypothesis", "criterion": "Candidate received a source-bounded computational score."},
-    {"category": "prioritized_hypothesis", "criterion": "Coverage-adjusted score met the declared prioritization rule."},
-    {"category": "microniche_supported_hypothesis", "criterion": "At least one traceable functional-microniche domain was observed."},
-    {"category": "conditional_dependency_supported_hypothesis", "criterion": "A loss-versus-intact DepMap contrast was executable and observed."},
-    {"category": "nominally_significant_result", "criterion": "P < 0.05 within the declared test family before multiple-testing correction."},
-    {"category": "fdr_supported_result", "criterion": "Benjamini-Hochberg q < 0.05 within the declared family and supportive effect direction."},
-    {"category": "externally_validated_result", "criterion": "Requires an independent dataset not used to construct the score; unavailable unless explicitly documented."},
-    {"category": "experimentally_tractable_candidate", "criterion": "A compound, assay or experimental tool is traceably available; not evidence of efficacy."},
-    {"category": "clinical_evidence", "criterion": "Requires traceable clinical evidence and is never inferred from tractability alone."},
-  ])
-  definitions.to_csv(methods_dir / "evidence_category_definitions.tsv", sep="\t", index=False)
+  definitions = evidence_category_definitions()
+  definitions.to_csv(
+    methods_dir / "evidence_category_definitions.tsv", sep="\t", index=False
+  )
+
+  registry_path = (
+    article_root
+    / "tables/supplementary/Table_S44_asset_reproduction_registry.tsv"
+  )
+  registry_path.parent.mkdir(parents=True, exist_ok=True)
+  reproduction.to_csv(registry_path, sep="\t", index=False)
+  if table_manifest_path.exists() and table_manifest_path.stat().st_size:
+    table_manifest = pd.read_csv(table_manifest_path, sep="\t", low_memory=False)
+    mask = table_manifest["table_id"].astype(str).eq(registry_path.stem)
+    if mask.any():
+      table_manifest.loc[mask, "rows"] = len(reproduction)
+      table_manifest.loc[mask, "columns"] = len(reproduction.columns)
+      table_manifest.loc[mask, "source_paths"] = str(inventory_path)
+      table_manifest.loc[mask, "script"] = "scripts/build_publication_methods_documentation.py"
+      table_manifest.loc[mask, "status"] = "ok" if not reproduction.empty else "empty_no_eligible_records"
+      table_manifest.to_csv(table_manifest_path, sep="\t", index=False)
   print(f"Wrote scientific methods and reproduction documentation to {methods_dir}")
 
 
