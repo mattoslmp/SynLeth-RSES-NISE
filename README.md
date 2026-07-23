@@ -1,6 +1,6 @@
 # SynLeth-RSES-Onco / RSES-Onco
 
-**RSES-Onco v0.11.0** is a coverage-aware framework for discovering and
+**RSES-Onco v0.11.1** is a coverage-aware framework for discovering and
 prioritizing cancer-selective dependencies created by non-homologous
 isofunctional enzymes (NISEs), homologous paralogs, pathway backups, collateral
 deletions and downstream vulnerabilities. The initial disease scope is
@@ -11,8 +11,8 @@ colorectal, gastric and lung cancer.
 **Address:** Av. Coronel José Bastos, Itaperuna, RJ, Brazil
 
 The repository combines curated NISE and paralog hypotheses, DepMap/TCGA evidence,
-functional and regulatory networks, pharmacology, structural context, explicit
-missingness and overlap control, and a completely scripted publication package.
+functional and regulatory networks, promoter methylation, pharmacology, structural
+context, explicit missingness and overlap control, and a scripted publication package.
 
 ## Scientific boundary
 
@@ -20,6 +20,57 @@ The software prioritizes experimental hypotheses. It does not establish clinical
 efficacy, patient benefit, safety, treatment suitability or cure. Missing evidence
 is not converted to zero and non-eligible domains do not enter the eligible score
 denominator.
+
+## What enters the RSES-Onco calculation
+
+The top-level score contains seven weighted domains:
+
+| Domain | Weight |
+|---|---:|
+| Tumor event | 0.16 |
+| Conditional dependency | 0.22 |
+| Selectivity | 0.14 |
+| Expression compensation | 0.08 |
+| Functional relation | 0.06 |
+| Functional microniche | 0.16 |
+| Validation and tractability | 0.18 |
+
+The functional-microniche domain contains expression context (0.20), localization
+(0.15), biochemical/structural evidence (0.15), genetic phenotype (0.20),
+interaction network (0.15) and regulatory network (0.15).
+
+Expression context is internally divided between pairwise expression divergence
+(0.50) and cancer-specific signed WGCNA context (0.50). The regulatory-network
+subscore is internally divided into DoRothEA TF-association divergence (0.32),
+TF-expression-profile divergence (0.28), JASPAR/FIMO promoter-motif divergence
+(0.20) and promoter-methylation context (0.20). Methylation therefore shares the
+existing regulatory-domain weight and is not counted as a new independent full
+RSES-Onco domain.
+
+The methylation context itself combines pairwise promoter-methylation profile
+divergence (0.50) and conditional target-promoter hypomethylation in lost-gene-loss
+versus intact models (0.50). Missing methylation remains NA and lowers regulatory
+subcoverage; it is never converted to biological zero. Association is not treated
+as proof of causal epigenetic silencing.
+
+## Methylation input
+
+Use the official DepMap custom-download dataset **Methylation (1kb upstream TSS)**
+or the traceable historical CCLE RRBS file. Set the path explicitly when necessary:
+
+```bash
+export METHYLATION="$DEPMAP_DIR/Methylation_(1kb_upstream_TSS)_subsetted_NAsdropped.csv"
+```
+
+Recognized fallback names include:
+
+```text
+Methylation_1kb_upstream_TSS.csv
+CCLE_RRBS_TSS1kb_20181022.txt.gz
+CCLE_RRBS_TSS1kb_20181022.txt
+```
+
+See [`docs/METHYLATION_DATA_AND_SCORING_V0111.md`](docs/METHYLATION_DATA_AND_SCORING_V0111.md).
 
 ## Installation
 
@@ -36,11 +87,12 @@ The repository contains a complete protocol from source acquisition to final art
 
 - [`docs/END_TO_END_ARTICLE_PROTOCOL.md`](docs/END_TO_END_ARTICLE_PROTOCOL.md) — canonical command-by-command pipeline tutorial;
 - [`docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md) — source acquisition, provenance, validation and recovery;
+- [`docs/METHYLATION_DATA_AND_SCORING_V0111.md`](docs/METHYLATION_DATA_AND_SCORING_V0111.md) — methylation source, formulas, missingness and rerun requirements;
 - [`supplementary/Supplementary_Methods_RSES_Onco_v0110.md`](supplementary/Supplementary_Methods_RSES_Onco_v0110.md) — scientific methods, formulas, evidence rules and references;
 - [`manuscript/RSES_Onco_intro_methods_draft_v0110.md`](manuscript/RSES_Onco_intro_methods_draft_v0110.md) — editable Introduction and Materials and Methods draft;
 - [`docs/figures/RSES_Onco_workflow_and_applications.svg`](docs/figures/RSES_Onco_workflow_and_applications.svg) — vector workflow and practical-application figure.
 
-The repository versions the corresponding DOCX, PDF and PNG derivatives. They are generated reproducibly with:
+The corresponding DOCX, PDF and PNG derivatives are generated reproducibly with:
 
 ```bash
 bash scripts/generate_repository_documentation_assets.sh
@@ -81,10 +133,7 @@ bash scripts/verify_complete_article_run.sh
 ```
 
 Every registered figure has an exact source TSV, generator script, input list,
-reproduction command, layout audit and PNG/PDF/SVG export. Figures S39-S69 provide
-source-backed score decomposition, robustness, expression, coexpression, WGCNA,
-regulatory, protein-network, CRISPR, localization, biochemical/structural, TCGA,
-pharmacology, NISE/paralog, control and stability support. Unavailable optional
+reproduction command, layout audit and PNG/PDF/SVG export. Unavailable optional
 evidence is displayed explicitly and is never invented.
 
 The document pipeline creates editable DOCX files, rendered PDFs and page PNGs.
