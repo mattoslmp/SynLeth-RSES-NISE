@@ -22,7 +22,14 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from rses_onco.publication import FigureRecord, placeholder, set_publication_style, wrap_label, write_figure_manifest, write_legends_markdown
+from rses_onco.publication import (
+  FigureRecord,
+  placeholder,
+  set_publication_style,
+  wrap_label,
+  write_figure_manifest,
+  write_legends_markdown,
+)
 from scripts.publication_audit_figures import save_record
 
 SCRIPT = "scripts/make_extended_supporting_figures.py"
@@ -55,8 +62,17 @@ def numeric_columns(frame: pd.DataFrame) -> list[str]:
 
 def label_column(frame: pd.DataFrame) -> str | None:
   preferred = (
-    "hypothesis_direction", "display_pair", "pair_id", "gene", "candidate_gene",
-    "cancer", "source", "domain_label", "module", "entity", "category",
+    "hypothesis_direction",
+    "display_pair",
+    "pair_id",
+    "gene",
+    "candidate_gene",
+    "cancer",
+    "source",
+    "domain_label",
+    "module",
+    "entity",
+    "category",
   )
   return next((column for column in preferred if column in frame.columns), None)
 
@@ -64,8 +80,15 @@ def label_column(frame: pd.DataFrame) -> str | None:
 def make_plot(frame: pd.DataFrame, figure_id: str, title: str) -> plt.Figure:
   set_publication_style()
   fig, axis = plt.subplots(figsize=(10.5, 7.2), constrained_layout=True)
-  if "evidence_status" in frame.columns and frame["evidence_status"].astype(str).str.startswith("unavailable").all():
-    placeholder(axis, "Evidence availability", str(frame.iloc[0].get("reason", "Evidence unavailable.")))
+  if (
+    "evidence_status" in frame.columns
+    and frame["evidence_status"].astype(str).str.startswith("unavailable").all()
+  ):
+    placeholder(
+      axis,
+      "Evidence availability",
+      str(frame.iloc[0].get("reason", "Evidence unavailable.")),
+    )
     return fig
 
   numbers = numeric_columns(frame)
@@ -77,35 +100,62 @@ def make_plot(frame: pd.DataFrame, figure_id: str, title: str) -> plt.Figure:
     work[y] = pd.to_numeric(work[y], errors="coerce")
     work = work.dropna(subset=[x, y]).head(5000)
     if work.empty:
-      placeholder(axis, "Evidence availability", "No eligible numeric observations were available.")
+      placeholder(
+        axis,
+        "Evidence availability",
+        "No eligible numeric observations were available.",
+      )
     else:
       axis.scatter(work[x], work[y], s=38, alpha=0.68)
       axis.set_xlabel(x.replace("_", " ").capitalize())
       axis.set_ylabel(y.replace("_", " ").capitalize())
       axis.grid(alpha=0.25)
       if label:
-        ranked = work.assign(_magnitude=work[y].abs()).nlargest(min(8, len(work)), "_magnitude")
+        ranked = work.assign(_magnitude=work[y].abs()).nlargest(
+          min(8, len(work)),
+          "_magnitude",
+        )
         for row in ranked.to_dict("records"):
-          axis.annotate(wrap_label(row.get(label, ""), 24), (row[x], row[y]), xytext=(4, 4), textcoords="offset points", fontsize=7.5)
+          axis.annotate(
+            wrap_label(row.get(label, ""), 24),
+            (row[x], row[y]),
+            xytext=(4, 4),
+            textcoords="offset points",
+            fontsize=7.5,
+          )
   elif len(numbers) == 1:
     value = numbers[0]
     work = frame.copy()
     work[value] = pd.to_numeric(work[value], errors="coerce")
-    work = work.dropna(subset=[value]).sort_values(value, ascending=False).head(35)
+    work = work.dropna(subset=[value]).sort_values(
+      value,
+      ascending=False,
+    ).head(35)
     if work.empty:
-      placeholder(axis, "Evidence availability", "No eligible numeric observations were available.")
+      placeholder(
+        axis,
+        "Evidence availability",
+        "No eligible numeric observations were available.",
+      )
     else:
       labels = work[label].astype(str) if label else work.index.astype(str)
       y = np.arange(len(work))
       axis.barh(y, work[value])
-      axis.set_yticks(y, [wrap_label(text.replace("_", " "), 34) for text in labels])
+      axis.set_yticks(
+        y,
+        [wrap_label(text.replace("_", " "), 34) for text in labels],
+      )
       axis.invert_yaxis()
       axis.set_xlabel(value.replace("_", " ").capitalize())
       axis.grid(axis="x", alpha=0.25)
   else:
     counts = frame.astype(str).stack().value_counts().head(25)
     if counts.empty:
-      placeholder(axis, "Evidence availability", "No eligible records were available.")
+      placeholder(
+        axis,
+        "Evidence availability",
+        "No eligible records were available.",
+      )
     else:
       y = np.arange(len(counts))
       axis.barh(y, counts.values)
@@ -147,7 +197,7 @@ SOURCE_REGISTRY: dict[int, str] = {
   66: "article_outputs/tables/qc/evidence_category_assignments.tsv",
   67: "article_outputs/tables/qc/coverage_by_domain.tsv",
   68: "data/processed/regulatory/wgcna/wgcna_pair_metrics_all_cancers.tsv",
-  69: "data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv",
+  69: "data/processed/methylation/pair_promoter_methylation_evidence.tsv",
 }
 
 
@@ -155,12 +205,19 @@ def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument("--config", default="config/article_assets.yaml")
   parser.add_argument("--output-root", default="article_outputs")
-  parser.add_argument("--strict-layout", action=argparse.BooleanOptionalAction, default=True)
+  parser.add_argument(
+    "--strict-layout",
+    action=argparse.BooleanOptionalAction,
+    default=True,
+  )
   args = parser.parse_args()
 
   output_root = resolve(args.output_root)
   config = yaml.safe_load(resolve(args.config).read_text(encoding="utf-8")) or {}
-  registry = {record["id"]: record for record in config.get("supplementary_figures", [])}
+  registry = {
+    record["id"]: record
+    for record in config.get("supplementary_figures", [])
+  }
   expected = {f"Figure_S{number}" for number in range(39, 70)}
   missing = sorted(expected - set(registry))
   if missing:
@@ -188,13 +245,23 @@ def main() -> None:
     records.append(record)
     print(f"Generated {figure_id}: {record.layout_status}", flush=True)
 
-  write_figure_manifest(records, output_root / "manifests/extended_supplementary_figure_manifest.tsv")
-  write_legends_markdown(records, output_root / "manuscript_assets/extended_supplementary_figure_legends.md")
+  write_figure_manifest(
+    records,
+    output_root / "manifests/extended_supplementary_figure_manifest.tsv",
+  )
+  write_legends_markdown(
+    records,
+    output_root / "manuscript_assets/extended_supplementary_figure_legends.md",
+  )
   summary = pd.DataFrame([asdict(record) for record in records])
   if len(summary) != 31 or set(summary["figure_id"]) != expected:
-    raise RuntimeError("Extended supplementary figure generation did not produce S39-S69")
+    raise RuntimeError(
+      "Extended supplementary figure generation did not produce S39-S69"
+    )
   if args.strict_layout and not summary["layout_status"].eq("pass").all():
-    raise RuntimeError("One or more extended supplementary figures failed layout validation")
+    raise RuntimeError(
+      "One or more extended supplementary figures failed layout validation"
+    )
 
 
 if __name__ == "__main__":
