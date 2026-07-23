@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Complete publication workflow wrapper.
 #
-# This wrapper makes the extended supporting-evidence and reproducibility stages
-# executable parts of `all` and `assets-only`, rather than leaving those scripts
-# disconnected from the canonical entry point.
+# The wrapper makes extended evidence, genomic Circos, complete script
+# documentation and reproducibility stages executable parts of `all` and
+# `assets-only` rather than leaving them disconnected from the canonical entry.
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -11,6 +11,7 @@ cd "$ROOT"
 
 CORE="$ROOT/scripts/publication_pipeline_steps.sh"
 RANKING="${RANKING:-results/expanded_26Q1/full/expanded_rses_onco.tsv}"
+CANDIDATES="${CANDIDATES:-data/processed/expanded_candidate_universe.tsv}"
 FUNCTIONAL_EVIDENCE="${FUNCTIONAL_EVIDENCE:-data/processed/expanded_pair_functional_evidence.tsv}"
 ARTICLE_ROOT="${ARTICLE_ROOT:-article_outputs}"
 LOG_DIR="${LOG_DIR:-logs/publication_26Q1}"
@@ -19,8 +20,10 @@ GENE_EFFECT="${GENE_EFFECT:-$DEPMAP_DIR/CRISPRGeneEffect.csv}"
 COPY_NUMBER="${COPY_NUMBER:-$DEPMAP_DIR/OmicsCNGeneWGS.csv}"
 MODELS="${MODELS:-$DEPMAP_DIR/Model.csv}"
 EXPRESSION="${EXPRESSION:-$DEPMAP_DIR/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv}"
+PROMOTERS="${PROMOTERS:-data/raw/regulatory/ensembl_promoters.tsv}"
 FUNCTIONAL_RAW_DIR="${FUNCTIONAL_RAW_DIR:-data/raw/human_functional_evidence}"
 LOSS_THRESHOLD="${LOSS_THRESHOLD:-0.30}"
+STRICT_LAYOUT="${STRICT_LAYOUT:-1}"
 
 mkdir -p "$LOG_DIR" "$ARTICLE_ROOT"
 
@@ -87,13 +90,76 @@ build_extended_supporting_evidence() {
       --top-k 20
 }
 
+build_repository_documentation_and_circos_data() {
+  require_file "$RANKING"
+  require_file "$CANDIDATES"
+  require_file "$PROMOTERS"
+  require_file "$EXPRESSION"
+  require_file "$MODELS"
+
+  log_stage "Document every Python, Bash and R pipeline script/module"
+  run_logged "$LOG_DIR/04k_build_script_documentation.log" \
+    python -u scripts/build_script_documentation.py \
+      --output-md docs/SCRIPT_CATALOG.md \
+      --output-tsv docs/script_manifest.tsv \
+      --processed-output \
+        data/processed/documentation/pipeline_script_catalog.tsv
+
+  log_stage "Build GRCh38 coordinates, NISE/paralog links, score rings and expression tables"
+  run_logged "$LOG_DIR/04l_build_genomic_circos_inputs.log" \
+    python -u scripts/build_genomic_circos_inputs.py \
+      --ranking "$RANKING" \
+      --candidates "$CANDIDATES" \
+      --promoters "$PROMOTERS" \
+      --expression "$EXPRESSION" \
+      --models "$MODELS" \
+      --output-dir data/processed/circos
+}
+
+integrate_genomic_circos_assets() {
+  local layout_flag="--strict-layout"
+  [[ "$STRICT_LAYOUT" == "1" ]] || layout_flag="--no-strict-layout"
+
+  log_stage "Generate genomic Circos Figure S70 from exact source tables"
+  run_logged "$LOG_DIR/06i_make_genomic_circos_figure.log" \
+    python -u scripts/make_genomic_circos_figure.py \
+      --config config/genomic_circos_asset.yaml \
+      --coordinates \
+        data/processed/circos/genomic_circos_gene_coordinates.tsv \
+      --links data/processed/circos/genomic_circos_pair_links.tsv \
+      --ring-values \
+        data/processed/circos/genomic_circos_ring_values.tsv \
+      --tracks \
+        data/processed/circos/genomic_circos_track_definitions.tsv \
+      --output-root "$ARTICLE_ROOT" \
+      "$layout_flag"
+
+  log_stage "Register Figure S70 and Supplementary Tables S45-S52"
+  run_logged "$LOG_DIR/06j_register_genomic_circos_assets.log" \
+    python -u scripts/register_genomic_circos_assets.py \
+      --article-root "$ARTICLE_ROOT"
+
+  log_stage "Generate genomic Circos supplementary methods"
+  run_logged "$LOG_DIR/06k_build_genomic_circos_methods.log" \
+    python -u scripts/build_genomic_circos_methods.py \
+      --tracks \
+        data/processed/circos/genomic_circos_track_definitions.tsv \
+      --output \
+        "$ARTICLE_ROOT/manuscript_assets/supplementary_methods/GENOMIC_CIRCOS_METHODS.md"
+
+  log_stage "Recatalog exact source data for all 78 figures"
+  run_logged "$LOG_DIR/06l_recatalog_figure_source_data.log" \
+    python -u scripts/catalog_figure_source_data.py \
+      --article-root "$ARTICLE_ROOT"
+}
+
 finalize_extended_publication_assets() {
   log_stage "Validate model-level and raw-source supporting evidence"
   run_logged "$LOG_DIR/06d_validate_extended_supporting_evidence.log" \
     python -u scripts/validate_extended_supporting_evidence.py \
       --article-root "$ARTICLE_ROOT"
 
-  log_stage "Validate WGCNA and promoter-aware regulatory score integration"
+  log_stage "Validate WGCNA, promoter and methylation-aware regulatory integration"
   run_logged "$LOG_DIR/06e_validate_wgcna_regulatory_evidence.log" \
     python -u scripts/validate_wgcna_regulatory_evidence.py \
       --ranking "$RANKING" \
@@ -115,8 +181,6 @@ finalize_extended_publication_assets() {
     python -u scripts/create_manual_visual_inspection_checklist.py \
       --article-root "$ARTICLE_ROOT"
 
-  # The added evidence, robustness analyses, documentation and review record must
-  # be included in the final workbook, inventory, provenance and checksums.
   bash "$CORE" workbook
   bash "$CORE" manifests
   bash "$CORE" validate
@@ -126,7 +190,9 @@ stage="${1:-}"
 case "$stage" in
   all|assets-only)
     build_extended_supporting_evidence
+    build_repository_documentation_and_circos_data
     bash "$CORE" "$stage"
+    integrate_genomic_circos_assets
     finalize_extended_publication_assets
     ;;
   *)
