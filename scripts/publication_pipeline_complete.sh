@@ -136,6 +136,10 @@ integrate_genomic_circos_assets() {
   run_logged "$LOG_DIR/06l_recatalog_figure_source_data.log" \
     python -u scripts/catalog_figure_source_data.py \
       --article-root "$ARTICLE_ROOT"
+  log_stage "Validate genomic Circos coordinates, links, rings, expression and script catalogue"
+  run_logged "$LOG_DIR/06m_validate_genomic_circos_integrity.log" \
+    python -u scripts/validate_genomic_circos_integrity.py \
+      --article-root "$ARTICLE_ROOT"
 }
 
 finalize_extended_publication_assets() {
