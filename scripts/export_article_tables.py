@@ -40,63 +40,28 @@ def read_optional(path: Path) -> pd.DataFrame:
     return pd.DataFrame()
 
 
-def write_table(
-  frame: pd.DataFrame,
-  path: Path,
-  category: str,
-  source_paths: list[Path],
-  script: str = "scripts/export_article_tables.py",
-) -> TableRecord:
+def write_table(frame: pd.DataFrame, path: Path, category: str, source_paths: list[Path], script: str = "scripts/export_article_tables.py") -> TableRecord:
   path.parent.mkdir(parents=True, exist_ok=True)
   temporary = path.with_suffix(path.suffix + ".tmp")
   frame.to_csv(temporary, sep="\t", index=False)
   temporary.replace(path)
-  return TableRecord(
-    table_id=path.stem,
-    category=category,
-    path=str(path),
-    rows=len(frame),
-    columns=len(frame.columns),
-    source_paths=";".join(str(value) for value in source_paths),
-    script=script,
-    status="ok" if not frame.empty else "empty_no_eligible_records",
-  )
+  return TableRecord(path.stem, category, str(path), len(frame), len(frame.columns), ";".join(str(value) for value in source_paths), script, "ok" if not frame.empty else "empty_no_eligible_records")
 
 
-def register_existing_table(
-  path: Path,
-  category: str,
-  source_paths: list[Path],
-  script: str,
-) -> TableRecord:
+def register_existing_table(path: Path, category: str, source_paths: list[Path], script: str) -> TableRecord:
   if not path.exists() or path.stat().st_size == 0:
     raise FileNotFoundError(f"Mandatory supplementary table is missing or empty: {path}")
   frame = pd.read_csv(path, sep="\t", low_memory=False)
-  return TableRecord(
-    table_id=path.stem,
-    category=category,
-    path=str(path),
-    rows=len(frame),
-    columns=len(frame.columns),
-    source_paths=";".join(str(value) for value in source_paths),
-    script=script,
-    status="ok" if not frame.empty else "empty_no_eligible_records",
-  )
+  return TableRecord(path.stem, category, str(path), len(frame), len(frame.columns), ";".join(str(value) for value in source_paths), script, "ok" if not frame.empty else "empty_no_eligible_records")
 
 
 def significant_dependency(frame: pd.DataFrame, fdr: float) -> pd.DataFrame:
   if frame.empty:
     return frame
-  q_column = next(
-    (column for column in ("q_value_bh_within_loss_cancer", "q_value_bh") if column in frame.columns),
-    None,
-  )
+  q_column = next((column for column in ("q_value_bh_within_loss_cancer", "q_value_bh") if column in frame.columns), None)
   if q_column is None or "delta_effect" not in frame:
     return pd.DataFrame(columns=frame.columns)
-  return frame.loc[
-    (pd.to_numeric(frame[q_column], errors="coerce") < fdr)
-    & (pd.to_numeric(frame["delta_effect"], errors="coerce") < 0)
-  ].sort_values([q_column, "delta_effect"], ascending=[True, True])
+  return frame.loc[(pd.to_numeric(frame[q_column], errors="coerce") < fdr) & (pd.to_numeric(frame["delta_effect"], errors="coerce") < 0)].sort_values([q_column, "delta_effect"], ascending=[True, True])
 
 
 def main() -> None:
@@ -128,27 +93,17 @@ def main() -> None:
   config = yaml.safe_load(resolve_path(args.config).read_text(encoding="utf-8")) or {}
   configured_main = list(config.get("main_tables") or [])
   configured_supplementary = list(config.get("supplementary_tables") or [])
-  if len(configured_main) != 4 or len(configured_supplementary) < 18:
-    raise ValueError("article_assets.yaml must define 4 main and at least 18 supplementary tables")
+  if len(configured_main) != 4 or len(configured_supplementary) != 44:
+    raise ValueError("article_assets.yaml must define 4 main and exactly 44 supplementary tables")
 
   paths = {
-    "ranking": resolve_path(args.ranking),
-    "candidates": resolve_path(args.candidates),
-    "members": resolve_path(args.members),
-    "functional": resolve_path(args.functional_evidence),
-    "dependency": resolve_path(args.dependency),
-    "expression": resolve_path(args.expression),
-    "phenotype": resolve_path(args.phenotype),
-    "expression_context": resolve_path(args.expression_context),
-    "tcga": resolve_path(args.tcga_events),
-    "discovery": resolve_path(args.discovery),
-    "pharmacology_evidence": resolve_path(args.pharmacology_evidence),
-    "pharmacology_ranking": resolve_path(args.pharmacology_ranking),
-    "sensitivity": resolve_path(args.drug_sensitivity),
-    "pharmacology_status": resolve_path(args.pharmacology_source_status),
-    "pharmacology_coverage": resolve_path(args.pharmacology_source_coverage),
-    "structure_manifest": resolve_path(args.structure_manifest),
-    "structural_annotations": resolve_path(args.structural_annotations),
+    "ranking": resolve_path(args.ranking), "candidates": resolve_path(args.candidates), "members": resolve_path(args.members),
+    "functional": resolve_path(args.functional_evidence), "dependency": resolve_path(args.dependency), "expression": resolve_path(args.expression),
+    "phenotype": resolve_path(args.phenotype), "expression_context": resolve_path(args.expression_context), "tcga": resolve_path(args.tcga_events),
+    "discovery": resolve_path(args.discovery), "pharmacology_evidence": resolve_path(args.pharmacology_evidence),
+    "pharmacology_ranking": resolve_path(args.pharmacology_ranking), "sensitivity": resolve_path(args.drug_sensitivity),
+    "pharmacology_status": resolve_path(args.pharmacology_source_status), "pharmacology_coverage": resolve_path(args.pharmacology_source_coverage),
+    "structure_manifest": resolve_path(args.structure_manifest), "structural_annotations": resolve_path(args.structural_annotations),
     "structure_render_manifest": resolve_path(args.structure_render_manifest),
   }
   for required in ("ranking", "candidates"):
@@ -157,40 +112,21 @@ def main() -> None:
 
   ranking = pd.read_csv(paths["ranking"], sep="\t", low_memory=False)
   candidates = pd.read_csv(paths["candidates"], sep="\t", low_memory=False)
-  members = read_optional(paths["members"])
-  functional = read_optional(paths["functional"])
-  dependency = read_optional(paths["dependency"])
-  expression = read_optional(paths["expression"])
-  phenotype = read_optional(paths["phenotype"])
-  expression_context = read_optional(paths["expression_context"])
-  tcga = read_optional(paths["tcga"])
-  discovery = read_optional(paths["discovery"])
-  pharmacology_evidence = read_optional(paths["pharmacology_evidence"])
-  pharmacology_ranking = read_optional(paths["pharmacology_ranking"])
-  sensitivity = read_optional(paths["sensitivity"])
-  pharmacology_status = read_optional(paths["pharmacology_status"])
-  pharmacology_coverage = read_optional(paths["pharmacology_coverage"])
-  structure_manifest = read_optional(paths["structure_manifest"])
-  structural_annotations = read_optional(paths["structural_annotations"])
-  structure_render_manifest = read_optional(paths["structure_render_manifest"])
+  members = read_optional(paths["members"]); functional = read_optional(paths["functional"])
+  dependency = read_optional(paths["dependency"]); expression = read_optional(paths["expression"])
+  phenotype = read_optional(paths["phenotype"]); expression_context = read_optional(paths["expression_context"])
+  tcga = read_optional(paths["tcga"]); discovery = read_optional(paths["discovery"])
+  pharmacology_evidence = read_optional(paths["pharmacology_evidence"]); pharmacology_ranking = read_optional(paths["pharmacology_ranking"])
+  sensitivity = read_optional(paths["sensitivity"]); pharmacology_status = read_optional(paths["pharmacology_status"])
+  pharmacology_coverage = read_optional(paths["pharmacology_coverage"]); structure_manifest = read_optional(paths["structure_manifest"])
+  structural_annotations = read_optional(paths["structural_annotations"]); structure_render_manifest = read_optional(paths["structure_render_manifest"])
 
   output_root = resolve_path(args.output_root)
-  main_dir = output_root / "tables" / "main"
-  supplementary_dir = output_root / "tables" / "supplementary"
-  source_dir = output_root / "source_data" / "tables"
-  manifest_dir = output_root / "manifests"
+  main_dir = output_root / "tables/main"; supplementary_dir = output_root / "tables/supplementary"
+  source_dir = output_root / "source_data/tables"; manifest_dir = output_root / "manifests"
   records: list[TableRecord] = []
 
-  class_summary = (
-    ranking.assign(source_class=ranking.get("source_class", pd.Series("unclassified", index=ranking.index)).fillna("unclassified").astype(str))
-      .groupby("source_class", as_index=False).agg(
-        scored_rows=("pair_id", "size"), unique_directions=("pair_id", "nunique"),
-        unique_targets=("target_gene", "nunique"),
-        maximum_adjusted_rses=("coverage_adjusted_rses", "max"),
-        median_adjusted_rses=("coverage_adjusted_rses", "median"),
-        median_coverage=("evidence_coverage", "median"),
-      ).sort_values("maximum_adjusted_rses", ascending=False)
-  )
+  class_summary = ranking.assign(source_class=ranking.get("source_class", pd.Series("unclassified", index=ranking.index)).fillna("unclassified").astype(str)).groupby("source_class", as_index=False).agg(scored_rows=("pair_id", "size"), unique_directions=("pair_id", "nunique"), unique_targets=("target_gene", "nunique"), maximum_adjusted_rses=("coverage_adjusted_rses", "max"), median_adjusted_rses=("coverage_adjusted_rses", "median"), median_coverage=("evidence_coverage", "median")).sort_values("maximum_adjusted_rses", ascending=False)
   records.append(write_table(class_summary, main_dir / configured_main[0], "main", [paths["ranking"]]))
   top_vulnerabilities = ranking.sort_values(["cancer", "coverage_adjusted_rses"], ascending=[True, False]).groupby("cancer", group_keys=False).head(args.top_n)
   records.append(write_table(top_vulnerabilities, main_dir / configured_main[1], "main", [paths["ranking"]]))
@@ -199,43 +135,21 @@ def main() -> None:
   records.append(write_table(top_pharmacology, main_dir / configured_main[3], "main", [paths["pharmacology_ranking"]]))
 
   component_columns = [column for column in ranking.columns if column.startswith("component_") or column.startswith("microniche_") or column.startswith("functional_microniche_")]
-  component_keys = [column for column in (
-    "cancer", "pair_id", "source_class", "lost_feature", "analysis_lost_gene",
-    "lost_gene", "target_gene", "rses_onco", "evidence_coverage",
-    "coverage_adjusted_rses", "priority_class",
-  ) if column in ranking]
+  component_keys = [column for column in ("cancer", "pair_id", "source_class", "lost_feature", "analysis_lost_gene", "lost_gene", "target_gene", "rses_onco", "evidence_coverage", "coverage_adjusted_rses", "priority_class") if column in ranking]
   component_matrix = ranking[component_keys + component_columns].copy()
   nise_directions = candidates.loc[candidates.get("source_class", pd.Series(index=candidates.index, dtype=object)).astype(str).eq("NISE")].copy()
-  network_columns = [column for column in functional.columns if column in {
-    "pair_id", "lost_gene", "target_gene", "source_class", "component_localization",
-    "component_biochemical_structural", "component_interaction_network",
-    "string_direct_score", "string_neighbor_jaccard", "string_shared_neighbors",
-    "component_regulatory_network", "regulator_jaccard", "shared_regulators",
-  }]
+  network_columns = [column for column in functional.columns if column in {"pair_id", "lost_gene", "target_gene", "source_class", "component_localization", "component_biochemical_structural", "component_interaction_network", "string_direct_score", "string_neighbor_jaccard", "string_shared_neighbors", "component_regulatory_network", "regulator_jaccard", "shared_regulators"}]
   network_evidence = functional[network_columns].copy() if network_columns else functional
-  status_coverage = pd.concat([
-    pharmacology_status.assign(record_type="source_status"),
-    pharmacology_coverage.assign(record_type="source_coverage"),
-  ], ignore_index=True, sort=False)
+  status_coverage = pd.concat([pharmacology_status.assign(record_type="source_status"), pharmacology_coverage.assign(record_type="source_coverage")], ignore_index=True, sort=False)
 
   base_frames = [
-    (candidates, [paths["candidates"]]),
-    (nise_directions, [paths["candidates"]]),
-    (members, [paths["members"]]),
-    (component_matrix, [paths["ranking"]]),
-    (dependency, [paths["dependency"]]),
-    (expression, [paths["expression"]]),
-    (phenotype, [paths["phenotype"]]),
-    (expression_context, [paths["expression_context"]]),
-    (network_evidence, [paths["functional"]]),
-    (tcga, [paths["tcga"]]),
-    (discovery, [paths["discovery"]]),
-    (pharmacology_evidence, [paths["pharmacology_evidence"]]),
-    (pharmacology_ranking, [paths["pharmacology_ranking"]]),
-    (sensitivity, [paths["sensitivity"]]),
+    (candidates, [paths["candidates"]]), (nise_directions, [paths["candidates"]]), (members, [paths["members"]]),
+    (component_matrix, [paths["ranking"]]), (dependency, [paths["dependency"]]), (expression, [paths["expression"]]),
+    (phenotype, [paths["phenotype"]]), (expression_context, [paths["expression_context"]]), (network_evidence, [paths["functional"]]),
+    (tcga, [paths["tcga"]]), (discovery, [paths["discovery"]]), (pharmacology_evidence, [paths["pharmacology_evidence"]]),
+    (pharmacology_ranking, [paths["pharmacology_ranking"]]), (sensitivity, [paths["sensitivity"]]),
     (status_coverage, [paths["pharmacology_status"], paths["pharmacology_coverage"]]),
-    (structure_manifest, [paths["structure_manifest"]]),
-    (structural_annotations, [paths["structural_annotations"]]),
+    (structure_manifest, [paths["structure_manifest"]]), (structural_annotations, [paths["structural_annotations"]]),
     (structure_render_manifest, [paths["structure_render_manifest"]]),
   ]
   for name, (frame, source_paths) in zip(configured_supplementary[:18], base_frames):
@@ -249,11 +163,29 @@ def main() -> None:
     "Table_S23_rses_ranking_stability.tsv": ("scripts/run_rses_robustness_analyses.py", [output_root / "tables/robustness/top_k_stability.tsv"]),
     "Table_S24_leave_one_domain_out.tsv": ("scripts/run_rses_robustness_analyses.py", [output_root / "tables/robustness/leave_one_domain_out.tsv"]),
     "Table_S25_weight_sensitivity.tsv": ("scripts/run_rses_robustness_analyses.py", [output_root / "tables/robustness/controlled_weight_perturbation.tsv"]),
+    "Table_S26_missing_data_sensitivity.tsv": ("scripts/run_rses_robustness_analyses.py", [output_root / "tables/robustness/missing_data_sensitivity.tsv"]),
+    "Table_S27_evidence_category_assignments.tsv": ("scripts/build_publication_evidence_audit_complete.py", [output_root / "tables/qc/evidence_category_assignments.tsv"]),
+    "Table_S28_coexpression_by_event_group.tsv": ("scripts/build_model_level_supporting_evidence.py", [output_root / "tables/supporting_evidence/expression/coexpression_by_event_group.tsv"]),
+    "Table_S29_compensation_and_dependency_contrasts.tsv": ("scripts/build_model_level_supporting_evidence.py", [output_root / "tables/supporting_evidence/expression/compensation_and_dependency_contrasts.tsv"]),
+    "Table_S30_model_level_expression_crispr_copy_number.tsv": ("scripts/build_model_level_supporting_evidence.py", [output_root / "tables/supporting_evidence/model_level/model_level_expression_crispr_copy_number.tsv"]),
+    "Table_S31_string_candidate_edges_all_channels.tsv": ("scripts/export_raw_functional_network_evidence.py", [output_root / "tables/supporting_evidence/networks/raw_sources/string_candidate_edges_all_channels.tsv"]),
+    "Table_S32_dorothea_candidate_regulatory_edges.tsv": ("scripts/export_raw_functional_network_evidence.py", [output_root / "tables/supporting_evidence/networks/raw_sources/dorothea_candidate_regulatory_edges.tsv"]),
+    "Table_S33_hpa_candidate_localization.tsv": ("scripts/export_raw_functional_network_evidence.py", [output_root / "tables/supporting_evidence/localization/hpa_candidate_localization.tsv"]),
+    "Table_S34_uniprot_candidate_annotations.tsv": ("scripts/export_raw_functional_network_evidence.py", [output_root / "tables/supporting_evidence/structures/uniprot_candidate_annotations.tsv"]),
+    "Table_S35_wgcna_pair_metrics_all_cancers.tsv": ("scripts/build_wgcna_regulatory_layer.py", [ROOT / "data/processed/regulatory/wgcna/wgcna_pair_metrics_all_cancers.tsv"]),
+    "Table_S36_wgcna_correlation_fallback_audit.tsv": ("scripts/run_wgcna_expression_network.R", [ROOT / "data/processed/regulatory/wgcna/wgcna_correlation_fallback_all_cancers.tsv"]),
+    "Table_S37_wgcna_run_diagnostics.tsv": ("scripts/run_wgcna_expression_network.R", [ROOT / "data/processed/regulatory/wgcna/wgcna_run_diagnostics_all_cancers.tsv"]),
+    "Table_S38_jaspar_promoter_tf_summary.tsv": ("scripts/scan_promoter_motifs.py", [ROOT / "data/processed/regulatory/jaspar_promoter_tf_summary.tsv"]),
+    "Table_S39_conditional_dependency_contrasts.tsv": ("scripts/build_model_level_supporting_evidence.py", [output_root / "tables/supporting_evidence/phenotypes/conditional_dependency_contrasts.tsv"]),
+    "Table_S40_tcga_gene_event_summary.tsv": ("scripts/export_supporting_evidence_tables.py", [output_root / "tables/supporting_evidence/genomic_context/tcga_gene_event_summary.tsv"]),
+    "Table_S41_pharmacology_evidence_long_support.tsv": ("scripts/export_supporting_evidence_tables.py", [output_root / "tables/supporting_evidence/pharmacology/pharmacology_evidence_long.tsv"]),
+    "Table_S42_pharmacology_source_coverage.tsv": ("scripts/prioritize_pharmacology.py", [ROOT / "results/expanded_26Q1/pharmacology/pharmacology_source_coverage.tsv"]),
+    "Table_S43_evidence_category_definitions.tsv": ("scripts/materialize_extended_supplementary_tables.py", [output_root / "tables/supplementary/Table_S43_evidence_category_definitions.tsv"]),
+    "Table_S44_asset_reproduction_registry.tsv": ("scripts/build_asset_reproduction_registry.py", [output_root / "tables/supplementary/Table_S44_asset_reproduction_registry.tsv"]),
   }
   for name in configured_supplementary[18:]:
     script, source_paths = external_sources.get(name, ("unknown", []))
-    path = supplementary_dir / name
-    records.append(register_existing_table(path, "supplementary", source_paths, script))
+    records.append(register_existing_table(supplementary_dir / name, "supplementary", source_paths, script))
 
   source_dir.mkdir(parents=True, exist_ok=True)
   for record in records:
