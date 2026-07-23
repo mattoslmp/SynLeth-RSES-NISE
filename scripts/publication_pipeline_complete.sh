@@ -90,6 +90,12 @@ build_repository_documentation_and_circos_data() {
       --ranking "$RANKING" --candidates "$CANDIDATES" \
       --promoters "$PROMOTERS" --expression "$EXPRESSION" \
       --models "$MODELS" --output-dir data/processed/circos
+  log_stage "Complete expression availability for every Circos gene and cancer"
+  run_logged "$LOG_DIR/04la_complete_genomic_circos_expression.log" \
+    python -u scripts/complete_genomic_circos_expression_summary.py \
+      --coordinates data/processed/circos/genomic_circos_gene_coordinates.tsv \
+      --model-values data/processed/circos/genomic_circos_expression_model_values.tsv \
+      --summary data/processed/circos/genomic_circos_expression_summary.tsv
   log_stage "Guarantee one chord for every simple NISE/paralog candidate pair"
   run_logged "$LOG_DIR/04m_complete_genomic_circos_links.log" \
     python -u scripts/complete_genomic_circos_links.py \
