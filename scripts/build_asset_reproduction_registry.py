@@ -3,7 +3,8 @@
 
 The registry is a supplementary table rather than an opaque technical manifest.
 It records the responsible script, expected inputs, command, output and document
-location for every registered publication figure and table.
+location for every registered publication figure and table, including the
+v0.11.1 methylation extension.
 """
 from __future__ import annotations
 
@@ -15,6 +16,12 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 
+METHYLATION_TABLES = (
+  "Table_S45_pair_promoter_methylation_evidence.tsv",
+  "Table_S46_gene_promoter_methylation_summary.tsv",
+  "Table_S47_methylation_source_status.tsv",
+)
+
 
 def resolve_path(value: str) -> Path:
   path = Path(value)
@@ -24,7 +31,11 @@ def resolve_path(value: str) -> Path:
 def figure_script(figure_id: str) -> str:
   number_text = figure_id.removeprefix("Figure_S")
   if figure_id.startswith("Figure_") and not figure_id.startswith("Figure_S"):
-    return "scripts/make_main_figures_resilient.py" if figure_id != "Figure_8" else "scripts/make_nise_structure_figures.py"
+    return (
+      "scripts/make_main_figures_resilient.py"
+      if figure_id != "Figure_8"
+      else "scripts/make_nise_structure_figures.py"
+    )
   number = int(number_text)
   if number <= 14:
     return "scripts/make_supplementary_figures_resilient.py"
@@ -33,6 +44,46 @@ def figure_script(figure_id: str) -> str:
   if number <= 38:
     return "scripts/make_audit_supplementary_figures.py"
   return "scripts/make_extended_supporting_figures.py"
+
+
+def figure_metadata(
+  record: dict[str, object],
+) -> tuple[str, str]:
+  if str(record.get("id")) == "Figure_S69":
+    return (
+      "Figure_S69_promoter_methylation_context",
+      "Cancer-specific promoter methylation context",
+    )
+  return str(record["file"]), str(record.get("title") or record["id"])
+
+
+def table_row(
+  article_root: Path,
+  category: str,
+  name: str,
+) -> dict[str, object]:
+  table_id = Path(name).stem
+  return {
+    "asset_id": table_id,
+    "asset_type": "table",
+    "category": category,
+    "scientific_title": table_id.replace("_", " "),
+    "script": (
+      "scripts/materialize_extended_supplementary_tables.py"
+      if name in METHYLATION_TABLES
+      else "scripts/export_article_tables.py"
+    ),
+    "primary_inputs": "Declared by table manifest and source_paths field",
+    "intermediate_data": f"{article_root}/tables/{category}/{name}",
+    "reproduction_command": (
+      "bash scripts/run_publication_pipeline.sh assets-only"
+    ),
+    "outputs": f"{article_root}/tables/{category}/{name}",
+    "dependencies": "environment.yml; pyproject.toml",
+    "document_location": (
+      "main manuscript" if category == "main" else "supplementary data"
+    ),
+  }
 
 
 def main() -> None:
@@ -46,46 +97,64 @@ def main() -> None:
   article_root = resolve_path(args.article_root)
   rows: list[dict[str, object]] = []
 
-  for category, key in (("main", "main_figures"), ("supplementary", "supplementary_figures")):
+  for category, key in (
+    ("main", "main_figures"),
+    ("supplementary", "supplementary_figures"),
+  ):
     for record in config.get(key, []):
       figure_id = str(record["id"])
       script = figure_script(figure_id)
+      file_name, title = figure_metadata(record)
       rows.append({
         "asset_id": figure_id,
         "asset_type": "figure",
         "category": category,
-        "scientific_title": record.get("title"),
+        "scientific_title": title,
         "script": script,
-        "primary_inputs": "Declared by the generator and exact figure-source inventory",
-        "intermediate_data": f"{article_root}/source_data/figures/{category}/{record['file']}_source_data.tsv",
-        "reproduction_command": "MPLBACKEND=Agg bash scripts/run_publication_pipeline.sh assets-only",
+        "primary_inputs": (
+          "Declared by the generator and exact figure-source inventory"
+        ),
+        "intermediate_data": (
+          f"{article_root}/source_data/figures/{category}/"
+          f"{file_name}_source_data.tsv"
+        ),
+        "reproduction_command": (
+          "MPLBACKEND=Agg bash "
+          "scripts/run_publication_pipeline.sh assets-only"
+        ),
         "outputs": ";".join(
-          f"{article_root}/figures/{category}/{record['file']}.{extension}"
+          f"{article_root}/figures/{category}/{file_name}.{extension}"
           for extension in ("png", "pdf", "svg")
         ),
         "dependencies": "environment.yml; pyproject.toml",
-        "document_location": "main manuscript" if category == "main" else "supplementary document",
+        "document_location": (
+          "main manuscript"
+          if category == "main"
+          else "supplementary document"
+        ),
       })
 
-  for category, key in (("main", "main_tables"), ("supplementary", "supplementary_tables")):
+  for category, key in (
+    ("main", "main_tables"),
+    ("supplementary", "supplementary_tables"),
+  ):
     for name in config.get(key, []):
-      table_id = Path(name).stem
-      rows.append({
-        "asset_id": table_id,
-        "asset_type": "table",
-        "category": category,
-        "scientific_title": table_id.replace("_", " "),
-        "script": "scripts/export_article_tables.py",
-        "primary_inputs": "Declared by table manifest and source_paths field",
-        "intermediate_data": f"{article_root}/tables/{category}/{name}",
-        "reproduction_command": "bash scripts/run_publication_pipeline.sh assets-only",
-        "outputs": f"{article_root}/tables/{category}/{name}",
-        "dependencies": "environment.yml; pyproject.toml",
-        "document_location": "main manuscript" if category == "main" else "supplementary data",
-      })
+      rows.append(table_row(article_root, category, str(name)))
+  for name in METHYLATION_TABLES:
+    rows.append(table_row(article_root, "supplementary", name))
 
   frame = pd.DataFrame(rows)
-  output = article_root / "tables/supplementary/Table_S44_asset_reproduction_registry.tsv"
+  if frame["asset_id"].duplicated().any():
+    duplicates = frame.loc[
+      frame["asset_id"].duplicated(keep=False),
+      "asset_id",
+    ].tolist()
+    raise RuntimeError(f"Duplicate reproduction registry assets: {duplicates}")
+
+  output = (
+    article_root
+    / "tables/supplementary/Table_S44_asset_reproduction_registry.tsv"
+  )
   output.parent.mkdir(parents=True, exist_ok=True)
   temporary = output.with_suffix(output.suffix + ".tmp")
   frame.to_csv(temporary, sep="\t", index=False)
@@ -94,14 +163,16 @@ def main() -> None:
   docs = article_root / "manuscript_assets/PUBLICATION_ASSET_REPRODUCTION.md"
   docs.parent.mkdir(parents=True, exist_ok=True)
   lines = [
-    "# Publication asset reproduction", "",
+    "# Publication asset reproduction",
+    "",
     "| Asset | Type | Category | Script | Command | Output |",
     "|---|---|---|---|---|---|",
   ]
   for row in frame.to_dict("records"):
     lines.append(
-      f"| {row['asset_id']} | {row['asset_type']} | {row['category']} | "
-      f"`{row['script']}` | `{row['reproduction_command']}` | `{row['outputs']}` |"
+      f"| {row['asset_id']} | {row['asset_type']} | "
+      f"{row['category']} | `{row['script']}` | "
+      f"`{row['reproduction_command']}` | `{row['outputs']}` |"
     )
   docs.write_text("\n".join(lines) + "\n", encoding="utf-8")
   print(f"Wrote reproduction registry: {output} ({len(frame):,} assets)")
