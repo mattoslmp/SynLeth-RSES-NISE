@@ -70,6 +70,12 @@ MPLBACKEND=Agg \
 python -u scripts/validate_publication_outputs.py \
   --article-root "$ARTICLE_ROOT"
 
+log_stage "Validate rendered manuscript and supplementary documents"
+python -u scripts/validate_publication_documents.py \
+  --article-root "$ARTICLE_ROOT" \
+  --document-dir "$ARTICLE_ROOT/documents" \
+  --require-page-renders
+
 log_stage "Verify publication-package SHA-256 checksums"
 (
   cd "$ARTICLE_ROOT"
@@ -100,7 +106,7 @@ main_figures = int(
   figures["figure_id"].astype(str).str.match(r"^Figure_[1-8]$").sum()
 )
 supplementary_figures = int(
-  figures["figure_id"].astype(str).str.match(r"^Figure_S(?:[1-9]|[12][0-9]|3[0-8])$").sum()
+  figures["figure_id"].astype(str).str.match(r"^Figure_S(?:[1-9]|[1-5][0-9]|6[0-9])$").sum()
 )
 image_files = sum(
   1
@@ -130,10 +136,10 @@ for key, value in summary.items():
 
 expected = {
   "main_figures": 8,
-  "supplementary_figures": 38,
-  "exported_figure_files": 138,
+  "supplementary_figures": 69,
+  "exported_figure_files": 231,
   "main_tables": 4,
-  "supplementary_tables": 25,
+  "supplementary_tables": 44,
 }
 for key, value in expected.items():
   if summary[key] != value:
@@ -153,6 +159,9 @@ required = [
   root / "tables/robustness/leave_one_domain_out.tsv",
   root / "tables/figure_data/figure_source_data_inventory.tsv",
   root / "tables/supporting_evidence/supporting_evidence_manifest.tsv",
+  root / "tables/supplementary/Table_S44_asset_reproduction_registry.tsv",
+  root / "source_data/figures/supplementary/Figure_S68_wgcna_module_eigengene_context_source_data.tsv",
+  root / "source_data/figures/supplementary/Figure_S69_integrated_regulatory_context_source_data.tsv",
   root / "manifests/scientific_integrity_validation.json",
 ]
 for path in required:
