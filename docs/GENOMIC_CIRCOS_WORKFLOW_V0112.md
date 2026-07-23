@@ -6,64 +6,61 @@
 
 ## Purpose
 
-The pipeline generates Supplementary Figure S70 as a source-backed genomic Circos
-representation of every coordinate-complete simple-gene hypothesis classified as a
-non-homologous isofunctional enzyme (NISE), a homologous paralog, or both. The
-figure combines genomic position, pair relationships, all RSES-Onco score domains,
-all functional-microniche subdomains, expression-network layers, regulatory layers,
-promoter methylation and nested evidence coverage.
+Supplementary Figure S70 is a source-backed genomic Circos representation of every
+coordinate-complete simple-gene hypothesis classified as a non-homologous
+isofunctional enzyme (NISE), a homologous paralog, or both. It combines genomic
+position, every pair relationship, all top-level RSES-Onco domains, all
+functional-microniche domains, WGCNA internal terms, regulatory terms, promoter
+methylation, validation terms and nested evidence coverage.
 
 ## Genomic coordinates
 
-Canonical coordinates are read from the Ensembl promoter acquisition table:
+Canonical coordinates are read from:
 
 ```text
 data/raw/regulatory/ensembl_promoters.tsv
 ```
 
-The plotted point uses the canonical-transcript TSS or the gene midpoint when the
-latter is present. Chromosome labels are normalized to GRCh38 chromosomes 1-22, X
-and Y. A gene without a coordinate is not silently placed at an arbitrary position;
-the Circos input stage fails and lists the unresolved genes.
+The canonical-transcript TSS is used as the genomic position. Chromosomes 1-22, X,
+Y and MT are supported on GRCh38. A gene without a supported coordinate is not
+assigned an invented location; the input stage terminates and reports the gene.
 
-## Included hypotheses
+## Included hypotheses and links
 
-The input universe is:
+The universe is `data/processed/expanded_candidate_universe.tsv`. Every simple pair
+identified by `source_class`, `relation_type` or `ensembl_homology_type` as a NISE
+or paralog/homolog is retained exactly once.
 
-```text
-data/processed/expanded_candidate_universe.tsv
-```
+- NISE chords: red (`#C62828`);
+- homologous-paralog chords: black (`#111111`);
+- genes represented in both classes: purple genomic ticks;
+- chord width/transparency: maximum cancer-specific
+  `coverage_adjusted_rses`;
+- pairs without a score row remain as low-opacity chords with
+  `link_status=score_missing`;
+- composite features that cannot be mapped to two genes are not assigned fictitious
+  positions.
 
-The Circos stage includes every simple pair whose `source_class`, `relation_type`
-or `ensembl_homology_type` identifies a NISE or paralog/homolog relationship.
-Composite features that cannot be represented as two genomic genes are not placed
-artificially on the chromosome ideogram.
+## Thirty-five ring tracks
 
-## Link representation
+### Panel A — observed score, top-level domains and validation terms
 
-- NISE links: red (`#C62828`);
-- homologous-paralog links: black (`#111111`);
-- genes participating in both relationship classes: purple genomic ticks;
-- chord width and transparency: proportional to the maximum cancer-specific
-  `coverage_adjusted_rses` observed for the pair;
-- every coordinate-complete NISE/paralog pair is retained, including pairs with
-  missing score components.
+1. observed-domain RSES-Onco;
+2. coverage-adjusted RSES-Onco;
+3. evidence coverage;
+4. tumor event;
+5. conditional dependency;
+6. selectivity;
+7. expression compensation;
+8. functional relation;
+9. functional microniche;
+10. validation and tractability;
+11. genetic-screen validation;
+12. isogenic validation;
+13. in vivo validation;
+14. clinical tractability.
 
-## Ring panels
-
-### Panel A — top-level RSES-Onco
-
-1. coverage-adjusted RSES-Onco;
-2. evidence coverage;
-3. tumor event;
-4. conditional dependency;
-5. selectivity;
-6. expression compensation;
-7. functional relation;
-8. functional microniche;
-9. validation and tractability.
-
-### Panel B — functional microniche and internal layers
+### Panel B — functional microniche and all score-internal layers
 
 1. expression context;
 2. localization;
@@ -72,7 +69,7 @@ artificially on the chromosome ideogram.
 5. interaction network;
 6. regulatory network;
 7. pairwise expression context;
-8. WGCNA expression network;
+8. WGCNA expression-network composite;
 9. DoRothEA TF-association divergence;
 10. TF-expression-profile divergence;
 11. JASPAR/FIMO promoter-motif divergence;
@@ -80,32 +77,36 @@ artificially on the chromosome ideogram.
 13. functional-microniche coverage;
 14. expression-context subcoverage;
 15. regulatory-network subcoverage;
-16. methylation coverage.
+16. methylation coverage;
+17. WGCNA TOM divergence;
+18. WGCNA module divergence;
+19. WGCNA kME divergence;
+20. promoter-methylation profile divergence;
+21. conditional target-promoter hypomethylation support.
 
 For each gene and ring, the plotted value is the maximum observed value across all
-associated pair-by-cancer rows. Supplementary Table S47 additionally retains the
-median, minimum, number of observed rows, number of eligible rows and evidence
-status. Missing or non-eligible evidence remains `NA` and is drawn as a hollow
-marker rather than zero.
+associated pair-by-cancer rows. Supplementary Table S47 also retains the median,
+minimum, observed-row count, eligible-row count and evidence status. Missing or
+non-eligible values remain `NA` and are drawn as hollow markers, not zero.
 
 ## Expression data
 
-The Circos stage reads only the required gene columns from:
+Only required gene columns are read from:
 
 ```text
 data/raw/depmap/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv
 ```
 
-The following outputs ensure that every expression value used is available for
-review and reproduction:
+- Table S49 contains every Circos gene × colorectal/gastric/lung context, including
+  explicit unavailable rows;
+- Table S50 contains every observed model-level `log2(TPM+1)` value;
+- when a gene/context has no expression value, S50 contains one sentinel row with
+  `expression_log2_tpm_plus_1=NA`, `is_measurement=false` and an explicit reason;
+- no unavailable expression is represented as numeric zero.
 
-- Supplementary Table S49: cancer-by-gene expression summary;
-- Supplementary Table S50: every model-level `log2(TPM+1)` value for every Circos
-  gene in colorectal, gastric and lung models.
+## Exact commands
 
-## Commands
-
-Build all Circos source tables:
+Build base coordinates, links, rings and expression tables:
 
 ```bash
 python -u scripts/build_genomic_circos_inputs.py \
@@ -117,11 +118,30 @@ python -u scripts/build_genomic_circos_inputs.py \
   --output-dir data/processed/circos
 ```
 
-Generate Figure S70:
+Add WGCNA, methylation and validation internal layers:
+
+```bash
+python -u scripts/enrich_genomic_circos_internal_layers.py \
+  --ranking results/expanded_26Q1/full/expanded_rses_onco.tsv \
+  --candidates data/processed/expanded_candidate_universe.tsv \
+  --wgcna data/processed/regulatory/wgcna/wgcna_pair_metrics_all_cancers.tsv \
+  --coordinates data/processed/circos/genomic_circos_gene_coordinates.tsv \
+  --rings data/processed/circos/genomic_circos_ring_values.tsv \
+  --tracks data/processed/circos/genomic_circos_track_definitions.tsv
+```
+
+Complete expression availability and pair links:
+
+```bash
+python -u scripts/complete_genomic_circos_expression_summary.py
+python -u scripts/complete_genomic_circos_links.py
+```
+
+Generate Figure S70 with all 35 tracks under strict layout:
 
 ```bash
 MPLBACKEND=Agg \
-python -u scripts/make_genomic_circos_figure.py \
+python -u scripts/make_genomic_circos_figure_resilient.py \
   --config config/genomic_circos_asset.yaml \
   --coordinates data/processed/circos/genomic_circos_gene_coordinates.tsv \
   --links data/processed/circos/genomic_circos_pair_links.tsv \
@@ -131,14 +151,20 @@ python -u scripts/make_genomic_circos_figure.py \
   --strict-layout
 ```
 
-Register S70 and Tables S45-S52:
+Register and validate:
 
 ```bash
 python -u scripts/register_genomic_circos_assets.py \
   --article-root article_outputs
+
+python -u scripts/catalog_figure_source_data.py \
+  --article-root article_outputs
+
+python -u scripts/validate_genomic_circos_integrity.py \
+  --article-root article_outputs
 ```
 
-The canonical entrypoint performs these steps automatically:
+The canonical entrypoint performs every step automatically:
 
 ```bash
 MPLBACKEND=Agg \
@@ -151,23 +177,21 @@ bash scripts/run_publication_pipeline.sh assets-only
 | Table | Contents |
 |---|---|
 | S45 | gene class, Ensembl identifiers and genomic coordinates |
-| S46 | every NISE/paralog chord and link rendering value |
+| S46 | every NISE/paralog chord, including score-missing pairs |
 | S47 | every gene-by-ring value, status and coverage count |
-| S48 | ring ID, label, source column, parent domain and aggregation rule |
-| S49 | cancer-by-gene expression summary |
-| S50 | complete model-level expression values used for Circos genes |
+| S48 | all 35 ring definitions and source columns |
+| S49 | complete gene × cancer expression summary |
+| S50 | observed model-level expression plus explicit NA sentinels |
 | S51 | complete generated catalogue of every pipeline script/module |
 | S52 | paths, sizes and SHA-256 provenance of every Circos source |
 
-The exact combined source table used to render Figure S70 is also copied to:
+The exact combined source table used to render S70 is copied byte-for-byte to:
 
 ```text
 article_outputs/tables/figure_data/supplementary/Figure_S70_source_data.tsv
 ```
 
 ## Complete script documentation
-
-Run:
 
 ```bash
 python -u scripts/build_script_documentation.py
@@ -182,5 +206,5 @@ docs/script_manifest.tsv
 data/processed/documentation/pipeline_script_catalog.tsv
 ```
 
-The catalogue is tested against the repository tree; omission of any script/module
-causes a test failure.
+Omission of any pipeline source causes a regression-test and integrity-validation
+failure.
