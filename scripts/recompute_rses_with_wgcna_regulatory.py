@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Recompute RSES-Onco with WGCNA and promoter-aware regulatory sublayers.
+"""Recompute RSES-Onco with WGCNA, promoter and methylation sublayers.
 
-The total functional-microniche weights are unchanged. Pairwise expression and WGCNA
-share the existing expression-context weight; DoRothEA, TF-expression consistency and
-promoter motif support share the existing regulatory-network weight. Cancer-specific
-network measurements are matched only to the corresponding cancer score row.
+The total functional-microniche weights are unchanged. Pairwise expression and
+WGCNA share the existing expression-context weight. DoRothEA, TF-expression
+consistency, promoter motifs and promoter methylation share the existing
+regulatory-network weight. Cancer-specific measurements are matched only to the
+corresponding cancer score row.
 """
 from __future__ import annotations
 
@@ -31,6 +32,7 @@ ELIGIBILITY_SEMANTICS_VERSION = "eligibility-aware-v1"
 EXPRESSION_REGULATORY_SEMANTICS_VERSION = (
   "eligibility-aware-wgcna-regulatory-v3"
 )
+METHYLATION_SEMANTICS_VERSION = "promoter-methylation-context-v1"
 EXPRESSION_SUBWEIGHTS = {
   "pairwise_expression_context": 0.50,
   "wgcna_expression_network": 0.50,
@@ -79,11 +81,7 @@ def main() -> None:
   parser.add_argument("--output", required=True)
   args = parser.parse_args()
 
-  ranking = pd.read_csv(
-    resolve_path(args.ranking),
-    sep="\t",
-    low_memory=False,
-  )
+  ranking = pd.read_csv(resolve_path(args.ranking), sep="\t", low_memory=False)
   evidence = pd.read_csv(
     resolve_path(args.functional_evidence),
     sep="\t",
@@ -98,14 +96,11 @@ def main() -> None:
   missing = sorted(required_evidence - set(evidence.columns))
   if missing:
     raise ValueError(
-      "Cancer-specific functional evidence lacks WGCNA/regulatory fields: "
+      "Cancer-specific functional evidence lacks WGCNA/regulatory/methylation fields: "
       + ", ".join(missing)
     )
   evidence_by_context = {
-    (
-      str(record["pair_id"]),
-      str(record["cancer"]),
-    ): record
+    (str(record["pair_id"]), str(record["cancer"])): record
     for record in evidence.to_dict("records")
   }
 
@@ -113,13 +108,8 @@ def main() -> None:
   for record in ranking.to_dict("records"):
     pair_id = str(record.get("pair_id"))
     cancer = str(record.get("cancer"))
-    pair_evidence = evidence_by_context.get(
-      (pair_id, cancer),
-      {},
-    )
-    pairwise_expression = numeric(
-      record.get("microniche_expression_context")
-    )
+    pair_evidence = evidence_by_context.get((pair_id, cancer), {})
+    pairwise_expression = numeric(record.get("microniche_expression_context"))
     wgcna_expression = numeric(
       pair_evidence.get("component_wgcna_expression_network")
     )
@@ -143,15 +133,11 @@ def main() -> None:
       if np.isfinite(expression_score.adjusted_score)
       else None
     )
-    microniche_components["regulatory_network"] = (
-      regulatory_composite
-    )
+    microniche_components["regulatory_network"] = regulatory_composite
     eligible_microniche = {
       domain
       for domain in FUNCTIONAL_MICRONICHE_WEIGHTS
-      if explicit_bool(
-        record.get(f"eligible_microniche_{domain}", True)
-      )
+      if explicit_bool(record.get(f"eligible_microniche_{domain}", True))
     }
     microniche = functional_microniche_score(
       microniche_components,
@@ -170,9 +156,7 @@ def main() -> None:
     eligible_onco = {
       domain
       for domain in EXPANDED_ONCO_WEIGHTS
-      if explicit_bool(
-        record.get(f"eligible_component_{domain}", True)
-      )
+      if explicit_bool(record.get(f"eligible_component_{domain}", True))
     }
     onco = expanded_onco_score(
       onco_components,
@@ -190,42 +174,63 @@ def main() -> None:
       "expression_context_raw": expression_score.observed_score,
       "expression_context_subcoverage": expression_score.coverage,
       "expression_context_adjusted": expression_score.adjusted_score,
-      "expression_context_observed_subcomponents": (
-        expression_score.n_domains
-      ),
+      "expression_context_observed_subcomponents": expression_score.n_domains,
       "regulatory_tf_association_divergence": pair_evidence.get(
         "regulatory_tf_association_divergence"
       ),
-      "regulatory_tf_expression_profile_divergence": (
-        pair_evidence.get(
-          "regulatory_tf_expression_profile_divergence"
-        )
+      "regulatory_tf_expression_profile_divergence": pair_evidence.get(
+        "regulatory_tf_expression_profile_divergence"
       ),
       "regulatory_promoter_motif_divergence": pair_evidence.get(
         "regulatory_promoter_motif_divergence"
       ),
-      "regulatory_network_raw": pair_evidence.get(
-        "regulatory_network_raw"
+      "regulatory_methylation_context": pair_evidence.get(
+        "regulatory_methylation_context"
       ),
+      "component_promoter_methylation_context": pair_evidence.get(
+        "component_promoter_methylation_context"
+      ),
+      "methylation_pair_profile_divergence": pair_evidence.get(
+        "methylation_pair_profile_divergence"
+      ),
+      "methylation_target_hypomethylation_support": pair_evidence.get(
+        "methylation_target_hypomethylation_support"
+      ),
+      "methylation_pair_spearman_rho": pair_evidence.get(
+        "methylation_pair_spearman_rho"
+      ),
+      "methylation_target_delta_loss_minus_intact": pair_evidence.get(
+        "methylation_target_delta_loss_minus_intact"
+      ),
+      "methylation_p_value": pair_evidence.get("methylation_p_value"),
+      "methylation_q_value_bh": pair_evidence.get("methylation_q_value_bh"),
+      "methylation_q_value_bh_within_cancer": pair_evidence.get(
+        "methylation_q_value_bh_within_cancer"
+      ),
+      "methylation_n_loss": pair_evidence.get("methylation_n_loss"),
+      "methylation_n_intact": pair_evidence.get("methylation_n_intact"),
+      "methylation_coverage": pair_evidence.get("methylation_coverage"),
+      "methylation_absence_reason": pair_evidence.get(
+        "methylation_absence_reason"
+      ),
+      "methylation_evidence_type": pair_evidence.get(
+        "methylation_evidence_type"
+      ),
+      "methylation_source_status": pair_evidence.get(
+        "methylation_source_status"
+      ),
+      "regulatory_network_raw": pair_evidence.get("regulatory_network_raw"),
       "regulatory_network_subcoverage": pair_evidence.get(
         "regulatory_network_coverage"
       ),
-      "promoter_evidence_type": pair_evidence.get(
-        "promoter_evidence_type"
-      ),
+      "promoter_evidence_type": pair_evidence.get("promoter_evidence_type"),
       "functional_microniche_rses": microniche.observed_score,
       "functional_microniche_coverage": microniche.coverage,
       "functional_microniche_adjusted": microniche.adjusted_score,
       "functional_microniche_n_domains": microniche.n_domains,
-      "functional_microniche_eligible_domains": (
-        microniche.eligible_domains
-      ),
-      "functional_microniche_observed_weight": (
-        microniche.observed_weight
-      ),
-      "functional_microniche_eligible_weight": (
-        microniche.eligible_weight
-      ),
+      "functional_microniche_eligible_domains": microniche.eligible_domains,
+      "functional_microniche_observed_weight": microniche.observed_weight,
+      "functional_microniche_eligible_weight": microniche.eligible_weight,
       "rses_onco": onco.observed_score,
       "evidence_coverage": onco.coverage,
       "coverage_adjusted_rses": onco.adjusted_score,
@@ -239,24 +244,30 @@ def main() -> None:
         onco.n_domains,
         onco.eligible_domains,
       ),
-      "scoring_semantics_version": (
-        ELIGIBILITY_SEMANTICS_VERSION
-      ),
+      "scoring_semantics_version": ELIGIBILITY_SEMANTICS_VERSION,
       "expression_regulatory_semantics_version": (
         EXPRESSION_REGULATORY_SEMANTICS_VERSION
       ),
-      "score_version": "RSES-Onco-expanded-v0.10.9",
+      "methylation_semantics_version": METHYLATION_SEMANTICS_VERSION,
+      "score_version": "RSES-Onco-expanded-v0.10.10",
       "expression_context_formula": (
         "0.5*pairwise_expression_context + 0.5*WGCNA_context, "
         "coverage-adjusted within the existing expression-context domain"
       ),
       "regulatory_network_formula": (
-        "0.40*DoRothEA_regulator_divergence + "
-        "0.35*TF_expression_profile_divergence + "
-        "0.25*JASPAR_promoter_motif_divergence, coverage-adjusted "
+        "0.32*DoRothEA_regulator_divergence + "
+        "0.28*TF_expression_profile_divergence + "
+        "0.20*JASPAR_promoter_motif_divergence + "
+        "0.20*CCLE_promoter_methylation_context, coverage-adjusted "
         "within the existing regulatory-network domain"
       ),
+      "methylation_context_formula": (
+        "0.50*pair_methylation_profile_divergence + "
+        "0.50*conditional_target_hypomethylation_support, "
+        "coverage-adjusted within the methylation sublayer"
+      ),
       "direct_promoter_binding_claim": False,
+      "direct_methylation_causality_claim": False,
     })
     rows.append(updated)
 
@@ -275,12 +286,10 @@ def main() -> None:
   result.to_csv(temporary, sep="\t", index=False)
   temporary.replace(output)
   print(
-    f"Recomputed cancer-specific WGCNA/promoter-aware RSES-Onco: "
+    "Recomputed cancer-specific WGCNA/promoter/methylation-aware RSES-Onco: "
     f"{output} ({len(result):,} rows)"
   )
-  print(
-    f"Eligibility semantics: {ELIGIBILITY_SEMANTICS_VERSION}"
-  )
+  print(f"Eligibility semantics: {ELIGIBILITY_SEMANTICS_VERSION}")
   print(
     "Expression/regulatory semantics: "
     f"{EXPRESSION_REGULATORY_SEMANTICS_VERSION}"
