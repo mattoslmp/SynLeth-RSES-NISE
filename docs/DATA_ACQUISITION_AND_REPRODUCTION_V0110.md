@@ -447,3 +447,27 @@ python -u scripts/integrate_methylation_regulatory_layer.py \
 The canonical resume workflow performs this stage automatically. Source absence, unmapped genes, unmapped models and insufficient groups are recorded explicitly rather than converted to biological zero. Detailed formulas and accepted layouts are documented in [`METHYLATION_DATA_AND_SCORING_V0111.md`](METHYLATION_DATA_AND_SCORING_V0111.md).
 
 <!-- END PROMOTER METHYLATION V0.11.1 -->
+
+<!-- BEGIN GENOMIC CIRCOS V0.11.2 -->
+
+## Genomic Circos source acquisition and provenance
+
+The genomic Circos requires the completed candidate universe, final cancer-specific ranking, Ensembl canonical-promoter coordinate table, DepMap model metadata and protein-coding expression matrix. The Ensembl table provides chromosome and canonical TSS coordinates; no gene lacking a canonical coordinate is assigned an invented position.
+
+All expression columns for Circos genes are read directly from `OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv`. The pipeline exports both cancer-by-gene summaries and every model-level `log2(TPM+1)` value. These outputs become Supplementary Tables S49 and S50.
+
+Run the source-data stage with:
+
+```bash
+python -u scripts/build_genomic_circos_inputs.py \
+  --ranking results/expanded_26Q1/full/expanded_rses_onco.tsv \
+  --candidates data/processed/expanded_candidate_universe.tsv \
+  --promoters data/raw/regulatory/ensembl_promoters.tsv \
+  --expression data/raw/depmap/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv \
+  --models data/raw/depmap/Model.csv \
+  --output-dir data/processed/circos
+```
+
+The generated source-provenance table retains every source path, byte size and SHA-256. Missing coordinates terminate the stage with the unresolved gene names; missing domain values remain NA and are never converted to zero.
+
+<!-- END GENOMIC CIRCOS V0.11.2 -->

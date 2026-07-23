@@ -217,3 +217,11 @@ For each candidate pair and cancer lineage, the analysis quantified divergence b
 Methylation shared the existing regulatory-network domain with DoRothEA TF associations, TF-expression consistency and JASPAR/FIMO promoter-motif evidence. Its inclusion did not alter the seven top-level RSES-Onco weights. Promoter methylation was considered association evidence and not direct proof of transcriptional silencing or causal compensation.
 
 <!-- END PROMOTER METHYLATION V0.11.1 -->
+
+<!-- BEGIN GENOMIC CIRCOS V0.11.2 -->
+
+## Genomic Circos visualization
+
+A genomic Circos representation was generated to integrate chromosomal position, NISE/paralog relationships and every RSES-Onco evidence layer. Canonical Ensembl/GRCh38 positions were assigned only to coordinate-resolved genes. NISE and homologous-paralog links were displayed separately, while concentric rings summarized top-level score domains, functional-microniche domains, expression-network and regulatory subcomponents, promoter methylation and evidence coverage. Missing evidence was retained as missing and displayed using hollow markers. Complete model-level expression values and exact figure-source tables were exported as supplementary data.
+
+<!-- END GENOMIC CIRCOS V0.11.2 -->

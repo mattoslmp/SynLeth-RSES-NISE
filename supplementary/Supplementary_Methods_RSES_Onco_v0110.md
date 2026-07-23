@@ -467,3 +467,17 @@ Methylation values were treated as association evidence. They were not interpret
 3. Benjamini Y, Hochberg Y. Controlling the false discovery rate: a practical and powerful approach to multiple testing. *Journal of the Royal Statistical Society Series B*. 1995;57:289-300.
 
 <!-- END PROMOTER METHYLATION V0.11.1 -->
+
+<!-- BEGIN GENOMIC CIRCOS V0.11.2 -->
+
+## Genomic Circos methods and source-data transparency
+
+Supplementary Figure S70 was generated from every coordinate-complete simple-gene candidate classified as a NISE, homologous paralog or both. Canonical positions were derived from the Ensembl canonical-transcript lookup used for promoter acquisition and displayed on a GRCh38 chromosome ideogram. Every gene was represented as a genomic tick; NISE relationships were connected in red and homologous-paralog relationships in black. Chord width and transparency were proportional to the maximum cancer-specific coverage-adjusted RSES-Onco score for the pair.
+
+Panel A included rings for coverage-adjusted RSES-Onco, evidence coverage, tumor event, dependency, selectivity, expression compensation, functional relation, functional microniche and validation/tractability. Panel B included expression context, localization, biochemical/structural evidence, genetic phenotype, interaction network, regulatory network, pairwise expression, WGCNA, DoRothEA, TF-expression profiles, JASPAR/FIMO promoter motifs, promoter methylation and nested coverage values.
+
+For each gene and ring, the plotted value was the maximum observed value across associated pair-by-cancer records. Median, minimum, observed-row count, eligible-row count and missingness status were preserved in Supplementary Table S47. Missing or non-eligible evidence was rendered as a hollow marker and not as numeric zero.
+
+All model-level DepMap `log2(TPM+1)` values used for Circos genes were exported in Supplementary Table S50. Supplementary Tables S45-S52 contain coordinates, links, rings, ring definitions, expression summaries, model-level expression, complete script documentation and source provenance. The exact combined source TSV used to render S70 was registered and copied byte-for-byte to the figure-data directory.
+
+<!-- END GENOMIC CIRCOS V0.11.2 -->
