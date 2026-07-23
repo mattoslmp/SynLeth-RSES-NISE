@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify that the complete real-data, evidence-audit, structural and publication workflow finished correctly.
+# Verify the complete real-data, evidence, Circos, structural and publication workflow.
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,15 +17,15 @@ log_stage() {
 
 if [[ -n "$PIPELINE_EXITCODE_FILE" ]]; then
   log_stage "Check recorded pipeline exit code"
-  if [[ ! -f "$PIPELINE_EXITCODE_FILE" ]]; then
+  [[ -f "$PIPELINE_EXITCODE_FILE" ]] || {
     echo "Missing pipeline exit-code file: $PIPELINE_EXITCODE_FILE" >&2
     exit 1
-  fi
+  }
   pipeline_status="$(tr -d '[:space:]' < "$PIPELINE_EXITCODE_FILE")"
-  if [[ "$pipeline_status" != "0" ]]; then
+  [[ "$pipeline_status" == "0" ]] || {
     echo "Pipeline exit code is $pipeline_status, expected 0" >&2
     exit 1
-  fi
+  }
   echo "Pipeline exit code: 0"
 fi
 
@@ -49,14 +49,19 @@ for key, expected in required.items():
   print(f"{key}: {observed}")
   if observed != expected:
     raise SystemExit(
-      f"Ensembl completeness check failed: {key}={observed!r}, expected {expected!r}"
+      f"Ensembl completeness check failed: {key}={observed!r}, "
+      f"expected {expected!r}"
     )
 print(f"seed_gene_count: {data.get('seed_gene_count')}")
 print(f"directed_paralog_count: {data.get('directed_paralog_count')}")
 PY
 
 log_stage "Verify that no GDC partial download remains"
-partial_count="$(find "$GDC_DIR" -type f -name '*.part' 2>/dev/null | wc -l | tr -d '[:space:]')"
+partial_count="$(
+  find "$GDC_DIR" -type f -name '*.part' 2>/dev/null \
+    | wc -l \
+    | tr -d '[:space:]'
+)"
 echo "GDC .part files: $partial_count"
 test "$partial_count" -eq 0
 
@@ -65,7 +70,7 @@ MPLBACKEND=Agg \
 python -u scripts/validate_publication_scientific_integrity.py \
   --article-root "$ARTICLE_ROOT"
 
-log_stage "Validate the complete publication package"
+log_stage "Validate the complete Circos-aware publication package"
 MPLBACKEND=Agg \
 python -u scripts/validate_publication_outputs.py \
   --article-root "$ARTICLE_ROOT"
@@ -99,47 +104,55 @@ from pathlib import Path
 import pandas as pd
 
 root = Path(sys.argv[1])
-figures = pd.read_csv(root / "manifests/figure_manifest.tsv", sep="\t")
-tables = pd.read_csv(root / "manifests/table_manifest.tsv", sep="\t")
-
+figures = pd.read_csv(
+  root / "manifests/figure_manifest.tsv",
+  sep="\t",
+  low_memory=False,
+)
+tables = pd.read_csv(
+  root / "manifests/table_manifest.tsv",
+  sep="\t",
+  low_memory=False,
+)
 main_figures = int(
   figures["figure_id"].astype(str).str.match(r"^Figure_[1-8]$").sum()
 )
 supplementary_figures = int(
-  figures["figure_id"].astype(str).str.match(r"^Figure_S(?:[1-9]|[1-5][0-9]|6[0-9])$").sum()
+  figures["figure_id"].astype(str).str.match(
+    r"^Figure_S(?:[1-9]|[1-6][0-9]|70)$"
+  ).sum()
 )
 image_files = sum(
   1
   for path in (root / "figures").rglob("*")
-  if path.is_file() and path.suffix.lower() in {".png", ".pdf", ".svg"}
+  if path.is_file()
+  and path.suffix.lower() in {".png", ".pdf", ".svg"}
 )
 structure_renders = sum(
   1
   for path in (root / "structure_atlas/individual").rglob("*.png")
   if path.is_file()
 )
-main_tables = int(tables["category"].astype(str).eq("main").sum())
-supplementary_tables = int(
-  tables["category"].astype(str).eq("supplementary").sum()
-)
-
 summary = {
   "main_figures": main_figures,
   "supplementary_figures": supplementary_figures,
   "exported_figure_files": image_files,
-  "main_tables": main_tables,
-  "supplementary_tables": supplementary_tables,
+  "main_tables": int(
+    tables["category"].astype(str).eq("main").sum()
+  ),
+  "supplementary_tables": int(
+    tables["category"].astype(str).eq("supplementary").sum()
+  ),
   "individual_structure_renders": structure_renders,
 }
 for key, value in summary.items():
   print(f"{key}: {value}")
-
 expected = {
   "main_figures": 8,
-  "supplementary_figures": 69,
-  "exported_figure_files": 231,
+  "supplementary_figures": 70,
+  "exported_figure_files": 234,
   "main_tables": 4,
-  "supplementary_tables": 44,
+  "supplementary_tables": 52,
 }
 for key, value in expected.items():
   if summary[key] != value:
@@ -151,7 +164,6 @@ if structure_renders < 140:
     "Final asset count failed: "
     f"individual_structure_renders={structure_renders}, expected at least 140"
   )
-
 required = [
   root / "tables/qc/candidate_domain_evidence_audit.tsv",
   root / "tables/qc/evidence_overlap_registry.tsv",
@@ -160,19 +172,29 @@ required = [
   root / "tables/figure_data/figure_source_data_inventory.tsv",
   root / "tables/supporting_evidence/supporting_evidence_manifest.tsv",
   root / "tables/supplementary/Table_S44_asset_reproduction_registry.tsv",
-  root / "source_data/figures/supplementary/Figure_S68_wgcna_module_eigengene_context_source_data.tsv",
-  root / "source_data/figures/supplementary/Figure_S69_integrated_regulatory_context_source_data.tsv",
+  root / "tables/supplementary/Table_S45_genomic_circos_gene_coordinates.tsv",
+  root / "tables/supplementary/Table_S46_genomic_circos_pair_links.tsv",
+  root / "tables/supplementary/Table_S47_genomic_circos_ring_values.tsv",
+  root / "tables/supplementary/Table_S48_genomic_circos_track_definitions.tsv",
+  root / "tables/supplementary/Table_S49_genomic_circos_expression_summary.tsv",
+  root / "tables/supplementary/Table_S50_genomic_circos_expression_model_values.tsv",
+  root / "tables/supplementary/Table_S51_pipeline_script_catalog.tsv",
+  root / "tables/supplementary/Table_S52_genomic_circos_source_provenance.tsv",
+  root / "tables/figure_data/supplementary/Figure_S70_source_data.tsv",
   root / "manifests/scientific_integrity_validation.json",
+  Path("docs/SCRIPT_CATALOG.md"),
+  Path("docs/script_manifest.tsv"),
 ]
 for path in required:
   if not path.exists() or path.stat().st_size == 0:
-    raise SystemExit(f"Missing or empty audit asset: {path}")
-
+    raise SystemExit(f"Missing or empty required asset: {path}")
 provenance_path = root / "manifests/publication_provenance.json"
 if provenance_path.exists():
   provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
   print(f"git_commit: {provenance.get('git_commit')}")
-  print(f"git_status_porcelain: {provenance.get('git_status_porcelain')!r}")
+  print(
+    f"git_status_porcelain: {provenance.get('git_status_porcelain')!r}"
+  )
 PY
 
 log_stage "Complete run validation passed"
