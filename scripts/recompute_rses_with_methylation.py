@@ -3,7 +3,9 @@
 
 The global RSES-Onco domain weights remain unchanged. Promoter methylation is an
 internal subcomponent of the existing `expression_compensation` domain, avoiding
-double counting with tumor-event and functional-microniche domains.
+double counting with tumor-event and functional-microniche domains. The integration
+is applied only to a TCGA-integrated ranking; a DepMap-only ranking remains free of
+TCGA methylation evidence.
 """
 from __future__ import annotations
 
@@ -18,7 +20,11 @@ if str(ROOT / "src") not in sys.path:
 import numpy as np
 import pandas as pd
 
-from rses_onco.expanded import EXPANDED_ONCO_WEIGHTS, coverage_aware_score, expanded_onco_score
+from rses_onco.expanded import (
+  EXPANDED_ONCO_WEIGHTS,
+  coverage_aware_score,
+  expanded_onco_score,
+)
 
 METHYLATION_COMPENSATION_SUBWEIGHTS = {
   "expression_compensation": 0.70,
@@ -47,7 +53,12 @@ def numeric(value: object) -> float | None:
 def explicit_bool(value: object) -> bool:
   if isinstance(value, bool):
     return value
-  return str(value).strip().casefold() in {"1", "true", "yes", "eligible"}
+  return str(value).strip().casefold() in {
+    "1",
+    "true",
+    "yes",
+    "eligible",
+  }
 
 
 def priority_label(
@@ -65,6 +76,23 @@ def priority_label(
   return "exploratory"
 
 
+def has_tcga_event_evidence(ranking: pd.DataFrame) -> bool:
+  if "component_tumor_event" not in ranking.columns:
+    return False
+  values = pd.to_numeric(
+    ranking["component_tumor_event"],
+    errors="coerce",
+  )
+  return bool(np.isfinite(values).any())
+
+
+def write_atomic(frame: pd.DataFrame, output: Path) -> None:
+  output.parent.mkdir(parents=True, exist_ok=True)
+  temporary = output.with_suffix(output.suffix + ".tmp")
+  frame.to_csv(temporary, sep="\t", index=False)
+  temporary.replace(output)
+
+
 def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument("--ranking", required=True)
@@ -72,7 +100,19 @@ def main() -> None:
   parser.add_argument("--output", required=True)
   args = parser.parse_args()
 
-  ranking = pd.read_csv(resolve_path(args.ranking), sep="\t", low_memory=False)
+  ranking_path = resolve_path(args.ranking)
+  output = resolve_path(args.output)
+  ranking = pd.read_csv(ranking_path, sep="\t", low_memory=False)
+
+  if not has_tcga_event_evidence(ranking):
+    if output.resolve() != ranking_path.resolve():
+      write_atomic(ranking, output)
+    print(
+      "Skipped GDC methylation integration because the ranking contains no "
+      "observed TCGA tumor-event component; DepMap-only semantics were preserved."
+    )
+    return
+
   evidence = pd.read_csv(
     resolve_path(args.methylation_evidence),
     sep="\t",
@@ -99,7 +139,9 @@ def main() -> None:
     pair_id = str(record.get("pair_id"))
     cancer = str(record.get("cancer"))
     methylation = evidence_by_context.get((pair_id, cancer), {})
-    expression_only = numeric(record.get("component_expression_compensation"))
+    expression_only = numeric(
+      record.get("component_expression_compensation")
+    )
     methylation_score = numeric(
       methylation.get("promoter_methylation_context_score")
     )
@@ -136,7 +178,9 @@ def main() -> None:
     eligible_onco = {
       domain
       for domain in EXPANDED_ONCO_WEIGHTS
-      if explicit_bool(record.get(f"eligible_component_{domain}", True))
+      if explicit_bool(
+        record.get(f"eligible_component_{domain}", True)
+      )
     }
     onco = expanded_onco_score(
       onco_components,
@@ -153,7 +197,9 @@ def main() -> None:
       "expression_methylation_subcoverage": composite.coverage,
       "expression_methylation_adjusted": composite.adjusted_score,
       "expression_methylation_observed_subcomponents": composite.n_domains,
-      "expression_methylation_eligible_subcomponents": composite.eligible_domains,
+      "expression_methylation_eligible_subcomponents": (
+        composite.eligible_domains
+      ),
       "methylation_evidence_status": methylation.get(
         "evidence_status",
         "missing",
@@ -212,7 +258,8 @@ def main() -> None:
       ),
       "score_version": SCORE_VERSION,
       "score_domain_weights": ";".join(
-        f"{key}={value}" for key, value in EXPANDED_ONCO_WEIGHTS.items()
+        f"{key}={value}"
+        for key, value in EXPANDED_ONCO_WEIGHTS.items()
       ),
     })
     rows.append(updated)
@@ -226,11 +273,7 @@ def main() -> None:
     ],
     ascending=[True, True, False, False],
   )
-  output = resolve_path(args.output)
-  output.parent.mkdir(parents=True, exist_ok=True)
-  temporary = output.with_suffix(output.suffix + ".tmp")
-  result.to_csv(temporary, sep="\t", index=False)
-  temporary.replace(output)
+  write_atomic(result, output)
   print(
     f"Recomputed methylation-aware RSES-Onco: {output} "
     f"({len(result):,} rows)"
