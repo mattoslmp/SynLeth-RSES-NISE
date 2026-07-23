@@ -15,7 +15,7 @@ def test_canonical_entrypoint_routes_to_complete_workflow() -> None:
   assert "assets-only" in entrypoint
 
 
-def test_complete_wrapper_executes_extended_evidence_and_finalization() -> None:
+def test_complete_wrapper_executes_extended_circos_and_finalization() -> None:
   wrapper = (
     ROOT / "scripts/publication_pipeline_complete.sh"
   ).read_text(encoding="utf-8")
@@ -24,20 +24,24 @@ def test_complete_wrapper_executes_extended_evidence_and_finalization() -> None:
     "export_raw_functional_network_evidence.py",
     "export_wgcna_regulatory_supporting_evidence.py",
     "run_wgcna_regulatory_ablation.py",
+    "build_script_documentation.py",
+    "build_genomic_circos_inputs.py",
+    "make_genomic_circos_figure.py",
+    "register_genomic_circos_assets.py",
+    "build_genomic_circos_methods.py",
+    "catalog_figure_source_data.py",
     "validate_extended_supporting_evidence.py",
     "validate_wgcna_regulatory_evidence.py",
     "build_publication_methods_documentation.py",
     "build_wgcna_regulatory_methods.py",
     "create_manual_visual_inspection_checklist.py",
-    'bash "$CORE" "$stage"',
+    "run_core_without_terminal_validation",
     'bash "$CORE" workbook',
     'bash "$CORE" manifests',
     'bash "$CORE" validate',
   }
   missing = sorted(
-    value
-    for value in required
-    if value not in wrapper
+    value for value in required if value not in wrapper
   )
   assert not missing, (
     f"complete publication wrapper missing: {missing}"
@@ -65,16 +69,14 @@ def test_assets_only_core_includes_all_publication_stages() -> None:
     "validate_publication_documents.py",
   }
   missing = sorted(
-    value
-    for value in required
-    if value not in core
+    value for value in required if value not in core
   )
   assert not missing, (
     f"publication core missing stages: {missing}"
   )
 
 
-def test_publication_registry_matches_expanded_contract() -> None:
+def test_core_registry_remains_backward_compatible() -> None:
   config = yaml.safe_load(
     (ROOT / "config/article_assets.yaml").read_text(
       encoding="utf-8"
@@ -89,12 +91,30 @@ def test_publication_registry_matches_expanded_contract() -> None:
     for record in config["supplementary_figures"]
   }
   assert main_ids == {
-    f"Figure_{index}"
-    for index in range(1, 9)
+    f"Figure_{index}" for index in range(1, 9)
   }
   assert supplementary_ids == {
-    f"Figure_S{index}"
-    for index in range(1, 70)
+    f"Figure_S{index}" for index in range(1, 70)
   }
   assert len(config["main_tables"]) == 4
   assert len(config["supplementary_tables"]) == 44
+
+
+def test_circos_extension_registry_and_table_contract() -> None:
+  config = yaml.safe_load(
+    (ROOT / "config/genomic_circos_asset.yaml").read_text(
+      encoding="utf-8"
+    )
+  )
+  assert config["supplementary_figures"][0]["id"] == "Figure_S70"
+  register = (
+    ROOT / "scripts/register_genomic_circos_assets.py"
+  ).read_text(encoding="utf-8")
+  for number in range(45, 53):
+    assert f"Table_S{number}_" in register
+  validator = (
+    ROOT / "scripts/validate_publication_outputs.py"
+  ).read_text(encoding="utf-8")
+  assert "expected_78" in validator
+  assert "expected_56" in validator
+  assert "Figure_S70" in validator
