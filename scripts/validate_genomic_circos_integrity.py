@@ -5,10 +5,17 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+  sys.path.insert(0, str(ROOT))
+if str(ROOT / "src") not in sys.path:
+  sys.path.insert(0, str(ROOT / "src"))
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
+from scripts.complete_genomic_circos_links import selected_pairs
 
 
 def resolve(value: str | Path) -> Path:
@@ -25,8 +32,13 @@ def read(path: Path) -> pd.DataFrame:
 def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument("--article-root", default="article_outputs")
+  parser.add_argument(
+    "--candidates",
+    default="data/processed/expanded_candidate_universe.tsv",
+  )
   args = parser.parse_args()
   root = resolve(args.article_root)
+  candidate_pairs = selected_pairs(resolve(args.candidates))
   figures = read(root / "manifests/figure_manifest.tsv")
   tables = read(root / "manifests/table_manifest.tsv")
   coordinates = read(
@@ -48,6 +60,11 @@ def main() -> None:
     root
     / "tables/supplementary/"
     "Table_S48_genomic_circos_track_definitions.tsv"
+  )
+  expression_summary = read(
+    root
+    / "tables/supplementary/"
+    "Table_S49_genomic_circos_expression_summary.tsv"
   )
   expression = read(
     root
@@ -95,6 +112,17 @@ def main() -> None:
   )
   if not linked.issubset(genes):
     errors.append("Circos links reference genes without coordinates")
+
+  expected_pair_ids = set(candidate_pairs["pair_id"].astype(str))
+  observed_pair_ids = set(links["pair_id"].astype(str))
+  if expected_pair_ids != observed_pair_ids:
+    errors.append(
+      "Circos does not contain exactly one chord per simple NISE/paralog "
+      f"pair; missing={sorted(expected_pair_ids - observed_pair_ids)[:50]}, "
+      f"extra={sorted(observed_pair_ids - expected_pair_ids)[:50]}"
+    )
+  if links["pair_id"].astype(str).duplicated().any():
+    errors.append("Circos contains duplicated pair chords")
 
   nise = links["pair_class"].astype(str).str.contains("NISE")
   paralog = links["pair_class"].astype(str).eq(
@@ -159,11 +187,34 @@ def main() -> None:
     "cancer",
     "expression_log2_tpm_plus_1",
     "source_file",
+    "evidence_status",
+    "is_measurement",
   }
   if not required_expression.issubset(expression.columns):
     errors.append("Model-level expression table lacks required fields")
   if not genes.issubset(set(expression["gene"].astype(str))):
     errors.append("Model-level expression table does not include every Circos gene")
+  sentinel = expression.loc[
+    expression["is_measurement"].astype(str).str.casefold().eq("false")
+  ]
+  if not sentinel.empty and not pd.to_numeric(
+    sentinel["expression_log2_tpm_plus_1"],
+    errors="coerce",
+  ).isna().all():
+    errors.append("Unavailable expression sentinel rows contain numeric values")
+  expected_expression_contexts = {
+    (cancer, gene)
+    for cancer in ("colon", "stomach", "lung")
+    for gene in genes
+  }
+  observed_expression_contexts = set(zip(
+    expression_summary["cancer"].astype(str),
+    expression_summary["gene"].astype(str),
+  ))
+  if expected_expression_contexts != observed_expression_contexts:
+    errors.append(
+      "Expression summary does not contain every Circos gene × cancer context"
+    )
 
   expected_scripts = {
     path.relative_to(ROOT).as_posix()
@@ -191,12 +242,17 @@ def main() -> None:
 
   report = {
     "status": "failed" if errors else "passed",
+    "candidate_pairs": int(len(candidate_pairs)),
     "genes": int(len(coordinates)),
     "links": int(len(links)),
     "tracks": int(len(tracks)),
     "ring_rows": int(len(rings)),
-    "expression_rows": int(len(expression)),
+    "expression_summary_rows": int(len(expression_summary)),
+    "expression_model_rows": int(len(expression)),
     "script_catalog_rows": int(len(scripts)),
+    "all_simple_nise_paralog_pairs_have_chords": not bool(
+      expected_pair_ids ^ observed_pair_ids
+    ),
     "nise_links_red": True,
     "paralog_links_black": True,
     "missing_values_preserved": True,
