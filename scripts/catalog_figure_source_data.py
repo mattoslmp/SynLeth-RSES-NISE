@@ -45,8 +45,15 @@ def command_for_script(script: str) -> str:
   if "make_genomic_circos_figure" in script:
     return (
       "MPLBACKEND=Agg python -u "
-      "scripts/make_genomic_circos_figure.py "
+      "scripts/make_genomic_circos_figure_resilient.py "
       "--config config/genomic_circos_asset.yaml "
+      "--coordinates data/processed/circos/"
+      "genomic_circos_gene_coordinates.tsv "
+      "--links data/processed/circos/genomic_circos_pair_links.tsv "
+      "--ring-values data/processed/circos/"
+      "genomic_circos_ring_values.tsv "
+      "--tracks data/processed/circos/"
+      "genomic_circos_track_definitions.tsv "
       "--output-root article_outputs --strict-layout"
     )
   if "make_main_figures" in script:
