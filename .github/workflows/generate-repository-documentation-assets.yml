@@ -6,9 +6,12 @@ on:
     paths:
       - "docs/END_TO_END_ARTICLE_PROTOCOL.md"
       - "docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md"
+      - "docs/METHYLATION_INTEGRATION_V0111.md"
       - "docs/figures/RSES_Onco_workflow_and_applications.dot"
       - "supplementary/Supplementary_Methods_RSES_Onco_v0110.md"
+      - "supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.md"
       - "manuscript/RSES_Onco_intro_methods_draft_v0110.md"
+      - "manuscript/RSES_Onco_methylation_methods_addendum_v0111.md"
       - "scripts/generate_repository_documentation_assets.sh"
       - ".github/workflows/generate-repository-documentation-assets.yml"
 
@@ -46,8 +49,12 @@ jobs:
           git add \
             supplementary/Supplementary_Methods_RSES_Onco_v0110.docx \
             supplementary/Supplementary_Methods_RSES_Onco_v0110.pdf \
+            supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.docx \
+            supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.pdf \
             manuscript/RSES_Onco_intro_methods_draft_v0110.docx \
             manuscript/RSES_Onco_intro_methods_draft_v0110.pdf \
+            manuscript/RSES_Onco_methylation_methods_addendum_v0111.docx \
+            manuscript/RSES_Onco_methylation_methods_addendum_v0111.pdf \
             docs/figures/RSES_Onco_workflow_and_applications.svg \
             docs/figures/RSES_Onco_workflow_and_applications.png
 
@@ -56,5 +63,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Generate repository documentation binaries"
+          git commit -m "Generate methylation-aware documentation binaries"
           git push origin "HEAD:${GITHUB_REF_NAME}"
