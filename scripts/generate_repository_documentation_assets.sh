@@ -13,9 +13,12 @@ require_command() {
   }
 }
 
+require_command python
 require_command pandoc
 require_command libreoffice
 require_command dot
+
+python -u scripts/update_v0111_documentation_sources.py
 
 mkdir -p \
   supplementary \
@@ -57,18 +60,27 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 COMBINED_SUPPLEMENT="$TMP_DIR/Supplementary_Methods_RSES_Onco_v0111_combined.md"
 COMBINED_MANUSCRIPT="$TMP_DIR/RSES_Onco_intro_methods_v0111_combined.md"
+MARKER="<!-- BEGIN V0.11.1 METHYLATION ADDENDUM -->"
 
-{
-  cat "$SUPPLEMENT_MD"
-  printf '\n\n---\n\n'
-  cat "$SUPPLEMENT_METHYLATION_MD"
-} > "$COMBINED_SUPPLEMENT"
+if grep -Fq "$MARKER" "$SUPPLEMENT_MD"; then
+  cp "$SUPPLEMENT_MD" "$COMBINED_SUPPLEMENT"
+else
+  {
+    cat "$SUPPLEMENT_MD"
+    printf '\n\n---\n\n'
+    cat "$SUPPLEMENT_METHYLATION_MD"
+  } > "$COMBINED_SUPPLEMENT"
+fi
 
-{
-  cat "$MANUSCRIPT_MD"
-  printf '\n\n---\n\n'
-  cat "$MANUSCRIPT_METHYLATION_MD"
-} > "$COMBINED_MANUSCRIPT"
+if grep -Fq "$MARKER" "$MANUSCRIPT_MD"; then
+  cp "$MANUSCRIPT_MD" "$COMBINED_MANUSCRIPT"
+else
+  {
+    cat "$MANUSCRIPT_MD"
+    printf '\n\n---\n\n'
+    cat "$MANUSCRIPT_METHYLATION_MD"
+  } > "$COMBINED_MANUSCRIPT"
+fi
 
 pandoc \
   "$COMBINED_SUPPLEMENT" \
