@@ -2,7 +2,7 @@
 
 This catalogue is generated directly from every Python, Bash and R source file in `scripts/` and `src/rses_onco/`. It is therefore an executable repository contract rather than a manually curated partial list.
 
-Generated entries: **118**
+Generated entries: **119**
 
 | Script/module | Stage | Language | Purpose | Reproduction command | Declared paths |
 |---|---|---|---|---|---|
@@ -97,6 +97,7 @@ Generated entries: **118**
 | `scripts/sync_methylation_documentation_v0111.py` | expression_and_regulation | Python | Idempotently synchronize canonical documentation with PR #25 methylation semantics. | `python -u scripts/sync_methylation_documentation_v0111.py --help` | `data/processed/expanded_candidate_universe.tsv;data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv;data/raw/depmap;docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md;docs/END_TO_END_ARTICLE_PROTOCOL.md;manuscript/RSES_Onco_intro_methods_draft_v0110.md;supplementary/Supplementary_Methods_RSES_Onco_v0110.md` |
 | `scripts/validate_extended_supporting_evidence.py` | validation | Python | Validate model-level and raw-source supporting evidence without overclaiming. | `python -u scripts/validate_extended_supporting_evidence.py --help` | `` |
 | `scripts/validate_gdc_matrices.py` | validation | Python | Validate aggregated TCGA/GDC homozygous-deletion matrices and report coverage. | `python -u scripts/validate_gdc_matrices.py --help` | `data/processed/TCGA_COLON_homdel_discrete.tsv;data/processed/TCGA_LUNG_homdel_discrete.tsv;data/processed/TCGA_STOMACH_homdel_discrete.tsv;results/empirical_26Q1/full/gdc_matrix_qc.tsv;results/empirical_26Q1/full/tcga_gene_event_summary.tsv` |
+| `scripts/validate_genomic_circos_final_status.py` | genomic_circos | Python | Validate finalized genomic Circos counts and SHA-256 provenance. | `python -u scripts/validate_genomic_circos_final_status.py --help` | `data/processed/circos` |
 | `scripts/validate_genomic_circos_integrity.py` | genomic_circos | Python | Validate scientific integrity of genomic Circos Figure S70 and its source tables. | `python -u scripts/validate_genomic_circos_integrity.py --help` | `data/processed/expanded_candidate_universe.tsv;data/supplementary/Figure_S70_source_data.tsv;supplementary/Table_S45_genomic_circos_gene_coordinates.tsv;supplementary/Table_S46_genomic_circos_pair_links.tsv;supplementary/Table_S47_genomic_circos_ring_values.tsv;supplementary/Table_S48_genomic_circos_track_definitions.tsv;supplementary/Table_S49_genomic_circos_expression_summary.tsv;supplementary/Table_S50_genomic_circos_expression_model_values.tsv;supplementary/Table_S51_pipeline_script_catalog.tsv` |
 | `scripts/validate_manual_inspection_completion.py` | validation | Python | Block final packaging until every registered figure passes manual inspection. | `python -u scripts/validate_manual_inspection_completion.py --help` | `` |
 | `scripts/validate_publication_documents.py` | validation | Python | Validate generated DOCX/PDF publication documents and page separation. | `python -u scripts/validate_publication_documents.py --help` | `article_outputs/documents` |
