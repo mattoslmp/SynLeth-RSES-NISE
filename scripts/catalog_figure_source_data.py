@@ -33,21 +33,55 @@ def read_tsv(path: Path) -> pd.DataFrame:
 
 
 def infer_category(figure_id: str) -> str:
-  return "main" if figure_id.startswith("Figure_") and not figure_id.startswith("Figure_S") else "supplementary"
+  return (
+    "main"
+    if figure_id.startswith("Figure_")
+    and not figure_id.startswith("Figure_S")
+    else "supplementary"
+  )
 
 
 def command_for_script(script: str) -> str:
+  if "make_genomic_circos_figure" in script:
+    return (
+      "MPLBACKEND=Agg python -u "
+      "scripts/make_genomic_circos_figure.py "
+      "--config config/genomic_circos_asset.yaml "
+      "--output-root article_outputs --strict-layout"
+    )
   if "make_main_figures" in script:
-    return "MPLBACKEND=Agg python -u scripts/make_main_figures_resilient.py --output-root article_outputs --strict-layout"
+    return (
+      "MPLBACKEND=Agg python -u "
+      "scripts/make_main_figures_resilient.py "
+      "--output-root article_outputs --strict-layout"
+    )
   if "make_supplementary_figures" in script:
-    return "MPLBACKEND=Agg python -u scripts/make_supplementary_figures_resilient.py --output-root article_outputs --strict-layout"
+    return (
+      "MPLBACKEND=Agg python -u "
+      "scripts/make_supplementary_figures_resilient.py "
+      "--output-root article_outputs --strict-layout"
+    )
   if "make_audit_supplementary_figures" in script:
-    return "MPLBACKEND=Agg python -u scripts/make_audit_supplementary_figures.py --output-root article_outputs --strict-layout"
+    return (
+      "MPLBACKEND=Agg python -u "
+      "scripts/make_audit_supplementary_figures.py "
+      "--output-root article_outputs --strict-layout"
+    )
   if "make_extended_supporting_figures" in script:
-    return "MPLBACKEND=Agg python -u scripts/make_extended_supporting_figures.py --output-root article_outputs --strict-layout"
+    return (
+      "MPLBACKEND=Agg python -u "
+      "scripts/make_extended_supporting_figures.py "
+      "--output-root article_outputs --strict-layout"
+    )
   if "structure" in script:
-    return "MPLBACKEND=Agg python -u scripts/make_nise_structure_figures.py --output-root article_outputs --strict-layout"
-  return "MPLBACKEND=Agg bash scripts/run_publication_pipeline.sh figures"
+    return (
+      "MPLBACKEND=Agg python -u "
+      "scripts/make_nise_structure_figures.py "
+      "--output-root article_outputs --strict-layout"
+    )
+  return (
+    "MPLBACKEND=Agg bash scripts/run_publication_pipeline.sh figures"
+  )
 
 
 def main() -> None:
@@ -57,9 +91,17 @@ def main() -> None:
   article_root = resolve_path(args.article_root)
   manifest_path = article_root / "manifests/figure_manifest.tsv"
   if not manifest_path.exists() or manifest_path.stat().st_size == 0:
-    raise FileNotFoundError(f"Missing or empty figure manifest: {manifest_path}")
+    raise FileNotFoundError(
+      f"Missing or empty figure manifest: {manifest_path}"
+    )
   manifest = read_tsv(manifest_path)
-  required = {"figure_id", "source_data_path", "script", "input_paths", "base_path"}
+  required = {
+    "figure_id",
+    "source_data_path",
+    "script",
+    "input_paths",
+    "base_path",
+  }
   missing = sorted(required - set(manifest.columns))
   if missing:
     raise ValueError(f"Figure manifest missing columns: {missing}")
@@ -77,14 +119,18 @@ def main() -> None:
       missing_files.append(str(source))
       continue
     frame = read_tsv(source)
-    destination_dir = article_root / "tables" / "figure_data" / category
+    destination_dir = (
+      article_root / "tables" / "figure_data" / category
+    )
     destination_dir.mkdir(parents=True, exist_ok=True)
     destination = destination_dir / f"{figure_id}_source_data.tsv"
     shutil.copy2(source, destination)
     source_hash = sha256(source)
     destination_hash = sha256(destination)
     if source_hash != destination_hash:
-      raise RuntimeError(f"Source-data copy checksum mismatch for {figure_id}")
+      raise RuntimeError(
+        f"Source-data copy checksum mismatch for {figure_id}"
+      )
 
     script = str(record.get("script") or "")
     base = Path(str(record["base_path"]))
@@ -121,39 +167,77 @@ def main() -> None:
         "non_missing_values": int(series.notna().sum()),
         "missing_values": int(series.isna().sum()),
         "unit": "not_recorded_in_source_table",
-        "meaning": "Refer to the figure legend and generator script; no undocumented meaning is invented.",
+        "meaning": (
+          "Refer to the figure legend and generator script; "
+          "no undocumented meaning is invented."
+        ),
       })
 
   if missing_files:
-    raise RuntimeError("Missing mandatory figure assets/source data:\n" + "\n".join(missing_files))
+    raise RuntimeError(
+      "Missing mandatory figure assets/source data:\n"
+      + "\n".join(missing_files)
+    )
   inventory = pd.DataFrame(rows)
   columns = pd.DataFrame(column_rows)
   if len(inventory) != len(manifest):
-    raise RuntimeError(f"Catalogued {len(inventory)} figures; manifest contains {len(manifest)}")
+    raise RuntimeError(
+      f"Catalogued {len(inventory)} figures; "
+      f"manifest contains {len(manifest)}"
+    )
 
-  catalog_dir = article_root / "tables" / "figure_data"
-  inventory.to_csv(catalog_dir / "figure_source_data_inventory.tsv", sep="\t", index=False)
-  columns.to_csv(catalog_dir / "figure_source_data_column_dictionary.tsv", sep="\t", index=False)
+  catalog_dir = article_root / "tables/figure_data"
+  inventory.to_csv(
+    catalog_dir / "figure_source_data_inventory.tsv",
+    sep="\t",
+    index=False,
+  )
+  columns.to_csv(
+    catalog_dir / "figure_source_data_column_dictionary.tsv",
+    sep="\t",
+    index=False,
+  )
   readme_lines = [
-    "# Figure source-data reproduction", "",
-    "Every registered figure has an exact TSV copy in `main/` or `supplementary/`.",
-    "The TSV is copied byte-for-byte from the source table written by the figure generator before rendering.",
-    "", "| Figure | Category | Generator | Exact source data | Reproduction command |",
+    "# Figure source-data reproduction",
+    "",
+    (
+      "Every registered figure has an exact TSV copy in `main/` "
+      "or `supplementary/`."
+    ),
+    (
+      "The TSV is copied byte-for-byte from the source table written "
+      "by the figure generator before rendering."
+    ),
+    "",
+    (
+      "| Figure | Category | Generator | Exact source data | "
+      "Reproduction command |"
+    ),
     "|---|---|---|---|---|",
   ]
   for row in rows:
     readme_lines.append(
-      f"| {row['figure_id']} | {row['category']} | `{row['generator_script']}` | "
-      f"`{row['source_table']}` | `{row['reproduction_command']}` |"
+      f"| {row['figure_id']} | {row['category']} | "
+      f"`{row['generator_script']}` | `{row['source_table']}` | "
+      f"`{row['reproduction_command']}` |"
     )
-  (catalog_dir / "README.md").write_text("\n".join(readme_lines) + "\n", encoding="utf-8")
+  (catalog_dir / "README.md").write_text(
+    "\n".join(readme_lines) + "\n",
+    encoding="utf-8",
+  )
 
   subprocess.run([
-    sys.executable, "-u", "scripts/build_publication_methods_documentation.py",
-    "--article-root", str(article_root),
+    sys.executable,
+    "-u",
+    "scripts/build_publication_methods_documentation.py",
+    "--article-root",
+    str(article_root),
   ], cwd=ROOT, check=True)
   print(f"Catalogued exact source data for {len(inventory)} figures.")
-  print(f"Inventory: {catalog_dir / 'figure_source_data_inventory.tsv'}")
+  print(
+    "Inventory: "
+    f"{catalog_dir / 'figure_source_data_inventory.tsv'}"
+  )
 
 
 if __name__ == "__main__":
