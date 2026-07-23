@@ -31,6 +31,7 @@ CHROMOSOME_LENGTHS_GRCH38: dict[str, int] = {
   "22": 50818468,
   "X": 156040895,
   "Y": 57227415,
+  "MT": 16569,
 }
 CHROMOSOME_ORDER = tuple(CHROMOSOME_LENGTHS_GRCH38)
 
@@ -39,7 +40,13 @@ def normalize_chromosome(value: object) -> str:
   text = str(value or "").strip().upper()
   if text.startswith("CHR"):
     text = text[3:]
-  aliases = {"23": "X", "24": "Y"}
+  aliases = {
+    "23": "X",
+    "24": "Y",
+    "M": "MT",
+    "MITO": "MT",
+    "MITOCHONDRIAL": "MT",
+  }
   return aliases.get(text, text)
 
 
