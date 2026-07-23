@@ -82,6 +82,14 @@ def classify(path: Path, article_root: Path) -> str:
     return "manuscript_asset"
   if parts and parts[0] == "structure_atlas":
     return "structure_render"
+  if parts and parts[0] == "documents":
+    if path.suffix.lower() == ".docx":
+      return "publication_document_docx"
+    if path.suffix.lower() == ".pdf":
+      return "publication_document_pdf"
+    if "_pages" in parts:
+      return "publication_document_page_render"
+    return "publication_document_support"
   return "other"
 
 
@@ -189,6 +197,7 @@ This directory was generated entirely by repository scripts.
 - Original figure/table source data: `source_data/`
 - Figure legends, score formulas and reproduction methods: `manuscript_assets/`
 - Workbooks: `workbooks/`
+- Editable DOCX, rendered PDFs and page renders: `documents/`
 - Provenance, manifests and SHA-256 checksums: `manifests/`
 
 Automated layout audits are stored beside every figure. Scientific-integrity validation
