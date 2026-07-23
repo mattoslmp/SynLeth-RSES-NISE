@@ -12,6 +12,7 @@ on:
       - "supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.md"
       - "manuscript/RSES_Onco_intro_methods_draft_v0110.md"
       - "manuscript/RSES_Onco_methylation_methods_addendum_v0111.md"
+      - "scripts/update_v0111_documentation_sources.py"
       - "scripts/generate_repository_documentation_assets.sh"
       - ".github/workflows/generate-repository-documentation-assets.yml"
 
@@ -36,21 +37,25 @@ jobs:
             libreoffice-writer \
             graphviz
 
-      - name: Generate Word PDF SVG and PNG assets
+      - name: Update canonical sources and generate Word PDF SVG and PNG assets
         run: |
           chmod +x scripts/generate_repository_documentation_assets.sh
           bash scripts/generate_repository_documentation_assets.sh
 
-      - name: Commit generated binary assets
+      - name: Commit updated sources and generated binary assets
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add \
+            docs/END_TO_END_ARTICLE_PROTOCOL.md \
+            docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md \
+            supplementary/Supplementary_Methods_RSES_Onco_v0110.md \
             supplementary/Supplementary_Methods_RSES_Onco_v0110.docx \
             supplementary/Supplementary_Methods_RSES_Onco_v0110.pdf \
             supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.docx \
             supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.pdf \
+            manuscript/RSES_Onco_intro_methods_draft_v0110.md \
             manuscript/RSES_Onco_intro_methods_draft_v0110.docx \
             manuscript/RSES_Onco_intro_methods_draft_v0110.pdf \
             manuscript/RSES_Onco_methylation_methods_addendum_v0111.docx \
@@ -63,5 +68,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Generate methylation-aware documentation binaries"
+          git commit -m "Generate methylation-aware documentation sources and binaries"
           git push origin "HEAD:${GITHUB_REF_NAME}"
