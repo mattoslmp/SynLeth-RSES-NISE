@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Complete publication workflow wrapper.
 #
-# This wrapper makes the extended supporting-evidence and reproducibility stages
-# executable parts of `all` and `assets-only`, rather than leaving those scripts
-# disconnected from the canonical entry point.
+# This wrapper makes the extended supporting-evidence, methylation and
+# reproducibility stages executable parts of `all` and `assets-only`, rather than
+# leaving those scripts disconnected from the canonical entry point.
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -12,6 +12,7 @@ cd "$ROOT"
 CORE="$ROOT/scripts/publication_pipeline_steps.sh"
 RANKING="${RANKING:-results/expanded_26Q1/full/expanded_rses_onco.tsv}"
 FUNCTIONAL_EVIDENCE="${FUNCTIONAL_EVIDENCE:-data/processed/expanded_pair_functional_evidence.tsv}"
+METHYLATION_EVIDENCE="${METHYLATION_EVIDENCE:-data/processed/methylation/pair_promoter_methylation_evidence.tsv}"
 ARTICLE_ROOT="${ARTICLE_ROOT:-article_outputs}"
 LOG_DIR="${LOG_DIR:-logs/publication_26Q1}"
 DEPMAP_DIR="${DEPMAP_DIR:-data/raw/depmap}"
@@ -100,6 +101,16 @@ finalize_extended_publication_assets() {
       --functional-evidence "$FUNCTIONAL_EVIDENCE" \
       --article-root "$ARTICLE_ROOT"
 
+  if [[ -s "$METHYLATION_EVIDENCE" ]]; then
+    log_stage "Validate GDC promoter methylation evidence and score integration"
+    run_logged "$LOG_DIR/06ea_validate_methylation_evidence.log" \
+      python -u scripts/validate_methylation_evidence.py \
+        --evidence "$METHYLATION_EVIDENCE" \
+        --ranking "$RANKING"
+  else
+    log_stage "Promoter methylation evidence unavailable; validate explicit publication placeholders"
+  fi
+
   log_stage "Generate score-formula, evidence-category and reproduction documentation"
   run_logged "$LOG_DIR/06f_build_publication_methods_documentation.log" \
     python -u scripts/build_publication_methods_documentation.py \
@@ -115,8 +126,8 @@ finalize_extended_publication_assets() {
     python -u scripts/create_manual_visual_inspection_checklist.py \
       --article-root "$ARTICLE_ROOT"
 
-  # The added evidence, robustness analyses, documentation and review record must
-  # be included in the final workbook, inventory, provenance and checksums.
+  # Added evidence, robustness analyses, documentation and review records must be
+  # included in the final workbook, inventory, provenance and checksums.
   bash "$CORE" workbook
   bash "$CORE" manifests
   bash "$CORE" validate
