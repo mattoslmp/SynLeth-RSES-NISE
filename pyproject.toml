@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rses-onco"
-version = "0.10.9"
+version = "0.11.0"
 description = "Coverage-aware all-NISE cancer vulnerability with WGCNA expression networks, promoter-aware TF regulation, evidence audit, robustness, pharmacology, structural atlas and scripted publication assets"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,6 +19,7 @@ dependencies = [
   "pyyaml>=6.0",
   "openpyxl>=3.1",
   "pillow>=10.0",
+  "python-docx>=1.1",
 ]
 
 [project.scripts]
