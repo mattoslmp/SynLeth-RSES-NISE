@@ -180,7 +180,8 @@ Simple correlation is not treated as automatic evidence of compensation. Compens
 
 For cancer-compatible models with both genes observed, the implementation calculates:
 
-- Spearman correlation \(ho\);
+- Spearman correlation \(
+ho\);
 - median absolute expression difference;
 - correlation divergence \((1-\rho)/2\);
 - saturated expression separation, clipped to \([0,1]\);
@@ -430,3 +431,39 @@ The complete command sequence is documented in `docs/END_TO_END_ARTICLE_PROTOCOL
 23. Ochoa D, Hercules A, Carmona M, et al. Open Targets Platform: supporting systematic drug-target identification and prioritisation. *Nucleic Acids Research*. 2021;49:D1302-D1310.
 24. Gaulton A, Hersey A, Nowotka M, et al. The ChEMBL database in 2017. *Nucleic Acids Research*. 2017;45:D945-D954.
 25. Freshour SL, Kiwala S, Cotto KC, et al. Integration of the Drug-Gene Interaction Database (DGIdb 4.0) with open crowdsource efforts. *Nucleic Acids Research*. 2021;49:D1144-D1151.
+
+<!-- BEGIN PROMOTER METHYLATION V0.11.1 -->
+
+## Promoter methylation methods
+
+Promoter methylation was evaluated from the DepMap custom-download dataset `Methylation (1kb upstream TSS)` or the historical `CCLE_RRBS_TSS1kb_20181022` matrix. Model or cell-line identifiers were mapped through `Model.csv`. Multiple promoter/TSS measurements assigned to the same gene were collapsed by the median within each model, while missing values remained missing.
+
+For a directional pair with lost gene $L$ and target gene $T$, methylation profile divergence combined Spearman correlation divergence and the median absolute beta-value difference:
+
+$$
+D_{profile}=\operatorname{mean}\left(\frac{1-\rho_{L,T}}{2},\operatorname{clip}\left(\frac{\widetilde{|\beta_L-\beta_T|}}{0.25},0,1\right)\right)
+$$
+
+Models were also stratified by the same copy-number loss threshold used in dependency and expression analyses. Conditional target hypomethylation support was:
+
+$$
+H_T=\operatorname{clip}\left(\frac{-(\widetilde{\beta}_{T,loss}-\widetilde{\beta}_{T,intact})}{0.25},0,1\right)
+$$
+
+The methylation context combined the two available terms with equal internal weights:
+
+$$
+M=0.50D_{profile}+0.50H_T
+$$
+
+with eligibility-aware subcoverage when either term was missing. The regulatory-network internal composition was 0.32 DoRothEA TF-association divergence, 0.28 TF-expression-profile divergence, 0.20 JASPAR/FIMO promoter-motif divergence and 0.20 promoter-methylation context. The global regulatory-network weight and all seven top-level RSES-Onco weights were unchanged.
+
+Methylation values were treated as association evidence. They were not interpreted automatically as direct causal silencing, promoter occupancy, compensatory transcription, synthetic lethality, therapeutic validation or clinical efficacy.
+
+### Promoter methylation references
+
+1. DepMap Project. Custom downloads and cell-line molecular data resources.
+2. Ghandi M, Huang FW, Jané-Valbuena J, et al. Next-generation characterization of the Cancer Cell Line Encyclopedia. *Nature*. 2019;569:503-508.
+3. Benjamini Y, Hochberg Y. Controlling the false discovery rate: a practical and powerful approach to multiple testing. *Journal of the Royal Statistical Society Series B*. 1995;57:289-300.
+
+<!-- END PROMOTER METHYLATION V0.11.1 -->

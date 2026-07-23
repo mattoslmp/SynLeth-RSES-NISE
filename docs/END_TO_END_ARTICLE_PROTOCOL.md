@@ -1,4 +1,4 @@
-# RSES-Onco v0.11.0: canonical end-to-end data, analysis and article protocol
+# RSES-Onco v0.11.1: canonical end-to-end data, analysis and article protocol
 
 **Author:** Leandro de Mattos Pereira  
 **Affiliation:** Databiomics, Laboratório de Bioinformática e Ciências de Dados, WBPereira  
@@ -13,9 +13,9 @@ RSES-Onco prioritizes experimental hypotheses. It does not establish clinical ef
 ## Current version contract
 
 ```text
-Repository and publication framework: 0.11.0
-Scientific score: RSES-Onco-expanded-v0.10.9
-WGCNA/regulatory semantics: eligibility-aware-wgcna-regulatory-v3
+Repository and publication framework: 0.11.1
+Scientific score: RSES-Onco-expanded-v0.10.10
+Expression/regulatory semantics: eligibility-aware-wgcna-regulatory-v3
 8 main figures
 69 supplementary figures
 77 registered figures
@@ -117,6 +117,7 @@ python -m pytest -q -p no:cacheprovider
 The source-specific commands, expected files, provenance rules and recovery procedures are documented in:
 
 - [`DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](DATA_ACQUISITION_AND_REPRODUCTION_V0110.md)
+- [`METHYLATION_DATA_AND_SCORING_V0111.md`](METHYLATION_DATA_AND_SCORING_V0111.md)
 - [`STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md`](STRING_FUNCTIONAL_EVIDENCE_WORKFLOW.md)
 - [`DOROTHEA_RECOVERY_WORKFLOW.md`](DOROTHEA_RECOVERY_WORKFLOW.md)
 - [`STRUCTURAL_ATLAS_WORKFLOW.md`](STRUCTURAL_ATLAS_WORKFLOW.md)
@@ -229,7 +230,7 @@ Release-specific sample counts may change and must be reported as observed rathe
 
 ```bash
 STAMP="$(date +%Y%m%d_%H%M%S)"
-BACKUP="$NEW/backups/pre_v0110_${STAMP}"
+BACKUP="$NEW/backups/pre_v0111_${STAMP}"
 mkdir -p "$BACKUP/results" "$BACKUP/regulatory" "$BACKUP/article_outputs"
 
 [[ -d results/expanded_26Q1 ]] && rsync -a results/expanded_26Q1/ "$BACKUP/results/"
@@ -297,10 +298,10 @@ validation_tractability   0.18
 
 ```bash
 STAMP="$(date +%Y%m%d_%H%M%S)"
-SESSION="rses_v0110_${STAMP}"
-RUNNER="$NEW/logs/run_rses_v0110_${STAMP}.sh"
-RUN_LOG="$NEW/logs/run_rses_v0110_${STAMP}.log"
-EXITCODE_FILE="$NEW/logs/run_rses_v0110_${STAMP}.exitcode"
+SESSION="rses_v0111_${STAMP}"
+RUNNER="$NEW/logs/run_rses_v0111_${STAMP}.sh"
+RUN_LOG="$NEW/logs/run_rses_v0111_${STAMP}.log"
+EXITCODE_FILE="$NEW/logs/run_rses_v0111_${STAMP}.exitcode"
 
 cat > "$RUNNER" <<EOF
 #!/usr/bin/env bash
@@ -331,9 +332,9 @@ exit "\$status"
 EOF
 
 chmod +x "$RUNNER"
-printf '%s\n' "$SESSION" > logs/last_rses_v0110_session.txt
-printf '%s\n' "$RUN_LOG" > logs/last_rses_v0110_log.txt
-printf '%s\n' "$EXITCODE_FILE" > logs/last_rses_v0110_exitcode_path.txt
+printf '%s\n' "$SESSION" > logs/last_rses_v0111_session.txt
+printf '%s\n' "$RUN_LOG" > logs/last_rses_v0111_log.txt
+printf '%s\n' "$EXITCODE_FILE" > logs/last_rses_v0111_exitcode_path.txt
 
 tmux new-session -d -s "$SESSION" "bash '$RUNNER'"
 ```
@@ -341,7 +342,7 @@ tmux new-session -d -s "$SESSION" "bash '$RUNNER'"
 Attach with:
 
 ```bash
-tmux attach -t "$(cat logs/last_rses_v0110_session.txt)"
+tmux attach -t "$(cat logs/last_rses_v0111_session.txt)"
 ```
 
 Detach without stopping the run with `Ctrl+B`, then `D`.
@@ -349,15 +350,15 @@ Detach without stopping the run with `Ctrl+B`, then `D`.
 Monitor with:
 
 ```bash
-RUN_LOG="$(cat logs/last_rses_v0110_log.txt)"
+RUN_LOG="$(cat logs/last_rses_v0111_log.txt)"
 tail -f "$RUN_LOG"
 ```
 
 ## 9. Completion and WGCNA checks
 
 ```bash
-EXITCODE_FILE="$(cat logs/last_rses_v0110_exitcode_path.txt)"
-RUN_LOG="$(cat logs/last_rses_v0110_log.txt)"
+EXITCODE_FILE="$(cat logs/last_rses_v0111_exitcode_path.txt)"
+RUN_LOG="$(cat logs/last_rses_v0111_log.txt)"
 cat "$EXITCODE_FILE"
 tail -n 300 "$RUN_LOG"
 ```
@@ -460,7 +461,7 @@ Do not auto-fill the checklist.
 ## 14. Final verification
 
 ```bash
-PIPELINE_EXITCODE_FILE="$(cat logs/last_rses_v0110_exitcode_path.txt)" \
+PIPELINE_EXITCODE_FILE="$(cat logs/last_rses_v0111_exitcode_path.txt)" \
 GDC_DIR="$GDC_DIR" \
 MPLBACKEND=Agg \
 bash scripts/verify_complete_article_run.sh \
@@ -490,7 +491,52 @@ sha256sum -c "$PACKAGE.sha256"
 ## 16. Companion documentation and manuscript sources
 
 - [`DATA_ACQUISITION_AND_REPRODUCTION_V0110.md`](DATA_ACQUISITION_AND_REPRODUCTION_V0110.md)
+- [`METHYLATION_DATA_AND_SCORING_V0111.md`](METHYLATION_DATA_AND_SCORING_V0111.md)
 - [`../supplementary/Supplementary_Methods_RSES_Onco_v0110.md`](../supplementary/Supplementary_Methods_RSES_Onco_v0110.md)
 - [`../manuscript/RSES_Onco_intro_methods_draft_v0110.md`](../manuscript/RSES_Onco_intro_methods_draft_v0110.md)
 - [`figures/RSES_Onco_workflow_and_applications.svg`](figures/RSES_Onco_workflow_and_applications.svg)
 - `figures/RSES_Onco_workflow_and_applications.png`
+
+<!-- BEGIN PROMOTER METHYLATION V0.11.1 -->
+
+## Promoter methylation layer
+
+Promoter methylation is an epigenetic subcomponent of the existing functional-microniche regulatory-network domain. It is not a new top-level RSES-Onco domain and therefore cannot receive an additional independent global weight.
+
+The supported sources are the DepMap custom-download dataset `Methylation (1kb upstream TSS)` and the traceable historical `CCLE_RRBS_TSS1kb_20181022` matrix. The resume workflow searches under `DEPMAP_DIR`, or the user may provide an explicit file:
+
+```bash
+export DEPMAP_DIR="$NEW/data/raw/depmap"
+export METHYLATION="$DEPMAP_DIR/Methylation_(1kb_upstream_TSS)_subsetted_NAsdropped.csv"
+```
+
+The regulatory-network internal weights are:
+
+```text
+DoRothEA TF-association divergence       0.32
+TF-expression-profile divergence        0.28
+JASPAR/FIMO promoter-motif divergence    0.20
+promoter-methylation context             0.20
+```
+
+The methylation context itself combines pair promoter-profile divergence (0.50) and conditional target-promoter hypomethylation in lost-gene-loss versus intact models (0.50). Missing methylation remains NA and lowers regulatory subcoverage; it is not converted to zero.
+
+Run the complete recalculation after setting `METHYLATION`:
+
+```bash
+MPLBACKEND=Agg \
+PYTHONUNBUFFERED=1 \
+bash scripts/resume_wgcna_regulatory_pipeline.sh resume-regulatory
+```
+
+The final ranking must report:
+
+```text
+score_version=RSES-Onco-expanded-v0.10.10
+methylation_semantics_version=promoter-methylation-context-v1
+regulatory_layer_version=wgcna-promoter-methylation-regulatory-v3
+```
+
+Supplementary Figure S52 and the exact source-data table report the methylation layer. Beta-values are association evidence and are not direct proof of silencing, derepression, compensation or synthetic lethality.
+
+<!-- END PROMOTER METHYLATION V0.11.1 -->
