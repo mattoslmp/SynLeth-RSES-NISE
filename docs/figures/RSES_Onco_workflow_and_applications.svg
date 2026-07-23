@@ -1,74 +1,172 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="850" viewBox="0 0 1600 850" role="img" aria-labelledby="title desc">
-  <title id="title">RSES-Onco workflow, functional microniche and practical applications</title>
-  <desc id="desc">A reproducible vector diagram showing data acquisition, candidate construction, supporting analyses, coverage-aware scoring, publication outputs, the functional microniche concept and practical validation applications.</desc>
-  <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#53657a"/></marker>
-    <style>
-      .heading{font:700 28px Arial,sans-serif;fill:#20364f}.label{font:700 20px Arial,sans-serif;fill:#20364f}.body{font:16px Arial,sans-serif;fill:#243342}.small{font:15px Arial,sans-serif;fill:#243342}.box{stroke-width:2;rx:18;ry:18}.arrow{stroke:#53657a;stroke-width:3;fill:none;marker-end:url(#arrow)}
-    </style>
-  </defs>
-  <rect width="1600" height="850" fill="#ffffff"/>
-  <text x="60" y="55" class="heading">RSES-Onco computational workflow</text>
-
-  <g id="workflow">
-    <rect class="box" x="50" y="95" width="270" height="160" fill="#eaf2ff" stroke="#2b4c7e"/>
-    <text x="185" y="130" text-anchor="middle" class="label">1. Data acquisition</text>
-    <text x="75" y="165" class="body">Curated NISEs and paralogs</text>
-    <text x="75" y="192" class="body">DepMap and TCGA/GDC</text>
-    <text x="75" y="219" class="body">Networks, promoters, structures</text>
-    <text x="75" y="246" class="body">Pharmacology and provenance</text>
-
-    <rect class="box" x="365" y="95" width="270" height="160" fill="#eaf2ff" stroke="#2b4c7e"/>
-    <text x="500" y="130" text-anchor="middle" class="label">2. Candidate universe</text>
-    <text x="390" y="170" class="body">Directional NISE hypotheses</text>
-    <text x="390" y="199" class="body">Homologous paralogs</text>
-    <text x="390" y="228" class="body">Collateral and discovery classes</text>
-
-    <rect class="box" x="680" y="95" width="300" height="160" fill="#eaf2ff" stroke="#2b4c7e"/>
-    <text x="830" y="130" text-anchor="middle" class="label">3. Supporting analyses</text>
-    <text x="705" y="165" class="body">Dependency and selectivity</text>
-    <text x="705" y="192" class="body">Expression, compensation, WGCNA</text>
-    <text x="705" y="219" class="body">Regulatory, STRING, localization</text>
-    <text x="705" y="246" class="body">Biochemical and structural context</text>
-
-    <rect class="box" x="1025" y="95" width="250" height="160" fill="#eaf2ff" stroke="#2b4c7e"/>
-    <text x="1150" y="130" text-anchor="middle" class="label">4. RSES-Onco score</text>
-    <text x="1050" y="175" class="body">Eligible-domain score</text>
-    <text x="1050" y="205" class="body">Weighted coverage</text>
-    <text x="1050" y="235" class="body">Coverage-adjusted ranking</text>
-
-    <rect class="box" x="1320" y="95" width="230" height="160" fill="#eaf2ff" stroke="#2b4c7e"/>
-    <text x="1435" y="130" text-anchor="middle" class="label">5. Reproducible outputs</text>
-    <text x="1345" y="170" class="body">Source-data tables</text>
-    <text x="1345" y="199" class="body">PNG, SVG and PDF</text>
-    <text x="1345" y="228" class="body">DOCX, manifests and audits</text>
-
-    <path class="arrow" d="M320 175 H355"/><path class="arrow" d="M635 175 H670"/><path class="arrow" d="M980 175 H1015"/><path class="arrow" d="M1275 175 H1310"/>
-  </g>
-
-  <g id="microniche">
-    <rect x="55" y="330" width="875" height="430" rx="24" fill="#f2f9ec" stroke="#7d9b5d" stroke-width="3"/>
-    <text x="90" y="375" class="heading">Functional microniche</text>
-    <text x="90" y="412" class="body">The local, context-dependent evidence environment of a directional candidate pair</text>
-    <text x="90" y="440" class="body">within a specific tumor setting. Missing evidence remains missing and is not treated as zero.</text>
-
-    <rect class="box" x="95" y="485" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="212" y="523" text-anchor="middle" class="label">Dependency</text><text x="212" y="552" text-anchor="middle" class="small">General and conditional</text>
-    <rect class="box" x="370" y="485" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="487" y="523" text-anchor="middle" class="label">Expression</text><text x="487" y="552" text-anchor="middle" class="small">Compensation and WGCNA</text>
-    <rect class="box" x="645" y="485" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="762" y="523" text-anchor="middle" class="label">Regulation</text><text x="762" y="552" text-anchor="middle" class="small">TF context and motifs</text>
-    <rect class="box" x="95" y="620" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="212" y="658" text-anchor="middle" class="label">Networks</text><text x="212" y="687" text-anchor="middle" class="small">STRING and phenotype</text>
-    <rect class="box" x="370" y="620" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="487" y="658" text-anchor="middle" class="label">Localization</text><text x="487" y="687" text-anchor="middle" class="small">Shared or distinct compartments</text>
-    <rect class="box" x="645" y="620" width="235" height="95" fill="#ffffff" stroke="#7d9b5d"/><text x="762" y="658" text-anchor="middle" class="label">Structure</text><text x="762" y="687" text-anchor="middle" class="small">Biochemical and residue evidence</text>
-  </g>
-
-  <g id="applications">
-    <rect x="980" y="330" width="570" height="430" rx="24" fill="#fff5eb" stroke="#b47d4b" stroke-width="3"/>
-    <text x="1015" y="375" class="heading">Practical applications</text>
-    <rect class="box" x="1020" y="425" width="490" height="65" fill="#ffffff" stroke="#b47d4b"/><text x="1265" y="466" text-anchor="middle" class="body">Prioritize CRISPR, knockdown and rescue experiments</text>
-    <rect class="box" x="1020" y="515" width="490" height="65" fill="#ffffff" stroke="#b47d4b"/><text x="1265" y="556" text-anchor="middle" class="body">Detect context-dependent backup or collateral vulnerabilities</text>
-    <rect class="box" x="1020" y="605" width="490" height="65" fill="#ffffff" stroke="#b47d4b"/><text x="1265" y="646" text-anchor="middle" class="body">Guide expression perturbation and exploratory pharmacology</text>
-    <rect class="box" x="1020" y="695" width="490" height="45" fill="#ffffff" stroke="#b47d4b"/><text x="1265" y="724" text-anchor="middle" class="small">Organize evidence for mechanistic follow-up, not clinical proof</text>
-  </g>
-
-  <path class="arrow" d="M830 255 V315"/><path class="arrow" d="M1150 255 V315"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generated by graphviz version 2.43.0 (0)
+ -->
+<!-- Title: G Pages: 1 -->
+<svg width="2309pt" height="413pt"
+ viewBox="0.00 0.00 2308.80 412.80" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(14.4 398.4)">
+<title>G</title>
+<polygon fill="white" stroke="transparent" points="-14.4,14.4 -14.4,-398.4 2294.4,-398.4 2294.4,14.4 -14.4,14.4"/>
+<g id="clust1" class="cluster">
+<title>cluster_workflow</title>
+<path fill="white" stroke="#9db4d1" d="M20,-268C20,-268 1461,-268 1461,-268 1467,-268 1473,-274 1473,-280 1473,-280 1473,-364 1473,-364 1473,-370 1467,-376 1461,-376 1461,-376 20,-376 20,-376 14,-376 8,-370 8,-364 8,-364 8,-280 8,-280 8,-274 14,-268 20,-268"/>
+<text text-anchor="middle" x="740.5" y="-359.2" font-family="Times,serif" font-size="16.00">RSES&#45;Onco workflow</text>
+</g>
+<g id="clust2" class="cluster">
+<title>cluster_microniche</title>
+<path fill="white" stroke="#b7c8aa" d="M979.5,-8C979.5,-8 1473,-8 1473,-8 1479,-8 1485,-14 1485,-20 1485,-20 1485,-144 1485,-144 1485,-150 1479,-156 1473,-156 1473,-156 979.5,-156 979.5,-156 973.5,-156 967.5,-150 967.5,-144 967.5,-144 967.5,-20 967.5,-20 967.5,-14 973.5,-8 979.5,-8"/>
+<text text-anchor="middle" x="1226.25" y="-139.2" font-family="Times,serif" font-size="16.00">Functional microniche concept</text>
+</g>
+<g id="clust3" class="cluster">
+<title>cluster_apps</title>
+<path fill="white" stroke="#d1b49d" d="M1257.5,-164C1257.5,-164 2260,-164 2260,-164 2266,-164 2272,-170 2272,-176 2272,-176 2272,-248 2272,-248 2272,-254 2266,-260 2260,-260 2260,-260 1257.5,-260 1257.5,-260 1251.5,-260 1245.5,-254 1245.5,-248 1245.5,-248 1245.5,-176 1245.5,-176 1245.5,-170 1251.5,-164 1257.5,-164"/>
+<text text-anchor="middle" x="1758.75" y="-243.2" font-family="Times,serif" font-size="16.00">Practical applications</text>
+</g>
+<!-- n1 -->
+<g id="node1" class="node">
+<title>n1</title>
+<path fill="#eaf2ff" stroke="#2b4c7e" d="M280,-342C280,-342 28,-342 28,-342 22,-342 16,-336 16,-330 16,-330 16,-288 16,-288 16,-282 22,-276 28,-276 28,-276 280,-276 280,-276 286,-276 292,-282 292,-288 292,-288 292,-330 292,-330 292,-336 286,-342 280,-342"/>
+<text text-anchor="middle" x="154" y="-325.4" font-family="Helvetica,sans-Serif" font-size="12.00">1. Data acquisition</text>
+<text text-anchor="middle" x="154" y="-312.4" font-family="Helvetica,sans-Serif" font-size="12.00">Curated NISEs, Ensembl paralogs,</text>
+<text text-anchor="middle" x="154" y="-299.4" font-family="Helvetica,sans-Serif" font-size="12.00">DepMap, TCGA/GDC, STRING,</text>
+<text text-anchor="middle" x="154" y="-286.4" font-family="Helvetica,sans-Serif" font-size="12.00">DoRothEA, HPA, AlphaFold, pharmacology</text>
+</g>
+<!-- n2 -->
+<g id="node2" class="node">
+<title>n2</title>
+<path fill="#eaf2ff" stroke="#2b4c7e" d="M586,-335.5C586,-335.5 354,-335.5 354,-335.5 348,-335.5 342,-329.5 342,-323.5 342,-323.5 342,-294.5 342,-294.5 342,-288.5 348,-282.5 354,-282.5 354,-282.5 586,-282.5 586,-282.5 592,-282.5 598,-288.5 598,-294.5 598,-294.5 598,-323.5 598,-323.5 598,-329.5 592,-335.5 586,-335.5"/>
+<text text-anchor="middle" x="470" y="-318.9" font-family="Helvetica,sans-Serif" font-size="12.00">2. Candidate universe</text>
+<text text-anchor="middle" x="470" y="-305.9" font-family="Helvetica,sans-Serif" font-size="12.00">Directed NISE and paralog hypotheses</text>
+<text text-anchor="middle" x="470" y="-292.9" font-family="Helvetica,sans-Serif" font-size="12.00">plus tumor&#45;context annotations</text>
+</g>
+<!-- n1&#45;&gt;n2 -->
+<g id="edge1" class="edge">
+<title>n1&#45;&gt;n2</title>
+<path fill="none" stroke="#5a6b7d" stroke-width="1.4" d="M292.14,-309C292.14,-309 333.61,-309 333.61,-309"/>
+<polygon fill="#5a6b7d" stroke="#5a6b7d" stroke-width="1.4" points="333.61,-311.8 341.61,-309 333.61,-306.2 333.61,-311.8"/>
+</g>
+<!-- n3 -->
+<g id="node3" class="node">
+<title>n3</title>
+<path fill="#eaf2ff" stroke="#2b4c7e" d="M909,-342C909,-342 660,-342 660,-342 654,-342 648,-336 648,-330 648,-330 648,-288 648,-288 648,-282 654,-276 660,-276 660,-276 909,-276 909,-276 915,-276 921,-282 921,-288 921,-288 921,-330 921,-330 921,-336 915,-342 909,-342"/>
+<text text-anchor="middle" x="784.5" y="-325.4" font-family="Helvetica,sans-Serif" font-size="12.00">3. Supporting analyses</text>
+<text text-anchor="middle" x="784.5" y="-312.4" font-family="Helvetica,sans-Serif" font-size="12.00">Dependency, selectivity, expression,</text>
+<text text-anchor="middle" x="784.5" y="-299.4" font-family="Helvetica,sans-Serif" font-size="12.00">compensation, WGCNA, regulatory,</text>
+<text text-anchor="middle" x="784.5" y="-286.4" font-family="Helvetica,sans-Serif" font-size="12.00">network, localization, structural evidence</text>
+</g>
+<!-- n2&#45;&gt;n3 -->
+<g id="edge2" class="edge">
+<title>n2&#45;&gt;n3</title>
+<path fill="none" stroke="#5a6b7d" stroke-width="1.4" d="M598.37,-309C598.37,-309 639.84,-309 639.84,-309"/>
+<polygon fill="#5a6b7d" stroke="#5a6b7d" stroke-width="1.4" points="639.84,-311.8 647.84,-309 639.84,-306.2 639.84,-311.8"/>
+</g>
+<!-- n4 -->
+<g id="node4" class="node">
+<title>n4</title>
+<path fill="#eaf2ff" stroke="#2b4c7e" d="M1187,-332.5C1187,-332.5 983,-332.5 983,-332.5 977,-332.5 971,-326.5 971,-320.5 971,-320.5 971,-291.5 971,-291.5 971,-285.5 977,-279.5 983,-279.5 983,-279.5 1187,-279.5 1187,-279.5 1193,-279.5 1199,-285.5 1199,-291.5 1199,-291.5 1199,-320.5 1199,-320.5 1199,-326.5 1193,-332.5 1187,-332.5"/>
+<text text-anchor="middle" x="1085" y="-315.9" font-family="Helvetica,sans-Serif" font-size="12.00">4. Coverage&#45;aware scoring</text>
+<text text-anchor="middle" x="1085" y="-302.9" font-family="Helvetica,sans-Serif" font-size="12.00">Eligible&#45;domain score + coverage</text>
+<text text-anchor="middle" x="1085" y="-289.9" font-family="Helvetica,sans-Serif" font-size="12.00">adjustment = RSES&#45;Onco</text>
+</g>
+<!-- n3&#45;&gt;n4 -->
+<g id="edge3" class="edge">
+<title>n3&#45;&gt;n4</title>
+<path fill="none" stroke="#5a6b7d" stroke-width="1.4" d="M921.12,-306C921.12,-306 962.74,-306 962.74,-306"/>
+<polygon fill="#5a6b7d" stroke="#5a6b7d" stroke-width="1.4" points="962.74,-308.8 970.74,-306 962.74,-303.2 962.74,-308.8"/>
+</g>
+<!-- m1 -->
+<g id="node6" class="node">
+<title>m1</title>
+<path fill="#eff8e8" stroke="#7d9b5d" d="M1182.5,-112C1182.5,-112 987.5,-112 987.5,-112 981.5,-112 975.5,-106 975.5,-100 975.5,-100 975.5,-58 975.5,-58 975.5,-52 981.5,-46 987.5,-46 987.5,-46 1182.5,-46 1182.5,-46 1188.5,-46 1194.5,-52 1194.5,-58 1194.5,-58 1194.5,-100 1194.5,-100 1194.5,-106 1188.5,-112 1182.5,-112"/>
+<text text-anchor="middle" x="1085" y="-95.4" font-family="Helvetica,sans-Serif" font-size="12.00">A functional microniche is the</text>
+<text text-anchor="middle" x="1085" y="-82.4" font-family="Helvetica,sans-Serif" font-size="12.00">local evidence environment of a</text>
+<text text-anchor="middle" x="1085" y="-69.4" font-family="Helvetica,sans-Serif" font-size="12.00">directional candidate pair in a</text>
+<text text-anchor="middle" x="1085" y="-56.4" font-family="Helvetica,sans-Serif" font-size="12.00">specific tumor context.</text>
+</g>
+<!-- n3&#45;&gt;m1 -->
+<g id="edge9" class="edge">
+<title>n3&#45;&gt;m1</title>
+<path fill="none" stroke="#698255" stroke-width="1.4" d="M785,-275.56C785,-211.77 785,-79 785,-79 785,-79 967.42,-79 967.42,-79"/>
+<polygon fill="#698255" stroke="#698255" stroke-width="1.4" points="967.42,-81.8 975.42,-79 967.42,-76.2 967.42,-81.8"/>
+</g>
+<!-- n5 -->
+<g id="node5" class="node">
+<title>n5</title>
+<path fill="#eaf2ff" stroke="#2b4c7e" d="M1453,-332.5C1453,-332.5 1273,-332.5 1273,-332.5 1267,-332.5 1261,-326.5 1261,-320.5 1261,-320.5 1261,-291.5 1261,-291.5 1261,-285.5 1267,-279.5 1273,-279.5 1273,-279.5 1453,-279.5 1453,-279.5 1459,-279.5 1465,-285.5 1465,-291.5 1465,-291.5 1465,-320.5 1465,-320.5 1465,-326.5 1459,-332.5 1453,-332.5"/>
+<text text-anchor="middle" x="1363" y="-315.9" font-family="Helvetica,sans-Serif" font-size="12.00">5. Publication assets</text>
+<text text-anchor="middle" x="1363" y="-302.9" font-family="Helvetica,sans-Serif" font-size="12.00">Figures, source&#45;data tables,</text>
+<text text-anchor="middle" x="1363" y="-289.9" font-family="Helvetica,sans-Serif" font-size="12.00">manifests, DOCX/PDF outputs</text>
+</g>
+<!-- n4&#45;&gt;n5 -->
+<g id="edge4" class="edge">
+<title>n4&#45;&gt;n5</title>
+<path fill="none" stroke="#5a6b7d" stroke-width="1.4" d="M1199.28,-314.83C1199.28,-314.83 1252.75,-314.83 1252.75,-314.83"/>
+<polygon fill="#5a6b7d" stroke="#5a6b7d" stroke-width="1.4" points="1252.75,-317.63 1260.75,-314.83 1252.75,-312.03 1252.75,-317.63"/>
+</g>
+<!-- a1 -->
+<g id="node8" class="node">
+<title>a1</title>
+<path fill="#fff3e8" stroke="#b47d4b" d="M1460.5,-222C1460.5,-222 1265.5,-222 1265.5,-222 1259.5,-222 1253.5,-216 1253.5,-210 1253.5,-210 1253.5,-194 1253.5,-194 1253.5,-188 1259.5,-182 1265.5,-182 1265.5,-182 1460.5,-182 1460.5,-182 1466.5,-182 1472.5,-188 1472.5,-194 1472.5,-194 1472.5,-210 1472.5,-210 1472.5,-216 1466.5,-222 1460.5,-222"/>
+<text text-anchor="middle" x="1363" y="-205.4" font-family="Helvetica,sans-Serif" font-size="12.00">Prioritize hypotheses for</text>
+<text text-anchor="middle" x="1363" y="-192.4" font-family="Helvetica,sans-Serif" font-size="12.00">CRISPR or knockdown validation</text>
+</g>
+<!-- n4&#45;&gt;a1 -->
+<g id="edge10" class="edge">
+<title>n4&#45;&gt;a1</title>
+<path fill="none" stroke="#b47d4b" stroke-width="1.4" d="M1199.43,-297.17C1231.6,-297.17 1258,-297.17 1258,-297.17 1258,-297.17 1258,-230.18 1258,-230.18"/>
+<polygon fill="#b47d4b" stroke="#b47d4b" stroke-width="1.4" points="1260.8,-230.18 1258,-222.18 1255.2,-230.18 1260.8,-230.18"/>
+</g>
+<!-- m2 -->
+<g id="node7" class="node">
+<title>m2</title>
+<path fill="#eff8e8" stroke="#7d9b5d" d="M1465,-121.5C1465,-121.5 1261,-121.5 1261,-121.5 1255,-121.5 1249,-115.5 1249,-109.5 1249,-109.5 1249,-28.5 1249,-28.5 1249,-22.5 1255,-16.5 1261,-16.5 1261,-16.5 1465,-16.5 1465,-16.5 1471,-16.5 1477,-22.5 1477,-28.5 1477,-28.5 1477,-109.5 1477,-109.5 1477,-115.5 1471,-121.5 1465,-121.5"/>
+<text text-anchor="middle" x="1363" y="-104.9" font-family="Helvetica,sans-Serif" font-size="12.00">Integrated layers:</text>
+<text text-anchor="middle" x="1363" y="-91.9" font-family="Helvetica,sans-Serif" font-size="12.00">• dependency and selectivity</text>
+<text text-anchor="middle" x="1363" y="-78.9" font-family="Helvetica,sans-Serif" font-size="12.00">• expression and compensation</text>
+<text text-anchor="middle" x="1363" y="-65.9" font-family="Helvetica,sans-Serif" font-size="12.00">• WGCNA/coexpression</text>
+<text text-anchor="middle" x="1363" y="-52.9" font-family="Helvetica,sans-Serif" font-size="12.00">• regulatory and STRING context</text>
+<text text-anchor="middle" x="1363" y="-39.9" font-family="Helvetica,sans-Serif" font-size="12.00">• localization</text>
+<text text-anchor="middle" x="1363" y="-26.9" font-family="Helvetica,sans-Serif" font-size="12.00">• biochemical/structural evidence</text>
+</g>
+<!-- m1&#45;&gt;m2 -->
+<g id="edge5" class="edge">
+<title>m1&#45;&gt;m2</title>
+<path fill="none" stroke="#7d9b5d" stroke-width="1.4" d="M1194.87,-79C1194.87,-79 1240.91,-79 1240.91,-79"/>
+<polygon fill="#7d9b5d" stroke="#7d9b5d" stroke-width="1.4" points="1240.91,-81.8 1248.91,-79 1240.91,-76.2 1240.91,-81.8"/>
+</g>
+<!-- a2 -->
+<g id="node9" class="node">
+<title>a2</title>
+<path fill="#fff3e8" stroke="#b47d4b" d="M1747,-219C1747,-219 1539,-219 1539,-219 1533,-219 1527,-213 1527,-207 1527,-207 1527,-191 1527,-191 1527,-185 1533,-179 1539,-179 1539,-179 1747,-179 1747,-179 1753,-179 1759,-185 1759,-191 1759,-191 1759,-207 1759,-207 1759,-213 1753,-219 1747,-219"/>
+<text text-anchor="middle" x="1643" y="-202.4" font-family="Helvetica,sans-Serif" font-size="12.00">Detect context&#45;dependent</text>
+<text text-anchor="middle" x="1643" y="-189.4" font-family="Helvetica,sans-Serif" font-size="12.00">backup or collateral vulnerabilities</text>
+</g>
+<!-- m2&#45;&gt;a2 -->
+<g id="edge11" class="edge">
+<title>m2&#45;&gt;a2</title>
+<path fill="none" stroke="#b47d4b" stroke-width="1.4" d="M1477.29,-69C1554.71,-69 1643,-69 1643,-69 1643,-69 1643,-170.97 1643,-170.97"/>
+<polygon fill="#b47d4b" stroke="#b47d4b" stroke-width="1.4" points="1640.2,-170.97 1643,-178.97 1645.8,-170.97 1640.2,-170.97"/>
+</g>
+<!-- a1&#45;&gt;a2 -->
+<!-- a3 -->
+<g id="node10" class="node">
+<title>a3</title>
+<path fill="#fff3e8" stroke="#b47d4b" d="M1992,-225.5C1992,-225.5 1821,-225.5 1821,-225.5 1815,-225.5 1809,-219.5 1809,-213.5 1809,-213.5 1809,-184.5 1809,-184.5 1809,-178.5 1815,-172.5 1821,-172.5 1821,-172.5 1992,-172.5 1992,-172.5 1998,-172.5 2004,-178.5 2004,-184.5 2004,-184.5 2004,-213.5 2004,-213.5 2004,-219.5 1998,-225.5 1992,-225.5"/>
+<text text-anchor="middle" x="1906.5" y="-208.9" font-family="Helvetica,sans-Serif" font-size="12.00">Guide rescue experiments,</text>
+<text text-anchor="middle" x="1906.5" y="-195.9" font-family="Helvetica,sans-Serif" font-size="12.00">expression perturbation and</text>
+<text text-anchor="middle" x="1906.5" y="-182.9" font-family="Helvetica,sans-Serif" font-size="12.00">exploratory pharmacology</text>
+</g>
+<!-- a2&#45;&gt;a3 -->
+<!-- a4 -->
+<g id="node11" class="node">
+<title>a4</title>
+<path fill="#fff3e8" stroke="#b47d4b" d="M2252,-225.5C2252,-225.5 2066,-225.5 2066,-225.5 2060,-225.5 2054,-219.5 2054,-213.5 2054,-213.5 2054,-184.5 2054,-184.5 2054,-178.5 2060,-172.5 2066,-172.5 2066,-172.5 2252,-172.5 2252,-172.5 2258,-172.5 2264,-178.5 2264,-184.5 2264,-184.5 2264,-213.5 2264,-213.5 2264,-219.5 2258,-225.5 2252,-225.5"/>
+<text text-anchor="middle" x="2159" y="-208.9" font-family="Helvetica,sans-Serif" font-size="12.00">Organize evidence for</text>
+<text text-anchor="middle" x="2159" y="-195.9" font-family="Helvetica,sans-Serif" font-size="12.00">mechanistic interpretation and</text>
+<text text-anchor="middle" x="2159" y="-182.9" font-family="Helvetica,sans-Serif" font-size="12.00">follow&#45;up study design</text>
+</g>
+<!-- a3&#45;&gt;a4 -->
+</g>
 </svg>
