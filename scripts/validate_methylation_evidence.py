@@ -16,17 +16,38 @@ def resolve_path(value: str) -> Path:
   return path if path.is_absolute() else ROOT / path
 
 
+def has_tcga_event_evidence(ranking: pd.DataFrame) -> bool:
+  if "component_tumor_event" not in ranking.columns:
+    return False
+  values = pd.to_numeric(
+    ranking["component_tumor_event"],
+    errors="coerce",
+  )
+  return bool(np.isfinite(values).any())
+
+
 def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument(
     "--evidence",
-    default="data/processed/methylation/pair_promoter_methylation_evidence.tsv",
+    default=(
+      "data/processed/methylation/"
+      "pair_promoter_methylation_evidence.tsv"
+    ),
   )
   parser.add_argument("--ranking", required=True)
   args = parser.parse_args()
 
-  evidence = pd.read_csv(resolve_path(args.evidence), sep="\t", low_memory=False)
-  ranking = pd.read_csv(resolve_path(args.ranking), sep="\t", low_memory=False)
+  evidence = pd.read_csv(
+    resolve_path(args.evidence),
+    sep="\t",
+    low_memory=False,
+  )
+  ranking = pd.read_csv(
+    resolve_path(args.ranking),
+    sep="\t",
+    low_memory=False,
+  )
   errors: list[str] = []
 
   required_evidence = {
@@ -43,17 +64,47 @@ def main() -> None:
   if not missing:
     observed = evidence["evidence_status"].astype(str).eq("observed")
     scores = pd.to_numeric(
-      evidence.loc[observed, "promoter_methylation_context_score"],
+      evidence.loc[
+        observed,
+        "promoter_methylation_context_score",
+      ],
       errors="coerce",
     )
-    if scores.isna().any() or not scores.between(0, 1, inclusive="both").all():
+    if (
+      scores.isna().any()
+      or not scores.between(0, 1, inclusive="both").all()
+    ):
       errors.append("methylation_scores_outside_0_1_or_missing")
-    direct_claim = evidence["direct_gene_silencing_claim"].astype(str).str.casefold()
+    direct_claim = (
+      evidence["direct_gene_silencing_claim"]
+      .astype(str)
+      .str.casefold()
+    )
     if direct_claim.isin({"true", "1", "yes"}).any():
       errors.append("unsupported_direct_gene_silencing_claim")
-    duplicates = evidence.duplicated(["pair_id", "cancer"])
-    if duplicates.any():
+    if evidence.duplicated(["pair_id", "cancer"]).any():
       errors.append("duplicate_pair_cancer_methylation_rows")
+
+  if not has_tcga_event_evidence(ranking):
+    forbidden = {
+      "promoter_methylation_context_score",
+      "expression_methylation_adjusted",
+    } & set(ranking.columns)
+    if forbidden:
+      errors.append(
+        "depmap_only_ranking_contains_tcga_methylation_columns:"
+        + ",".join(sorted(forbidden))
+      )
+    if errors:
+      raise SystemExit(
+        "Methylation validation failed:\n"
+        + "\n".join(f"- {error}" for error in errors)
+      )
+    print(
+      "DepMap-only ranking correctly retained non-methylation semantics; "
+      "the GDC methylation evidence table itself is valid."
+    )
+    return
 
   required_ranking = {
     "pair_id",
@@ -67,7 +118,9 @@ def main() -> None:
   }
   missing_ranking = sorted(required_ranking - set(ranking.columns))
   if missing_ranking:
-    errors.append("missing_ranking_columns:" + ",".join(missing_ranking))
+    errors.append(
+      "missing_ranking_columns:" + ",".join(missing_ranking)
+    )
   else:
     if set(ranking["score_version"].dropna().astype(str)) != {
       "RSES-Onco-expanded-v0.11.1"
@@ -86,6 +139,15 @@ def main() -> None:
     finite = subcoverage[np.isfinite(subcoverage)]
     if not finite.between(0, 1, inclusive="both").all():
       errors.append("expression_methylation_subcoverage_outside_0_1")
+    if (
+      "methylation_direct_silencing_claim" in ranking.columns
+      and ranking["methylation_direct_silencing_claim"]
+      .astype(str)
+      .str.casefold()
+      .isin({"true", "1", "yes"})
+      .any()
+    ):
+      errors.append("ranking_contains_direct_methylation_silencing_claim")
 
   if errors:
     raise SystemExit(
@@ -93,7 +155,11 @@ def main() -> None:
       + "\n".join(f"- {error}" for error in errors)
     )
   print("Methylation evidence and score integration validation passed.")
-  print(evidence["evidence_status"].value_counts(dropna=False).to_string())
+  print(
+    evidence["evidence_status"]
+    .value_counts(dropna=False)
+    .to_string()
+  )
 
 
 if __name__ == "__main__":
