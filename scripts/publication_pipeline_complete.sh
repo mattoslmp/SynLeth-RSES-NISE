@@ -119,6 +119,10 @@ build_repository_documentation_and_circos_data() {
       --ranking "$RANKING" --candidates "$CANDIDATES" \
       --promoters "$PROMOTERS" --expression "$EXPRESSION" \
       --models "$MODELS" --wgcna "$WGCNA_PAIR_METRICS"
+  log_stage "Validate finalized Circos counts and complete provenance"
+  run_logged "$LOG_DIR/04o_validate_genomic_circos_final_status.log" \
+    python -u scripts/validate_genomic_circos_final_status.py \
+      --circos-dir data/processed/circos
 }
 
 run_core_without_terminal_validation() {
