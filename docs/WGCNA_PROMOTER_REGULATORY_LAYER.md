@@ -1,4 +1,4 @@
-# WGCNA, promoter and transcription-factor layer for RSES-Onco v0.10.8
+# WGCNA, promoter and transcription-factor layer for RSES-Onco v0.10.9
 
 ## Scientific design
 
@@ -11,7 +11,7 @@ The existing expression-context domain is internally decomposed into:
 - cancer-specific pairwise expression divergence: 0.50;
 - cancer-specific signed WGCNA context: 0.50.
 
-WGCNA uses DepMap log2(TPM+1), cancer-compatible models, all mapped candidate genes plus cancer-specific highly variable genes, biweight midcorrelation, signed adjacency, signed TOM, dynamic tree cut, merged modules, kME and intramodular connectivity. The pair subscore combines TOM divergence (0.40), module divergence (0.30) and kME divergence (0.30). Each cancer-specific RSES-Onco row receives only the WGCNA network derived from the corresponding cancer models. A separate median consensus table is retained for pair-level source compatibility and descriptive reporting, not as an additional evidence unit.
+WGCNA uses DepMap log2(TPM+1), cancer-compatible models, all mapped candidate genes plus cancer-specific highly variable genes, and biweight midcorrelation (`bicor`) as the primary correlation. The same explicit settings are used for soft-threshold selection, signed adjacency and kME: `maxPOutliers=0.10` and `pearsonFallback="individual"`. Pearson is used only for an individual gene or module eigengene with zero or non-finite MAD; every affected entity is exported in a correlation-fallback audit table. Signed TOM, dynamic tree cut, merged modules, kME and intramodular connectivity are then calculated. The pair subscore combines TOM divergence (0.40), module divergence (0.30) and kME divergence (0.30). Each cancer-specific RSES-Onco row receives only the WGCNA network derived from the corresponding cancer models. A separate median consensus table is retained for pair-level source compatibility and descriptive reporting, not as an additional evidence unit.
 
 ### Regulatory-network domain
 
@@ -35,6 +35,8 @@ Ablations remove the selected subcomponent from the eligible internal model and 
 
 - `data/processed/regulatory/wgcna/wgcna_pair_metrics_all_cancers.tsv`
 - `data/processed/regulatory/wgcna/wgcna_input_preparation.tsv`
+- `data/processed/regulatory/wgcna/wgcna_correlation_fallback_all_cancers.tsv`
+- `data/processed/regulatory/wgcna/wgcna_run_diagnostics_all_cancers.tsv`
 - `data/processed/regulatory/promoter_tf_regulatory_pair_metrics.tsv`
 - `data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv`
 - `data/raw/regulatory/ensembl_promoters.tsv`
@@ -77,8 +79,8 @@ The command preserves the pre-WGCNA functional evidence, downloads and caches pr
 The final ranking retains `scoring_semantics_version=eligibility-aware-v1` for compatibility with the eligibility audit and adds:
 
 ```text
-expression_regulatory_semantics_version=eligibility-aware-wgcna-regulatory-v2
-score_version=RSES-Onco-expanded-v0.10.8
+expression_regulatory_semantics_version=eligibility-aware-wgcna-regulatory-v3
+score_version=RSES-Onco-expanded-v0.10.9
 ```
 
 The WGCNA/regulatory validator requires all values to be bounded, all promoter evidence to be labelled as motif prediction, and all direct promoter-binding claims to remain false unless a separate traceable direct-binding source is explicitly added in a future version.
