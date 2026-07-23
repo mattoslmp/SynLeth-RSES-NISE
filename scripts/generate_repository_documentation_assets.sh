@@ -24,37 +24,79 @@ mkdir -p \
   logs/documentation_assets
 
 SUPPLEMENT_MD="supplementary/Supplementary_Methods_RSES_Onco_v0110.md"
+SUPPLEMENT_METHYLATION_MD="supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.md"
 SUPPLEMENT_DOCX="supplementary/Supplementary_Methods_RSES_Onco_v0110.docx"
 SUPPLEMENT_PDF="supplementary/Supplementary_Methods_RSES_Onco_v0110.pdf"
+SUPPLEMENT_METHYLATION_DOCX="supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.docx"
+SUPPLEMENT_METHYLATION_PDF="supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.pdf"
 
 MANUSCRIPT_MD="manuscript/RSES_Onco_intro_methods_draft_v0110.md"
+MANUSCRIPT_METHYLATION_MD="manuscript/RSES_Onco_methylation_methods_addendum_v0111.md"
 MANUSCRIPT_DOCX="manuscript/RSES_Onco_intro_methods_draft_v0110.docx"
 MANUSCRIPT_PDF="manuscript/RSES_Onco_intro_methods_draft_v0110.pdf"
+MANUSCRIPT_METHYLATION_DOCX="manuscript/RSES_Onco_methylation_methods_addendum_v0111.docx"
+MANUSCRIPT_METHYLATION_PDF="manuscript/RSES_Onco_methylation_methods_addendum_v0111.pdf"
 
 WORKFLOW_DOT="docs/figures/RSES_Onco_workflow_and_applications.dot"
 WORKFLOW_SVG="docs/figures/RSES_Onco_workflow_and_applications.svg"
 WORKFLOW_PNG="docs/figures/RSES_Onco_workflow_and_applications.png"
 
-for source in "$SUPPLEMENT_MD" "$MANUSCRIPT_MD" "$WORKFLOW_DOT"; do
+for source in \
+  "$SUPPLEMENT_MD" \
+  "$SUPPLEMENT_METHYLATION_MD" \
+  "$MANUSCRIPT_MD" \
+  "$MANUSCRIPT_METHYLATION_MD" \
+  "$WORKFLOW_DOT"; do
   [[ -s "$source" ]] || {
     echo "Required documentation source is missing or empty: $source" >&2
     exit 1
   }
 done
 
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+COMBINED_SUPPLEMENT="$TMP_DIR/Supplementary_Methods_RSES_Onco_v0111_combined.md"
+COMBINED_MANUSCRIPT="$TMP_DIR/RSES_Onco_intro_methods_v0111_combined.md"
+
+{
+  cat "$SUPPLEMENT_MD"
+  printf '\n\n---\n\n'
+  cat "$SUPPLEMENT_METHYLATION_MD"
+} > "$COMBINED_SUPPLEMENT"
+
+{
+  cat "$MANUSCRIPT_MD"
+  printf '\n\n---\n\n'
+  cat "$MANUSCRIPT_METHYLATION_MD"
+} > "$COMBINED_MANUSCRIPT"
+
 pandoc \
-  "$SUPPLEMENT_MD" \
+  "$COMBINED_SUPPLEMENT" \
   --from markdown+tex_math_dollars \
   --standalone \
-  --metadata title="Supplementary Methods: RSES-Onco v0.11.0" \
+  --metadata title="Supplementary Methods: RSES-Onco v0.11.1" \
   --output "$SUPPLEMENT_DOCX"
 
 pandoc \
-  "$MANUSCRIPT_MD" \
+  "$SUPPLEMENT_METHYLATION_MD" \
   --from markdown+tex_math_dollars \
   --standalone \
-  --metadata title="RSES-Onco Introduction and Materials and Methods" \
+  --metadata title="Supplementary Methylation Methods: RSES-Onco v0.11.1" \
+  --output "$SUPPLEMENT_METHYLATION_DOCX"
+
+pandoc \
+  "$COMBINED_MANUSCRIPT" \
+  --from markdown+tex_math_dollars \
+  --standalone \
+  --metadata title="RSES-Onco Introduction and Materials and Methods v0.11.1" \
   --output "$MANUSCRIPT_DOCX"
+
+pandoc \
+  "$MANUSCRIPT_METHYLATION_MD" \
+  --from markdown+tex_math_dollars \
+  --standalone \
+  --metadata title="RSES-Onco methylation methods addendum v0.11.1" \
+  --output "$MANUSCRIPT_METHYLATION_DOCX"
 
 LO_PROFILE="file:///tmp/rses-onco-libreoffice-${UID}-$$"
 
@@ -64,6 +106,7 @@ libreoffice \
   --convert-to pdf \
   --outdir supplementary \
   "$SUPPLEMENT_DOCX" \
+  "$SUPPLEMENT_METHYLATION_DOCX" \
   > logs/documentation_assets/supplementary_pdf.log \
   2>&1
 
@@ -73,6 +116,7 @@ libreoffice \
   --convert-to pdf \
   --outdir manuscript \
   "$MANUSCRIPT_DOCX" \
+  "$MANUSCRIPT_METHYLATION_DOCX" \
   > logs/documentation_assets/manuscript_pdf.log \
   2>&1
 
@@ -82,8 +126,12 @@ dot -Tpng "$WORKFLOW_DOT" -o "$WORKFLOW_PNG"
 required_outputs=(
   "$SUPPLEMENT_DOCX"
   "$SUPPLEMENT_PDF"
+  "$SUPPLEMENT_METHYLATION_DOCX"
+  "$SUPPLEMENT_METHYLATION_PDF"
   "$MANUSCRIPT_DOCX"
   "$MANUSCRIPT_PDF"
+  "$MANUSCRIPT_METHYLATION_DOCX"
+  "$MANUSCRIPT_METHYLATION_PDF"
   "$WORKFLOW_SVG"
   "$WORKFLOW_PNG"
 )
@@ -101,11 +149,17 @@ from pathlib import Path
 
 required = [
   Path("supplementary/Supplementary_Methods_RSES_Onco_v0110.md"),
+  Path("supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.md"),
   Path("supplementary/Supplementary_Methods_RSES_Onco_v0110.docx"),
   Path("supplementary/Supplementary_Methods_RSES_Onco_v0110.pdf"),
+  Path("supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.docx"),
+  Path("supplementary/Supplementary_Methylation_Methods_RSES_Onco_v0111.pdf"),
   Path("manuscript/RSES_Onco_intro_methods_draft_v0110.md"),
+  Path("manuscript/RSES_Onco_methylation_methods_addendum_v0111.md"),
   Path("manuscript/RSES_Onco_intro_methods_draft_v0110.docx"),
   Path("manuscript/RSES_Onco_intro_methods_draft_v0110.pdf"),
+  Path("manuscript/RSES_Onco_methylation_methods_addendum_v0111.docx"),
+  Path("manuscript/RSES_Onco_methylation_methods_addendum_v0111.pdf"),
   Path("docs/figures/RSES_Onco_workflow_and_applications.svg"),
   Path("docs/figures/RSES_Onco_workflow_and_applications.png"),
 ]
