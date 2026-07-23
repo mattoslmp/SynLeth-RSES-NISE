@@ -90,6 +90,13 @@ build_repository_documentation_and_circos_data() {
       --ranking "$RANKING" --candidates "$CANDIDATES" \
       --promoters "$PROMOTERS" --expression "$EXPRESSION" \
       --models "$MODELS" --output-dir data/processed/circos
+  log_stage "Guarantee one chord for every simple NISE/paralog candidate pair"
+  run_logged "$LOG_DIR/04m_complete_genomic_circos_links.log" \
+    python -u scripts/complete_genomic_circos_links.py \
+      --candidates "$CANDIDATES" \
+      --coordinates data/processed/circos/genomic_circos_gene_coordinates.tsv \
+      --ranking "$RANKING" \
+      --links data/processed/circos/genomic_circos_pair_links.tsv
 }
 
 run_core_without_terminal_validation() {
