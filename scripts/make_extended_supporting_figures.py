@@ -33,6 +33,13 @@ from rses_onco.publication import (
 from scripts.publication_audit_figures import save_record
 
 SCRIPT = "scripts/make_extended_supporting_figures.py"
+METHYLATION_TITLE = "Cancer-specific promoter methylation context"
+METHYLATION_CAPTION = (
+  "Directional promoter methylation context for the hypothesized lost gene "
+  "and target/paralog. GDC SeSAMe beta values provide epigenetic context and "
+  "are not direct proof of transcriptional silencing."
+)
+METHYLATION_FILE = "Figure_S69_promoter_methylation_context"
 
 
 def resolve(value: str | Path) -> Path:
@@ -46,8 +53,13 @@ def read_source(path: Path) -> pd.DataFrame:
   return pd.DataFrame([{
     "evidence_status": "unavailable_or_no_eligible_records",
     "source_path": str(path),
-    "reason": "The declared source was absent, empty or contained no eligible observations.",
-    "interpretation_boundary": "Unavailable evidence is not negative biological evidence.",
+    "reason": (
+      "The declared source was absent, empty or contained no eligible "
+      "observations."
+    ),
+    "interpretation_boundary": (
+      "Unavailable evidence is not negative biological evidence."
+    ),
   }])
 
 
@@ -74,15 +86,28 @@ def label_column(frame: pd.DataFrame) -> str | None:
     "entity",
     "category",
   )
-  return next((column for column in preferred if column in frame.columns), None)
+  return next(
+    (column for column in preferred if column in frame.columns),
+    None,
+  )
 
 
-def make_plot(frame: pd.DataFrame, figure_id: str, title: str) -> plt.Figure:
+def make_plot(
+  frame: pd.DataFrame,
+  figure_id: str,
+  title: str,
+) -> plt.Figure:
   set_publication_style()
-  fig, axis = plt.subplots(figsize=(10.5, 7.2), constrained_layout=True)
+  fig, axis = plt.subplots(
+    figsize=(10.5, 7.2),
+    constrained_layout=True,
+  )
   if (
     "evidence_status" in frame.columns
-    and frame["evidence_status"].astype(str).str.startswith("unavailable").all()
+    and frame["evidence_status"]
+    .astype(str)
+    .str.startswith("unavailable")
+    .all()
   ):
     placeholder(
       axis,
@@ -111,10 +136,9 @@ def make_plot(frame: pd.DataFrame, figure_id: str, title: str) -> plt.Figure:
       axis.set_ylabel(y.replace("_", " ").capitalize())
       axis.grid(alpha=0.25)
       if label:
-        ranked = work.assign(_magnitude=work[y].abs()).nlargest(
-          min(8, len(work)),
-          "_magnitude",
-        )
+        ranked = work.assign(
+          _magnitude=work[y].abs()
+        ).nlargest(min(8, len(work)), "_magnitude")
         for row in ranked.to_dict("records"):
           axis.annotate(
             wrap_label(row.get(label, ""), 24),
@@ -127,10 +151,11 @@ def make_plot(frame: pd.DataFrame, figure_id: str, title: str) -> plt.Figure:
     value = numbers[0]
     work = frame.copy()
     work[value] = pd.to_numeric(work[value], errors="coerce")
-    work = work.dropna(subset=[value]).sort_values(
-      value,
-      ascending=False,
-    ).head(35)
+    work = (
+      work.dropna(subset=[value])
+      .sort_values(value, ascending=False)
+      .head(35)
+    )
     if work.empty:
       placeholder(
         axis,
@@ -138,12 +163,19 @@ def make_plot(frame: pd.DataFrame, figure_id: str, title: str) -> plt.Figure:
         "No eligible numeric observations were available.",
       )
     else:
-      labels = work[label].astype(str) if label else work.index.astype(str)
+      labels = (
+        work[label].astype(str)
+        if label
+        else work.index.astype(str)
+      )
       y = np.arange(len(work))
       axis.barh(y, work[value])
       axis.set_yticks(
         y,
-        [wrap_label(text.replace("_", " "), 34) for text in labels],
+        [
+          wrap_label(text.replace("_", " "), 34)
+          for text in labels
+        ],
       )
       axis.invert_yaxis()
       axis.set_xlabel(value.replace("_", " ").capitalize())
@@ -159,7 +191,10 @@ def make_plot(frame: pd.DataFrame, figure_id: str, title: str) -> plt.Figure:
     else:
       y = np.arange(len(counts))
       axis.barh(y, counts.values)
-      axis.set_yticks(y, [wrap_label(value, 34) for value in counts.index])
+      axis.set_yticks(
+        y,
+        [wrap_label(value, 34) for value in counts.index],
+      )
       axis.invert_yaxis()
       axis.set_xlabel("Records")
       axis.grid(axis="x", alpha=0.25)
@@ -201,6 +236,24 @@ SOURCE_REGISTRY: dict[int, str] = {
 }
 
 
+def figure_metadata(
+  number: int,
+  item: dict[str, object],
+) -> tuple[str, str, str]:
+  if number == 69:
+    return (
+      METHYLATION_FILE,
+      METHYLATION_TITLE,
+      METHYLATION_CAPTION,
+    )
+  title = str(item["title"])
+  return (
+    str(item["file"]),
+    title,
+    str(item.get("caption") or title),
+  )
+
+
 def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument("--config", default="config/article_assets.yaml")
@@ -213,7 +266,9 @@ def main() -> None:
   args = parser.parse_args()
 
   output_root = resolve(args.output_root)
-  config = yaml.safe_load(resolve(args.config).read_text(encoding="utf-8")) or {}
+  config = yaml.safe_load(
+    resolve(args.config).read_text(encoding="utf-8")
+  ) or {}
   registry = {
     record["id"]: record
     for record in config.get("supplementary_figures", [])
@@ -221,7 +276,9 @@ def main() -> None:
   expected = {f"Figure_S{number}" for number in range(39, 70)}
   missing = sorted(expected - set(registry))
   if missing:
-    raise RuntimeError(f"Extended figure registry is incomplete: {missing}")
+    raise RuntimeError(
+      f"Extended figure registry is incomplete: {missing}"
+    )
 
   records: list[FigureRecord] = []
   for number in range(39, 70):
@@ -229,13 +286,14 @@ def main() -> None:
     item = registry[figure_id]
     source_path = resolve(SOURCE_REGISTRY[number])
     frame = read_source(source_path)
-    fig = make_plot(frame, figure_id, str(item["title"]))
+    file_name, title, caption = figure_metadata(number, item)
+    fig = make_plot(frame, figure_id, title)
     record = save_record(
       fig=fig,
       figure_id=figure_id,
-      file_name=str(item["file"]),
-      title=str(item["title"]),
-      caption=str(item.get("caption") or item["title"]),
+      file_name=file_name,
+      title=title,
+      caption=caption,
       output_root=output_root,
       source=frame,
       inputs=[source_path],
@@ -243,22 +301,30 @@ def main() -> None:
       strict=args.strict_layout,
     )
     records.append(record)
-    print(f"Generated {figure_id}: {record.layout_status}", flush=True)
+    print(
+      f"Generated {figure_id}: {record.layout_status}",
+      flush=True,
+    )
 
   write_figure_manifest(
     records,
-    output_root / "manifests/extended_supplementary_figure_manifest.tsv",
+    output_root
+    / "manifests/extended_supplementary_figure_manifest.tsv",
   )
   write_legends_markdown(
     records,
-    output_root / "manuscript_assets/extended_supplementary_figure_legends.md",
+    output_root
+    / "manuscript_assets/extended_supplementary_figure_legends.md",
   )
   summary = pd.DataFrame([asdict(record) for record in records])
   if len(summary) != 31 or set(summary["figure_id"]) != expected:
     raise RuntimeError(
       "Extended supplementary figure generation did not produce S39-S69"
     )
-  if args.strict_layout and not summary["layout_status"].eq("pass").all():
+  if (
+    args.strict_layout
+    and not summary["layout_status"].eq("pass").all()
+  ):
     raise RuntimeError(
       "One or more extended supplementary figures failed layout validation"
     )
