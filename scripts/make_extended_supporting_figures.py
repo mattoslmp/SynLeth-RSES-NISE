@@ -22,7 +22,14 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from rses_onco.publication import FigureRecord, placeholder, set_publication_style, wrap_label, write_figure_manifest, write_legends_markdown
+from rses_onco.publication import (
+  FigureRecord,
+  placeholder,
+  set_publication_style,
+  wrap_label,
+  write_figure_manifest,
+  write_legends_markdown,
+)
 from scripts.publication_audit_figures import save_record
 
 SCRIPT = "scripts/make_extended_supporting_figures.py"
@@ -64,12 +71,25 @@ def label_column(frame: pd.DataFrame) -> str | None:
 def make_plot(frame: pd.DataFrame, figure_id: str, title: str) -> plt.Figure:
   set_publication_style()
   fig, axis = plt.subplots(figsize=(10.5, 7.2), constrained_layout=True)
-  if "evidence_status" in frame.columns and frame["evidence_status"].astype(str).str.startswith("unavailable").all():
-    placeholder(axis, "Evidence availability", str(frame.iloc[0].get("reason", "Evidence unavailable.")))
+  if (
+    "evidence_status" in frame.columns
+    and frame["evidence_status"].astype(str).str.startswith("unavailable").all()
+  ):
+    placeholder(
+      axis,
+      "Evidence availability",
+      str(frame.iloc[0].get("reason", "Evidence unavailable.")),
+    )
     return fig
 
   numbers = numeric_columns(frame)
   label = label_column(frame)
+  if figure_id == "Figure_S52":
+    preferred = [
+      "methylation_pair_profile_divergence",
+      "methylation_target_hypomethylation_support",
+    ]
+    numbers = [column for column in preferred if column in frame.columns]
   if len(numbers) >= 2:
     x, y = numbers[:2]
     work = frame[[x, y] + ([label] if label else [])].copy()
@@ -84,9 +104,18 @@ def make_plot(frame: pd.DataFrame, figure_id: str, title: str) -> plt.Figure:
       axis.set_ylabel(y.replace("_", " ").capitalize())
       axis.grid(alpha=0.25)
       if label:
-        ranked = work.assign(_magnitude=work[y].abs()).nlargest(min(8, len(work)), "_magnitude")
+        ranked = work.assign(_magnitude=work[y].abs()).nlargest(
+          min(8, len(work)),
+          "_magnitude",
+        )
         for row in ranked.to_dict("records"):
-          axis.annotate(wrap_label(row.get(label, ""), 24), (row[x], row[y]), xytext=(4, 4), textcoords="offset points", fontsize=7.5)
+          axis.annotate(
+            wrap_label(row.get(label, ""), 24),
+            (row[x], row[y]),
+            xytext=(4, 4),
+            textcoords="offset points",
+            fontsize=7.5,
+          )
   elif len(numbers) == 1:
     value = numbers[0]
     work = frame.copy()
@@ -130,7 +159,7 @@ SOURCE_REGISTRY: dict[int, str] = {
   49: "data/processed/regulatory/wgcna/colon/wgcna_soft_threshold_diagnostics.tsv",
   50: "data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv",
   51: "data/processed/regulatory/jaspar_promoter_tf_summary.tsv",
-  52: "data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv",
+  52: "data/processed/regulatory/promoter_methylation_pair_metrics.tsv",
   53: "article_outputs/tables/supporting_evidence/networks/raw_sources/string_candidate_edges_all_channels.tsv",
   54: "article_outputs/tables/supporting_evidence/phenotypes/conditional_dependency_contrasts.tsv",
   55: "article_outputs/tables/supporting_evidence/phenotypes/conditional_dependency_contrasts.tsv",
@@ -155,12 +184,19 @@ def main() -> None:
   parser = argparse.ArgumentParser()
   parser.add_argument("--config", default="config/article_assets.yaml")
   parser.add_argument("--output-root", default="article_outputs")
-  parser.add_argument("--strict-layout", action=argparse.BooleanOptionalAction, default=True)
+  parser.add_argument(
+    "--strict-layout",
+    action=argparse.BooleanOptionalAction,
+    default=True,
+  )
   args = parser.parse_args()
 
   output_root = resolve(args.output_root)
   config = yaml.safe_load(resolve(args.config).read_text(encoding="utf-8")) or {}
-  registry = {record["id"]: record for record in config.get("supplementary_figures", [])}
+  registry = {
+    record["id"]: record
+    for record in config.get("supplementary_figures", [])
+  }
   expected = {f"Figure_S{number}" for number in range(39, 70)}
   missing = sorted(expected - set(registry))
   if missing:
@@ -172,13 +208,21 @@ def main() -> None:
     item = registry[figure_id]
     source_path = resolve(SOURCE_REGISTRY[number])
     frame = read_source(source_path)
-    fig = make_plot(frame, figure_id, str(item["title"]))
+    title = str(item["title"])
+    caption = str(item.get("caption") or title)
+    if figure_id == "Figure_S52":
+      title = "Promoter methylation context"
+      caption = (
+        "Cancer-specific pair promoter-methylation divergence and conditional "
+        "target hypomethylation support. Association is not causal silencing proof."
+      )
+    fig = make_plot(frame, figure_id, title)
     record = save_record(
       fig=fig,
       figure_id=figure_id,
       file_name=str(item["file"]),
-      title=str(item["title"]),
-      caption=str(item.get("caption") or item["title"]),
+      title=title,
+      caption=caption,
       output_root=output_root,
       source=frame,
       inputs=[source_path],
@@ -188,8 +232,14 @@ def main() -> None:
     records.append(record)
     print(f"Generated {figure_id}: {record.layout_status}", flush=True)
 
-  write_figure_manifest(records, output_root / "manifests/extended_supplementary_figure_manifest.tsv")
-  write_legends_markdown(records, output_root / "manuscript_assets/extended_supplementary_figure_legends.md")
+  write_figure_manifest(
+    records,
+    output_root / "manifests/extended_supplementary_figure_manifest.tsv",
+  )
+  write_legends_markdown(
+    records,
+    output_root / "manuscript_assets/extended_supplementary_figure_legends.md",
+  )
   summary = pd.DataFrame([asdict(record) for record in records])
   if len(summary) != 31 or set(summary["figure_id"]) != expected:
     raise RuntimeError("Extended supplementary figure generation did not produce S39-S69")
