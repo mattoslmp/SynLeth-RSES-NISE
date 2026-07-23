@@ -2,8 +2,9 @@
 """Collapse cancer-specific WGCNA/regulatory evidence to a consensus pair prior.
 
 Cancer-specific measurements remain in the detailed source tables. The functional
-microniche receives a consensus prior so the same expression matrix is not counted as
-three independent evidence units in each cancer-specific RSES-Onco score.
+microniche receives a consensus prior so the same expression or methylation matrix
+is not counted as three independent evidence units in each cancer-specific
+RSES-Onco score.
 """
 from __future__ import annotations
 
@@ -58,6 +59,21 @@ def main() -> None:
     "regulatory_tf_association_divergence",
     "regulatory_tf_expression_profile_divergence",
     "regulatory_promoter_motif_divergence",
+    "regulatory_methylation_context",
+    "component_promoter_methylation_context",
+    "methylation_raw",
+    "methylation_coverage",
+    "methylation_pair_profile_divergence",
+    "methylation_target_hypomethylation_support",
+    "methylation_pair_spearman_rho",
+    "methylation_pair_median_absolute_difference",
+    "methylation_target_delta_loss_minus_intact",
+    "methylation_p_value",
+    "methylation_q_value_bh",
+    "methylation_q_value_bh_within_cancer",
+    "methylation_profile_n_models",
+    "methylation_n_loss",
+    "methylation_n_intact",
     "regulatory_lost_regulator_count",
     "regulatory_target_regulator_count",
     "regulatory_lost_promoter_tf_count",
@@ -86,13 +102,16 @@ def main() -> None:
   )
   merged["regulatory_network_method"] = (
     "DoRothEA_TF_target_plus_TF_expression_consistency_plus_"
-    "JASPAR_promoter_motif_prediction"
+    "JASPAR_promoter_motif_prediction_plus_CCLE_promoter_methylation"
   )
   merged["promoter_evidence_type"] = (
     "JASPAR_motif_prediction_not_direct_binding"
   )
+  merged["methylation_evidence_type"] = (
+    "CCLE_RRBS_weighted_1kb_upstream_TSS_promoter_methylation"
+  )
   merged["regulatory_layer_version"] = (
-    "wgcna-promoter-regulatory-v2"
+    "wgcna-promoter-methylation-regulatory-v3"
   )
 
   output = resolve_path(args.output)
@@ -101,7 +120,7 @@ def main() -> None:
   merged.to_csv(temporary, sep="\t", index=False)
   temporary.replace(output)
   print(
-    f"Wrote consensus WGCNA/regulatory evidence: {output} "
+    f"Wrote consensus WGCNA/regulatory/methylation evidence: {output} "
     f"({len(merged):,} pair rows)"
   )
 
