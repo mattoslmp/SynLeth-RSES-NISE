@@ -44,6 +44,12 @@ def patch_protocol() -> None:
     "run_rses_v0110_": "run_rses_v0111_",
     "last_rses_v0110_": "last_rses_v0111_",
     "pre_v0110_": "pre_v0111_",
+    "verify_complete_article_run_v0110.log": (
+      "verify_complete_article_run_v0111.log"
+    ),
+    "RSES_Onco_v0110_complete_submission_package.zip": (
+      "RSES_Onco_v0111_complete_submission_package.zip"
+    ),
   }
   for old, new in replacements.items():
     text = text.replace(old, new)
@@ -60,7 +66,7 @@ def patch_protocol() -> None:
   body = r"""
 Promoter methylation is an epigenetic subcomponent of the existing functional-microniche regulatory-network domain. It is not a new top-level RSES-Onco domain and therefore cannot receive an additional independent global weight.
 
-The supported sources are the DepMap custom-download dataset `Methylation (1kb upstream TSS)` and the traceable historical `CCLE_RRBS_TSS1kb_20181022` matrix. The resume workflow searches under `DEPMAP_DIR`, or the user may provide an explicit file:
+The supported sources are the DepMap custom-download dataset `Methylation (1kb upstream TSS)` and the traceable historical `CCLE_RRBS_TSS1kb_20181022` matrix. The resume workflow automatically searches under `DEPMAP_DIR`, or the user may provide an explicit file:
 
 ```bash
 export DEPMAP_DIR="$NEW/data/raw/depmap"
@@ -78,7 +84,7 @@ promoter-methylation context             0.20
 
 The methylation context itself combines pair promoter-profile divergence (0.50) and conditional target-promoter hypomethylation in lost-gene-loss versus intact models (0.50). Missing methylation remains NA and lowers regulatory subcoverage; it is not converted to zero.
 
-Run the complete recalculation after setting `METHYLATION`:
+Run the complete recalculation after placing the methylation file under `DEPMAP_DIR` or setting `METHYLATION`:
 
 ```bash
 MPLBACKEND=Agg \
@@ -130,7 +136,7 @@ python -u scripts/integrate_methylation_regulatory_layer.py \
   --copy-number "$DEPMAP_DIR/OmicsCNGeneWGS.csv" \
   --models "$DEPMAP_DIR/Model.csv" \
   --candidates data/processed/expanded_candidate_universe.tsv \
-  --input data/processed/regulatory/expanded_pair_functional_evidence_by_cancer_pre_methylation.tsv \
+  --input data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv \
   --output data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv
 ```
 
