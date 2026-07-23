@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Resume from cached STRING/DoRothEA/HPA/UniProt evidence and rebuild RSES-Onco
-# with cancer-specific signed WGCNA, TF-expression consistency and promoter motifs.
+# Resume from cached functional evidence and rebuild RSES-Onco with cancer-specific
+# WGCNA, promoter-aware TF regulation and optional GDC promoter methylation.
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -28,12 +28,22 @@ PROMOTERS="${PROMOTERS:-data/raw/regulatory/ensembl_promoters.tsv}"
 PROMOTER_FASTA="${PROMOTER_FASTA:-data/raw/regulatory/ensembl_promoters.fa}"
 JASPAR_MEME="${JASPAR_MEME:-data/raw/regulatory/JASPAR2026_CORE_vertebrates_non-redundant.meme}"
 PROMOTER_MOTIFS="${PROMOTER_MOTIFS:-$PROCESSED_DIR/regulatory/jaspar_promoter_tf_summary.tsv}"
+
+METHYLATION_MODE="${METHYLATION_MODE:-auto}"
+METHYLATION_RAW_DIR="${METHYLATION_RAW_DIR:-data/raw/methylation}"
+METHYLATION_MANIFEST="${METHYLATION_MANIFEST:-$METHYLATION_RAW_DIR/gdc_methylation_manifest.tsv}"
+METHYLATION_GENE_SAMPLE="${METHYLATION_GENE_SAMPLE:-$PROCESSED_DIR/methylation/gdc_promoter_methylation_gene_sample.tsv}"
+METHYLATION_GENE_SUMMARY="${METHYLATION_GENE_SUMMARY:-$PROCESSED_DIR/methylation/gdc_promoter_methylation_gene_summary.tsv}"
+METHYLATION_SOURCE_STATUS="${METHYLATION_SOURCE_STATUS:-$PROCESSED_DIR/methylation/gdc_promoter_methylation_aggregation_status.tsv}"
+METHYLATION_EVIDENCE="${METHYLATION_EVIDENCE:-$PROCESSED_DIR/methylation/pair_promoter_methylation_evidence.tsv}"
+METHYLATION_MIN_SAMPLES="${METHYLATION_MIN_SAMPLES:-10}"
+
 LOSS_THRESHOLD="${LOSS_THRESHOLD:-0.30}"
 MIN_GROUP_SIZE="${MIN_GROUP_SIZE:-3}"
 PUBLICATION_STAGE="${PUBLICATION_STAGE:-assets-only}"
 
 mkdir -p "$LOG_DIR" "$DEPMAP_RESULTS" "$FULL_RESULTS" \
-  "$PROCESSED_DIR/regulatory"
+  "$PROCESSED_DIR/regulatory" "$PROCESSED_DIR/methylation"
 
 log_stage() {
   printf '\n[%s] %s\n' "$(date -Iseconds)" "$*"
@@ -72,7 +82,7 @@ check_runtime() {
   }
   bash -n scripts/resume_wgcna_regulatory_pipeline.sh
   python -m compileall -q src scripts tests
-  echo "WGCNA/promoter regulatory runtime is ready."
+  echo "WGCNA/regulatory/methylation runtime is ready."
 }
 
 preserve_base_functional_evidence() {
@@ -98,7 +108,7 @@ build_regulatory_layer() {
       --output "$PROMOTERS" \
       --fasta "$PROMOTER_FASTA"
 
-  log_stage "Acquire official JASPAR 2026 CORE vertebrate motifs"
+  log_stage "Acquire official JASPAR CORE vertebrate motifs"
   run_logged "$LOG_DIR/02_jaspar_core.log" \
     python -u scripts/download_jaspar_core_vertebrates.py \
       --output "$JASPAR_MEME"
@@ -131,11 +141,59 @@ build_regulatory_layer() {
       --output "$FUNCTIONAL_EVIDENCE"
 }
 
+build_methylation_layer() {
+  case "$METHYLATION_MODE" in
+    off)
+      log_stage "Promoter methylation integration disabled by METHYLATION_MODE=off"
+      return 0
+      ;;
+    auto|download|require)
+      ;;
+    *)
+      echo "Invalid METHYLATION_MODE=$METHYLATION_MODE; use auto, download, require or off" >&2
+      return 2
+      ;;
+  esac
+
+  if [[ ! -s "$METHYLATION_GENE_SAMPLE" ]]; then
+    if [[ "$METHYLATION_MODE" == "download" || "$METHYLATION_MODE" == "require" ]]; then
+      log_stage "Acquire and validate GDC/TCGA methylation beta values"
+      run_logged "$LOG_DIR/05a_download_gdc_methylation.log" \
+        python -u scripts/download_gdc_methylation.py \
+          --stage all \
+          --output-dir "$METHYLATION_RAW_DIR" \
+          --manifest "$METHYLATION_MANIFEST"
+      log_stage "Aggregate GDC methylation to promoter-level gene/sample values"
+      run_logged "$LOG_DIR/05b_aggregate_gdc_methylation.log" \
+        python -u scripts/aggregate_gdc_methylation.py \
+          --manifest "$METHYLATION_MANIFEST" \
+          --annotation-dir "$METHYLATION_RAW_DIR/annotations" \
+          --output "$METHYLATION_GENE_SAMPLE" \
+          --gene-summary "$METHYLATION_GENE_SUMMARY" \
+          --status-output "$METHYLATION_SOURCE_STATUS"
+    else
+      log_stage "No promoter methylation matrix found; continuing without methylation in auto mode"
+      return 0
+    fi
+  fi
+
+  require_file "$METHYLATION_GENE_SAMPLE"
+  log_stage "Build cancer-specific promoter methylation evidence for NISE and paralog pairs"
+  run_logged "$LOG_DIR/05c_build_methylation_pair_evidence.log" \
+    python -u scripts/build_methylation_pair_evidence.py \
+      --candidates "$CANDIDATES" \
+      --gene-sample "$METHYLATION_GENE_SAMPLE" \
+      --output "$METHYLATION_EVIDENCE" \
+      --min-samples "$METHYLATION_MIN_SAMPLES"
+  require_file "$METHYLATION_EVIDENCE"
+}
+
 score_one() {
   local base_log="$1"
-  local final_log="$2"
-  local output="$3"
-  shift 3
+  local wgcna_log="$2"
+  local methylation_log="$3"
+  local output="$4"
+  shift 4
   run_logged "$base_log" \
     python -u scripts/run_expanded_rses_onco.py \
       --gene-effect "$GENE_EFFECT" \
@@ -148,11 +206,24 @@ score_one() {
       --min-group-size "$MIN_GROUP_SIZE" \
       "$@" \
       --output "$output"
-  run_logged "$final_log" \
+  run_logged "$wgcna_log" \
     python -u scripts/recompute_rses_with_wgcna_regulatory.py \
       --ranking "$output" \
       --functional-evidence "$CANCER_SPECIFIC_EVIDENCE" \
       --output "$output"
+  if [[ -s "$METHYLATION_EVIDENCE" ]]; then
+    run_logged "$methylation_log" \
+      python -u scripts/recompute_rses_with_methylation.py \
+        --ranking "$output" \
+        --methylation-evidence "$METHYLATION_EVIDENCE" \
+        --output "$output"
+    run_logged "${methylation_log%.log}_validate.log" \
+      python -u scripts/validate_methylation_evidence.py \
+        --evidence "$METHYLATION_EVIDENCE" \
+        --ranking "$output"
+  else
+    log_stage "Methylation evidence unavailable; retaining WGCNA/regulatory score version"
+  fi
 }
 
 score_depmap() {
@@ -160,6 +231,7 @@ score_depmap() {
   score_one \
     "$LOG_DIR/06_depmap_score_base.log" \
     "$LOG_DIR/07_depmap_score_wgcna.log" \
+    "$LOG_DIR/07a_depmap_score_methylation.log" \
     "$DEPMAP_RESULTS/expanded_rses_onco.tsv"
 }
 
@@ -174,6 +246,7 @@ score_full() {
   score_one \
     "$LOG_DIR/08_full_score_base.log" \
     "$LOG_DIR/09_full_score_wgcna.log" \
+    "$LOG_DIR/09a_full_score_methylation.log" \
     "$FULL_RESULTS/expanded_rses_onco.tsv" \
     --tcga "colon=$colon" \
     --tcga "stomach=$stomach" \
@@ -199,6 +272,9 @@ publication() {
   MEMBERS="$MEMBERS" \
   DISCOVERY="$DISCOVERY_RESULTS/all_target_dependency_screen.tsv" \
   FUNCTIONAL_EVIDENCE="$FUNCTIONAL_EVIDENCE" \
+  METHYLATION_EVIDENCE="$METHYLATION_EVIDENCE" \
+  METHYLATION_GENE_SUMMARY="$METHYLATION_GENE_SUMMARY" \
+  METHYLATION_SOURCE_STATUS="$METHYLATION_SOURCE_STATUS" \
   GENE_EFFECT="$GENE_EFFECT" \
   COPY_NUMBER="$COPY_NUMBER" \
   MODELS="$MODELS" \
@@ -232,16 +308,21 @@ case "$stage" in
     check_runtime
     build_regulatory_layer
     ;;
+  methylation-only)
+    check_runtime
+    build_methylation_layer
+    ;;
   resume-regulatory|all)
     check_runtime
     build_regulatory_layer
+    build_methylation_layer
     score_depmap
     score_full
     publication
     finalize
     ;;
   *)
-    echo "Usage: bash scripts/resume_wgcna_regulatory_pipeline.sh [check-runtime|regulatory-only|resume-regulatory]" >&2
+    echo "Usage: bash scripts/resume_wgcna_regulatory_pipeline.sh [check-runtime|regulatory-only|methylation-only|resume-regulatory]" >&2
     exit 2
     ;;
 esac
