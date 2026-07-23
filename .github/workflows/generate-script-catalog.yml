@@ -1,0 +1,49 @@
+name: Generate complete script catalogue
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/**"
+      - "src/rses_onco/**"
+      - ".github/workflows/generate-script-catalog.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install catalogue dependency
+        run: python -m pip install pandas
+
+      - name: Generate complete source catalogue
+        run: |
+          python -u scripts/build_script_documentation.py \
+            --output-md docs/SCRIPT_CATALOG.md \
+            --output-tsv docs/script_manifest.tsv \
+            --processed-output /tmp/pipeline_script_catalog.tsv
+
+      - name: Commit generated catalogue
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/SCRIPT_CATALOG.md docs/script_manifest.tsv
+          if git diff --cached --quiet; then
+            echo "Script catalogue is current."
+            exit 0
+          fi
+          git commit -m "Generate complete script and module catalogue"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
