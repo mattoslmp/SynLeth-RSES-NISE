@@ -112,6 +112,13 @@ build_repository_documentation_and_circos_data() {
       --coordinates data/processed/circos/genomic_circos_gene_coordinates.tsv \
       --ranking "$RANKING" \
       --links data/processed/circos/genomic_circos_pair_links.tsv
+  log_stage "Finalize Circos counts and full SHA-256 source provenance"
+  run_logged "$LOG_DIR/04n_finalize_genomic_circos_status.log" \
+    python -u scripts/finalize_genomic_circos_status.py \
+      --output-dir data/processed/circos \
+      --ranking "$RANKING" --candidates "$CANDIDATES" \
+      --promoters "$PROMOTERS" --expression "$EXPRESSION" \
+      --models "$MODELS" --wgcna "$WGCNA_PAIR_METRICS"
 }
 
 run_core_without_terminal_validation() {
