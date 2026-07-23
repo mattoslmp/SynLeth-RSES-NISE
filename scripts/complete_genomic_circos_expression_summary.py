@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Complete the Circos expression summary with explicit unavailable rows.
+"""Complete Circos expression tables with explicit unavailable rows.
 
-The model-level expression table contains only observed values. This stage ensures
-that the summary contains every Circos gene in every cancer context, distinguishing
-missing gene columns or no observed values from biological zero.
+Observed model-level expression values are preserved unchanged. Every Circos gene
+and cancer context is represented in the summary, and a single sentinel row is
+added to the model-level table only when no expression value exists. Sentinel rows
+carry NA expression and an explicit status; they are not measurements and are
+never converted to numeric zero.
 """
 from __future__ import annotations
 
@@ -75,6 +77,46 @@ def main() -> None:
     else "not_recorded"
   )
 
+  values["evidence_status"] = "observed"
+  values["absence_reason"] = ""
+  values["is_measurement"] = True
+  observed_contexts = set(
+    zip(
+      values.get(
+        "cancer",
+        pd.Series(index=values.index, dtype=object),
+      ).astype(str),
+      values.get(
+        "gene",
+        pd.Series(index=values.index, dtype=object),
+      ).astype(str),
+    )
+  )
+  sentinel_rows = []
+  for cancer in CANCERS:
+    for gene in genes:
+      if (cancer, gene) in observed_contexts:
+        continue
+      sentinel_rows.append({
+        "ModelID": f"UNAVAILABLE::{cancer}::{gene}",
+        "gene": gene,
+        "expression_log2_tpm_plus_1": pd.NA,
+        "cancer": cancer,
+        "source_file": source_file,
+        "evidence_status": (
+          "gene_or_context_unavailable_in_expression_matrix"
+        ),
+        "absence_reason": (
+          "no_model_level_log2_tpm_plus_1_values_for_gene_and_cancer"
+        ),
+        "is_measurement": False,
+      })
+  completed_values = pd.concat(
+    [values, pd.DataFrame(sentinel_rows)],
+    ignore_index=True,
+    sort=False,
+  ).sort_values(["cancer", "gene", "ModelID"])
+
   complete = pd.MultiIndex.from_product(
     [CANCERS, genes],
     names=["cancer", "gene"],
@@ -119,11 +161,17 @@ def main() -> None:
     raise RuntimeError(
       "Circos expression summary does not cover every gene × cancer context"
     )
+  if set(completed_values["gene"].astype(str)) != set(genes):
+    raise RuntimeError(
+      "Completed model-level expression table does not represent every Circos gene"
+    )
   atomic_tsv(result, summary_path)
+  atomic_tsv(completed_values, values_path)
   print(
     f"Completed Circos expression summary: {len(result):,} rows; "
     f"observed={int(result['observed_values'].gt(0).sum()):,}; "
-    f"unavailable={int(result['observed_values'].eq(0).sum()):,}."
+    f"unavailable={int(result['observed_values'].eq(0).sum()):,}; "
+    f"sentinel_rows={len(sentinel_rows):,}."
   )
 
 
