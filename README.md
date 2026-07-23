@@ -1,6 +1,6 @@
 # SynLeth-RSES-Onco / RSES-Onco
 
-**RSES-Onco v0.10.3** is a coverage-aware framework for discovering and
+**RSES-Onco v0.11.0** is a coverage-aware framework for discovering and
 prioritizing cancer-selective dependencies created by non-homologous
 isofunctional enzymes (NISEs), homologous paralogs, pathway backups, collateral
 deletions and downstream vulnerabilities. The initial disease scope is
@@ -37,7 +37,7 @@ explicit coverage.
 ## Canonical end-to-end protocol
 
 The complete, command-by-command protocol from DepMap/GDC acquisition through all
-analyses, all 40 figures, all tables, checksums and post-run validation is:
+analyses, all 77 figures, all tables, checksums and post-run validation is:
 
 - [`docs/END_TO_END_ARTICLE_PROTOCOL.md`](docs/END_TO_END_ARTICLE_PROTOCOL.md)
 
@@ -206,11 +206,17 @@ When the integrated ranking already exists:
 bash scripts/run_publication_pipeline.sh all
 ```
 
-Regenerate all figures from existing evidence and structural renders:
+Rebuild every publication asset from existing evidence and structural renders:
 
 ```bash
 MPLBACKEND=Agg \
-bash scripts/run_publication_pipeline.sh figures
+bash scripts/run_publication_pipeline.sh assets-only
+```
+
+Build and render the editable Word documents and inspection PDFs:
+
+```bash
+bash scripts/run_publication_pipeline.sh documents
 ```
 
 The figure orchestrator is:
@@ -235,10 +241,10 @@ The final package contains:
 
 ```text
 8 main figures
-32 supplementary figures
-120 PNG/PDF/SVG files
+69 supplementary figures
+231 PNG/PDF/SVG files
 4 main tables
-18 supplementary tables
+44 supplementary tables
 ```
 
 Structural organization:
@@ -247,7 +253,9 @@ Structural organization:
 - **Figures S15-S29** — one legible AlphaFold structural atlas per NISE activity;
 - **Figure S30** — AlphaFold confidence and annotation coverage;
 - **Figure S31** — catalytic/binding/ligand-residue provenance;
-- **Figure S32** — pairwise structural evidence.
+- **Figure S32** — pairwise structural evidence;
+- **Figures S33-S38** — coverage, missingness, overlap and robustness audits;
+- **Figures S39-S69** — source-backed expression, WGCNA, regulatory, network, phenotype, genomic, structural, pharmacology and stability support.
 
 Every composite figure is exported as:
 
@@ -282,6 +290,7 @@ article_outputs/
 ├── source_data/
 ├── manuscript_assets/
 ├── workbooks/
+├── documents/
 └── manifests/
 ```
 
