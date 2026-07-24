@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
 import numpy as np
@@ -12,6 +13,21 @@ from rses_onco.extended_multiomics import (
   coverage_consensus,
   read_model_feature_matrix,
 )
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_recompute_module():
+  path = ROOT / "scripts/recompute_rses_with_extended_multiomics.py"
+  specification = importlib.util.spec_from_file_location(
+    "recompute_rses_with_extended_multiomics",
+    path,
+  )
+  assert specification is not None and specification.loader is not None
+  module = importlib.util.module_from_spec(specification)
+  specification.loader.exec_module(module)
+  return module
 
 
 def models() -> pd.DataFrame:
@@ -148,7 +164,7 @@ def test_gdsc_combination_alignment_and_bliss() -> None:
   assert result.iloc[0]["library_drug"] == "DrugB"
 
 
-def test_coverage_consensus_penalizes_missing_extension() -> None:
+def test_coverage_consensus_penalizes_missing_eligible_extension() -> None:
   complete, complete_coverage = coverage_consensus(
     {"baseline": 0.8, "extension": 0.6},
     {"baseline": 0.7, "extension": 0.3},
@@ -161,3 +177,27 @@ def test_coverage_consensus_penalizes_missing_extension() -> None:
   assert complete_coverage == 1.0
   assert missing_coverage == 0.7
   assert missing < 0.8
+
+
+def test_noneligible_extension_does_not_penalize_baseline() -> None:
+  module = load_recompute_module()
+  score, coverage = module.combine(
+    0.8,
+    None,
+    baseline_weight=0.7,
+    extension_eligible=False,
+  )
+  assert score == 0.8
+  assert coverage == 1.0
+
+
+def test_missing_eligible_extension_reduces_internal_coverage() -> None:
+  module = load_recompute_module()
+  score, coverage = module.combine(
+    0.8,
+    None,
+    baseline_weight=0.7,
+    extension_eligible=True,
+  )
+  assert score is not None and score < 0.8
+  assert coverage == 0.7
