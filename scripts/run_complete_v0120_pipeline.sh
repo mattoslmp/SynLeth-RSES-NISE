@@ -61,20 +61,44 @@ echo "Commit: $(git rev-parse HEAD)"
 echo "Extended data: $EXTENDED_DATA_DIR"
 echo "Methylation: $METHYLATION"
 
+# Build the complete baseline analysis: WGCNA, regulatory networks, methylation,
+# TCGA/DepMap scoring, structures, pharmacology and the original publication package.
 bash scripts/resume_wgcna_regulatory_pipeline.sh check-runtime
 
 PUBLICATION_STAGE=all \
 METHYLATION="$METHYLATION" \
 bash scripts/resume_wgcna_regulatory_pipeline.sh resume-regulatory
 
-bash scripts/run_extended_multiomics_pipeline.sh all
+# Build causal multi-omics layers and replace both rankings atomically with v0.12.0.
+bash scripts/run_extended_multiomics_pipeline.sh analysis
 
-# Rebuild workbook and editable documents after registering S71-S78 and S53-S64.
+# Add the custom PRISM/GDSC matrices to the canonical pharmacology long table,
+# then recompute pharmacological selectivity and every core publication asset using
+# the extended ranking. Combination screens remain a separate non-circular table.
+python -u scripts/merge_custom_pharmacology_evidence.py \
+  --canonical data/processed/pharmacology/drug_sensitivity_long.tsv \
+  --custom data/processed/extended_multiomics/custom_drug_sensitivity_long.tsv \
+  --output data/processed/pharmacology/drug_sensitivity_long.tsv \
+  --status-output data/processed/pharmacology/extended_drug_sensitivity_merge_status.tsv
+
+RANKING="$RESULT_ROOT/full/expanded_rses_onco.tsv" \
+bash scripts/publication_pipeline_steps.sh analyze-sensitivity
+
+RANKING="$RESULT_ROOT/full/expanded_rses_onco.tsv" \
+METHYLATION="$METHYLATION" \
+STRICT_LAYOUT="$STRICT_LAYOUT" \
+bash scripts/run_publication_pipeline.sh assets-only
+
+# Append and validate S71-S78 and S53-S64 only after the core manifests are rebuilt.
+bash scripts/run_extended_multiomics_pipeline.sh publication
+
+# Rebuild workbooks, editable documents and manifests after all 86 figures and 68
+# tables have been registered.
 bash scripts/run_publication_pipeline.sh workbook
 bash scripts/run_publication_pipeline.sh documents
 bash scripts/run_publication_pipeline.sh manifests
 
-# Rebuild result checksums after the score was replaced by v0.12.0.
+# Rebuild result checksums after the score and final publication package changed.
 find "$RESULT_ROOT" "$ARTICLE_ROOT" \
   -type f ! -name SHA256SUMS.txt -print0 \
   | sort -z \
