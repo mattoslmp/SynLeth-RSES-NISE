@@ -1,11 +1,11 @@
 cff-version: 1.2.0
-title: "RSES-Onco: coverage-aware cancer vulnerability framework with genomic Circos, expression, regulatory and promoter-methylation microniches"
+title: "RSES-Onco: coverage-aware multi-omics cancer vulnerability framework with genomic Circos, functional-loss states, proteomic compensation, expression, regulatory and promoter-methylation microniches"
 message: "Please cite this software and the associated manuscript."
 type: software
 authors:
   - family-names: "Pereira"
     given-names: "Leandro de Mattos"
-version: 0.11.2
+version: 0.12.0
 date-released: 2026-07-23
 repository-code: "https://github.com/mattoslmp/SynLeth-RSES-Onco"
 license: MIT
