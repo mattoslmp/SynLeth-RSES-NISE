@@ -107,6 +107,19 @@ def main() -> None:
     missing_direct = sorted(DIRECT_SCORE_SOURCE_KEYS - available)
     if missing_direct:
       errors.append(f"missing_direct_score_sources:{missing_direct}")
+    standardized_direct = set(
+      status.loc[
+        status["status"].astype(str).eq("ok"),
+        "source_key",
+      ].astype(str)
+    )
+    failed_direct = sorted(
+      DIRECT_SCORE_SOURCE_KEYS - standardized_direct
+    )
+    if failed_direct:
+      errors.append(
+        f"unstandardized_direct_score_sources:{failed_direct}"
+      )
 
   required_loss_columns = {
     "ModelID",
@@ -189,6 +202,10 @@ def main() -> None:
     "extended_rank_change",
     "extended_multiomics_semantics_version",
     "score_version",
+    "ablation_without_integrated_functional_loss_coverage_adjusted_rses",
+    "ablation_without_dependency_probability_coverage_adjusted_rses",
+    "ablation_without_protein_compensation_coverage_adjusted_rses",
+    "ablation_without_rnai_orthogonal_support_coverage_adjusted_rses",
   }
   if not required_ranking_columns.issubset(ranking.columns):
     errors.append(
@@ -220,7 +237,7 @@ def main() -> None:
       observed = set(figures["figure_id"].astype(str))
       if not expected_figures.issubset(observed):
         errors.append(
-          f"missing_extended_figures:"
+          "missing_extended_figures:"
           f"{sorted(expected_figures - observed)}"
         )
     if table_manifest.exists():
@@ -238,7 +255,7 @@ def main() -> None:
       )
       if not expected_tables.issubset(observed):
         errors.append(
-          f"missing_extended_tables:"
+          "missing_extended_tables:"
           f"{sorted(expected_tables - observed)}"
         )
 
