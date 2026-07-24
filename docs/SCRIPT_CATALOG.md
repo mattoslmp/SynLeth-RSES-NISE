@@ -2,7 +2,7 @@
 
 This catalogue is generated directly from every Python, Bash and R source file in `scripts/` and `src/rses_onco/`. It is therefore an executable repository contract rather than a manually curated partial list.
 
-Generated entries: **119**
+Generated entries: **120**
 
 | Script/module | Stage | Language | Purpose | Reproduction command | Declared paths |
 |---|---|---|---|---|---|
@@ -114,6 +114,7 @@ Generated entries: **119**
 | `src/rses_onco/depmap.py` | supporting_module | Python | No module-level description was recorded. | `python -u src/rses_onco/depmap.py --help` | `` |
 | `src/rses_onco/evidence_categories.py` | supporting_module | Python | No module-level description was recorded. | `python -u src/rses_onco/evidence_categories.py --help` | `` |
 | `src/rses_onco/expanded.py` | supporting_module | Python | No module-level description was recorded. | `python -u src/rses_onco/expanded.py --help` | `` |
+| `src/rses_onco/extended_multiomics.py` | supporting_module | Python | No module-level description was recorded. | `python -u src/rses_onco/extended_multiomics.py --help` | `` |
 | `src/rses_onco/integrate.py` | supporting_module | Python | No module-level description was recorded. | `python -u src/rses_onco/integrate.py --help` | `` |
 | `src/rses_onco/methylation.py` | expression_and_regulation | Python | No module-level description was recorded. | `python -u src/rses_onco/methylation.py --help` | `` |
 | `src/rses_onco/networks.py` | supporting_module | Python | No module-level description was recorded. | `python -u src/rses_onco/networks.py --help` | `` |
