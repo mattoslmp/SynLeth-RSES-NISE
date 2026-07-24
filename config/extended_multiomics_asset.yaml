@@ -1,0 +1,33 @@
+supplementary_figures:
+  - id: Figure_S71
+    file: Figure_S71_extended_multiomics_source_coverage
+    title: Extended multi-omics source availability and scientific role
+    caption: Availability, standardization status and declared role of every downloaded DepMap extension. Causal score layers, orthogonal validation layers and exploratory covariates remain explicitly separated.
+  - id: Figure_S72
+    file: Figure_S72_baseline_vs_extended_ranking
+    title: Baseline versus extended RSES-Onco ranking
+    caption: Comparison of coverage-adjusted baseline and v0.12.0 multi-omics scores. The baseline is preserved for direct assessment of score and rank changes.
+  - id: Figure_S73
+    file: Figure_S73_extended_layer_contributions
+    title: Candidate-level contributions from scored extended layers
+    caption: Integrated functional-loss, CRISPR dependency-probability, multi-platform protein-compensation and RNAi orthogonal-support components for the highest-ranked evaluable candidate-context rows.
+  - id: Figure_S74
+    file: Figure_S74_proteomic_compensation_concordance
+    title: Cross-platform proteomic compensation evidence
+    caption: Target-protein compensation effects across Gygi, Sanger, Olink and RPPA sources. Platforms are normalized and evaluated separately before consensus; raw measurements are never directly pooled.
+  - id: Figure_S75
+    file: Figure_S75_integrated_functional_loss_states
+    title: Integrated functional-loss state composition
+    caption: Model-gene functional-loss states constructed from relative and absolute copy number, LOH and damaging-mutation evidence, with hotspot and fusion observations retained as contextual annotations.
+  - id: Figure_S76
+    file: Figure_S76_crispr_rnai_orthogonal_support
+    title: CRISPR dependency probability and RNAi orthogonal support
+    caption: Comparison of CRISPR dependency-confidence and DEMETER2 RNAi support for conditional target vulnerability. The technologies are treated as related but orthogonal validation channels.
+  - id: Figure_S77
+    file: Figure_S77_context_layer_shifts
+    title: Non-causal multi-omics context shifts
+    caption: Exploratory metabolomic, pathway, miRNA, chromatin, subtype, genomic-signature and MetMap shifts. These context layers support robustness and biological interpretation but do not directly increase the primary RSES-Onco score without mechanistic mapping.
+  - id: Figure_S78
+    file: Figure_S78_extended_rank_stability
+    title: Rank stability after causal multi-omics extension
+    caption: Cancer-specific baseline-to-extended rank changes and top-candidate stability, documenting the impact of the new scored layers without obscuring the original ranking.
