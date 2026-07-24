@@ -2,7 +2,7 @@
 
 This catalogue is generated directly from every Python, Bash and R source file in `scripts/` and `src/rses_onco/`. It is therefore an executable repository contract rather than a manually curated partial list.
 
-Generated entries: **130**
+Generated entries: **131**
 
 | Script/module | Stage | Language | Purpose | Reproduction command | Declared paths |
 |---|---|---|---|---|---|
@@ -102,6 +102,7 @@ Generated entries: **130**
 | `scripts/summarize_empirical_results.py` | supporting_module | Python | Create manuscript-ready benchmark or expanded RSES-Onco summary tables. | `python -u scripts/summarize_empirical_results.py --help` | `results/empirical_26Q1/depmap_only/empirical_rses_onco_by_cancer.tsv;results/empirical_26Q1/full/article_tables;results/empirical_26Q1/full/empirical_rses_onco_by_cancer.tsv` |
 | `scripts/sync_circos_documentation_v0112.py` | genomic_circos | Python | Idempotently synchronize canonical tutorials and methods with Circos v0.11.2. | `python -u scripts/sync_circos_documentation_v0112.py --help` | `data/processed/circos;data/processed/expanded_candidate_universe.tsv;data/raw/depmap/Model.csv;data/raw/depmap/OmicsExpressionTPMLogp1HumanProteinCodingGenes.csv;data/raw/regulatory/ensembl_promoters.tsv;docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md;docs/END_TO_END_ARTICLE_PROTOCOL.md;manuscript/RSES_Onco_intro_methods_draft_v0110.md;results/expanded_26Q1/full/expanded_rses_onco.tsv;supplementary/Supplementary_Methods_RSES_Onco_v0110.md` |
 | `scripts/sync_methylation_documentation_v0111.py` | expression_and_regulation | Python | Idempotently synchronize canonical documentation with PR #25 methylation semantics. | `python -u scripts/sync_methylation_documentation_v0111.py --help` | `data/processed/expanded_candidate_universe.tsv;data/processed/regulatory/expanded_pair_functional_evidence_by_cancer.tsv;data/raw/depmap;docs/DATA_ACQUISITION_AND_REPRODUCTION_V0110.md;docs/END_TO_END_ARTICLE_PROTOCOL.md;manuscript/RSES_Onco_intro_methods_draft_v0110.md;supplementary/Supplementary_Methods_RSES_Onco_v0110.md` |
+| `scripts/validate_extended_input_schemas.py` | validation | Python | Validate local DepMap extension schemas before any scientific calculation. | `python -u scripts/validate_extended_input_schemas.py --help` | `config/extended_multiomics_sources.yaml;data/processed/extended_multiomics/extended_input_schema_validation.tsv` |
 | `scripts/validate_extended_multiomics_integrity.py` | validation | Python | Validate scientific and publication integrity of RSES-Onco v0.12.0. | `python -u scripts/validate_extended_multiomics_integrity.py --help` | `data/processed/extended_multiomics;results/expanded_26Q1/full/expanded_rses_onco.tsv` |
 | `scripts/validate_extended_supporting_evidence.py` | validation | Python | Validate model-level and raw-source supporting evidence without overclaiming. | `python -u scripts/validate_extended_supporting_evidence.py --help` | `` |
 | `scripts/validate_gdc_matrices.py` | validation | Python | Validate aggregated TCGA/GDC homozygous-deletion matrices and report coverage. | `python -u scripts/validate_gdc_matrices.py --help` | `data/processed/TCGA_COLON_homdel_discrete.tsv;data/processed/TCGA_LUNG_homdel_discrete.tsv;data/processed/TCGA_STOMACH_homdel_discrete.tsv;results/empirical_26Q1/full/gdc_matrix_qc.tsv;results/empirical_26Q1/full/tcga_gene_event_summary.tsv` |
