@@ -45,7 +45,10 @@ def combine(
   extension: float | None,
   *,
   baseline_weight: float,
+  extension_eligible: bool,
 ) -> tuple[float | None, float]:
+  if not extension_eligible:
+    return baseline, 1.0 if baseline is not None else 0.0
   return coverage_consensus(
     {"baseline": baseline, "extension": extension},
     {"baseline": baseline_weight, "extension": 1.0 - baseline_weight},
@@ -65,21 +68,33 @@ def score_row(
     numeric(row, "baseline_component_tumor_event"),
     extension_values["integrated_functional_loss"],
     baseline_weight=0.65,
+    extension_eligible=bool(
+      row.get("eligible_integrated_functional_loss", False)
+    ),
   )
   dependency, dependency_coverage = combine(
     numeric(row, "baseline_component_dependency"),
     extension_values["dependency_probability"],
     baseline_weight=0.75,
+    extension_eligible=bool(
+      row.get("eligible_dependency_probability", False)
+    ),
   )
   expression_compensation, expression_coverage = combine(
     numeric(row, "baseline_component_expression_compensation"),
     extension_values["protein_compensation"],
     baseline_weight=0.65,
+    extension_eligible=bool(
+      row.get("eligible_protein_compensation", False)
+    ),
   )
   genetic_phenotype, genetic_coverage = combine(
     numeric(row, "baseline_microniche_genetic_phenotype"),
     extension_values["rnai_orthogonal_support"],
     baseline_weight=0.70,
+    extension_eligible=bool(
+      row.get("eligible_rnai_orthogonal_support", False)
+    ),
   )
 
   microniche_components = {
