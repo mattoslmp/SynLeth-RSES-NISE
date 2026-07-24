@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -13,6 +14,7 @@ def load_script(name: str):
   specification = importlib.util.spec_from_file_location(path.stem, path)
   assert specification is not None and specification.loader is not None
   module = importlib.util.module_from_spec(specification)
+  sys.modules[specification.name] = module
   specification.loader.exec_module(module)
   return module
 
