@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rses-onco"
-version = "0.11.2"
-description = "Coverage-aware NISE and paralog cancer vulnerability framework with WGCNA, promoter and methylation regulation, genomic Circos, complete script documentation, evidence audit, pharmacology and structural publication assets"
+version = "0.12.0"
+description = "Coverage-aware NISE and paralog cancer vulnerability framework with integrated functional-loss states, CRISPR confidence, multi-platform proteomics, RNAi validation, WGCNA, promoter methylation, genomic Circos, pharmacology and reproducible publication assets"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{name = "Leandro de Mattos Pereira"}]
