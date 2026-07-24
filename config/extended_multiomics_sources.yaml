@@ -1,0 +1,138 @@
+version: RSES-Onco-extended-multiomics-v0.12.0
+input_directory: dmap_data
+sources:
+  crispr_dependency:
+    filename: CRISPR_Gene_Dependency_subsetted.csv
+    role: scored_dependency_confidence
+    gene_features: true
+  damaging_mutations:
+    filename: Damaging_Mutations_Public_26Q1_subsetted.csv
+    role: scored_functional_loss
+    gene_features: true
+  hotspot_mutations:
+    filename: Hotspot_Mutations_Public_26Q1_subsetted.csv
+    role: exploratory_mutation_context
+    gene_features: true
+  mutation_table:
+    filename: mutations_NAsdropped.csv
+    role: scored_variant_level_functional_loss
+    layout: long_mutation
+  fusions:
+    filename: Fusions_Public_26Q1_subsetted.csv
+    role: exploratory_fusion_context
+    gene_features: true
+  absolute_cn:
+    filename: Omics_Absolute_CN_Gene_Public_24Q4_subsetted.csv
+    role: scored_functional_loss
+    gene_features: true
+  loh:
+    filename: Omics_LoH_Public_24Q4_subsetted.csv
+    role: scored_functional_loss
+    gene_features: true
+  rnai_demeter2:
+    filename: RNAi_Achilles_DRIVE_Marcotte_DEMETER2_subsetted.csv
+    role: scored_orthogonal_genetic_validation
+    gene_features: true
+    lower_is_more_dependent: true
+  proteomics_gygi:
+    filename: Harmonized_MS_CCLE_Gygi_subsetted.csv
+    role: scored_protein_compensation
+    gene_features: true
+  proteomics_sanger:
+    filename: Harmonized_MS_Sanger_subsetted.csv
+    role: scored_protein_compensation
+    gene_features: true
+  proteomics_olink:
+    filename: Harmonized_Olink_2023_Lysate_Best_Dilution_subsetted.csv
+    role: scored_protein_compensation
+    gene_features: true
+  proteomics_rppa:
+    filename: Harmonized_RPPA_CCLE_subsetted.csv
+    role: scored_protein_compensation
+    gene_features: true
+  proteomics_rppa500:
+    filename: RPPA500_MCLP_subsetted.csv
+    role: scored_protein_compensation
+    gene_features: true
+  metabolomics:
+    filename: Metabolomics_subsetted.csv
+    role: exploratory_metabolic_state
+  methylation:
+    filename: Methylation_1kb_upstream_TSS_subsetted_NAsdropped.csv
+    role: existing_regulatory_score_input
+    gene_features: true
+  mirna:
+    filename: miRNA_Expression-2.csv
+    role: exploratory_post_transcriptional_context
+  global_chromatin:
+    filename: global_profilling_2.csv
+    role: exploratory_epigenomic_covariate
+  ssgsea:
+    filename: ssGSEA_Public_24Q2_subsetted.csv
+    role: exploratory_pathway_covariate
+  omics_signatures:
+    filename: Omics_Signatures_Public_26Q1_subsetted.csv
+    role: covariate_and_robustness
+  molecular_subtypes:
+    filename: Inferred_Molecular_Subtypes_Public_26Q1_subsetted.csv
+    role: covariate_and_robustness
+  subtype_matrix:
+    filename: Subtype_Matrix_Public_26Q1_subsetted.csv
+    role: covariate_and_robustness
+  metmap_125:
+    filename: metmap-125-metatastic-potential.csv
+    role: translational_metastatic_validation
+  metmap_500:
+    filename: metmap-500-metatastic-potential.csv
+    role: translational_metastatic_validation
+  metmap_penetrance:
+    filename: metmap-500-penetrance.csv
+    role: translational_metastatic_validation
+  prism_primary_viability:
+    filename: PRISM_Repurposing_Primary_Viability_subsetted.csv
+    role: translational_single_drug_validation
+  prism_primary_compound_sample:
+    filename: PRISM_Repurposing_Primary_Viability_per_Compound_Sample_subsetted.csv
+    role: translational_single_drug_validation
+  prism_secondary_auc:
+    filename: PRISM_Repurposing_Secondary_AUC_subsetted.csv
+    role: translational_single_drug_validation
+  prism_secondary_viability:
+    filename: PRISM_Repurposing_Secondary_Viability_subsetted.csv
+    role: translational_single_drug_validation
+  prism_secondary_log2_auc:
+    filename: PRISM_Repurposing_Secondary_log2_AUC_subsetted.csv
+    role: translational_single_drug_validation
+  gdsc1_auc:
+    filename: GDSC1_AUC_subsetted.csv
+    role: translational_single_drug_validation
+  gdsc1_viability:
+    filename: GDSC1_Viability_subsetted.csv
+    role: translational_single_drug_validation
+  gdsc1_log2_auc:
+    filename: GDSC1_log2_AUC_subsetted.csv
+    role: translational_single_drug_validation
+  gdsc2_auc:
+    filename: GDSC2_AUC_subsetted.csv
+    role: translational_single_drug_validation
+  gdsc2_viability:
+    filename: GDSC2_Viability_subsetted.csv
+    role: translational_single_drug_validation
+  gdsc2_log2_auc:
+    filename: GDSC2_log2_AUC_subsetted.csv
+    role: translational_single_drug_validation
+  gdsc_combination_anchor_viability:
+    filename: GDSC_Combination_Anchor_Viability_subsetted.csv
+    role: translational_combination_validation
+  gdsc_combination_combination_auc:
+    filename: GDSC_Combination_Combination_AUC_subsetted.csv
+    role: translational_combination_validation
+  gdsc_combination_combination_viability:
+    filename: GDSC_Combination_Combination_Viability_subsetted.csv
+    role: translational_combination_validation
+  gdsc_combination_library_auc:
+    filename: GDSC_Combination_Library_AUC_subsetted.csv
+    role: translational_combination_validation
+  gdsc_combination_library_viability:
+    filename: GDSC_Combination_Library_Viability_subsetted.csv
+    role: translational_combination_validation
