@@ -787,24 +787,49 @@ def read_long_event_matrix(
     )
     if consequence_column is not None:
       consequences = frame[consequence_column].astype(str).str.casefold()
-      lof_terms = (
+      clear_lof_terms = (
         "frame_shift",
         "frameshift",
         "nonsense",
         "stop_gained",
-        "splice",
+        "stop_lost",
+        "splice_acceptor",
+        "splice_donor",
+        "splice_site",
         "start_lost",
         "translation_start_site",
       )
-      damaging_terms = lof_terms + (
-        "missense",
-        "in_frame",
-        "deleterious",
-        "damaging",
+      clear_lof = pd.Series(False, index=frame.index)
+      for term in clear_lof_terms:
+        clear_lof |= consequences.str.contains(term, na=False)
+
+      annotation_columns = [
+        column
+        for column in (
+          "isDamaging",
+          "damaging",
+          "LikelyLoF",
+          "likely_lof",
+          "PolyPhen",
+          "SIFT",
+          "VEP_Impact",
+          "IMPACT",
+          "Oncogenic",
+        )
+        if column in frame.columns
+      ]
+      annotated_damaging = pd.Series(False, index=frame.index)
+      for column in annotation_columns:
+        values = frame[column].astype(str).str.casefold()
+        annotated_damaging |= values.str.contains(
+          r"(^|[^a-z])(true|1|yes|damaging|deleterious|probably_damaging|high)([^a-z]|$)",
+          regex=True,
+          na=False,
+        )
+      missense_or_inframe = consequences.str.contains(
+        r"missense|in_frame|inframe", regex=True, na=False
       )
-      mask = pd.Series(False, index=frame.index)
-      for term in damaging_terms:
-        mask |= consequences.str.contains(term, na=False)
+      mask = clear_lof | (missense_or_inframe & annotated_damaging)
       standardized = standardized.loc[mask]
   elif event == "fusion":
     partner_column = find_first_column(
