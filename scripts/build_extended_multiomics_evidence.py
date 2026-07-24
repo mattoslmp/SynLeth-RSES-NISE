@@ -15,6 +15,7 @@ import pandas as pd
 import yaml
 
 from rses_onco.extended_multiomics import (
+  DIRECT_SCORE_SOURCE_KEYS,
   SourceSpec,
   bh_adjust,
   build_functional_loss_table,
@@ -41,36 +42,56 @@ def write_tsv(frame: pd.DataFrame, path: Path) -> None:
   frame.to_csv(path, sep="\t", index=False)
 
 
-def merge_binary(first: pd.DataFrame | None, second: pd.DataFrame | None) -> pd.DataFrame | None:
+def merge_binary(
+  first: pd.DataFrame | None,
+  second: pd.DataFrame | None,
+) -> pd.DataFrame | None:
   if first is None or first.empty:
     return second
   if second is None or second.empty:
     return first
-  rows = sorted(set(first.index.astype(str)) | set(second.index.astype(str)))
-  columns = sorted(set(first.columns.astype(str)) | set(second.columns.astype(str)))
+  rows = sorted(
+    set(first.index.astype(str)) | set(second.index.astype(str))
+  )
+  columns = sorted(
+    set(first.columns.astype(str)) | set(second.columns.astype(str))
+  )
   left = first.reindex(index=rows, columns=columns)
   right = second.reindex(index=rows, columns=columns)
-  return pd.concat([left, right], axis=0).groupby(level=0).max().reindex(columns=columns)
+  return (
+    pd.concat([left, right], axis=0)
+      .groupby(level=0)
+      .max()
+      .reindex(columns=columns)
+  )
 
 
 def main() -> None:
   parser = argparse.ArgumentParser()
-  parser.add_argument("--config", default="config/extended_multiomics_sources.yaml")
+  parser.add_argument(
+    "--config", default="config/extended_multiomics_sources.yaml"
+  )
   parser.add_argument("--input-dir", default="dmap_data")
   parser.add_argument("--models", default="data/raw/depmap/Model.csv")
-  parser.add_argument("--copy-number", default="data/raw/depmap/OmicsCNGeneWGS.csv")
+  parser.add_argument(
+    "--copy-number", default="data/raw/depmap/OmicsCNGeneWGS.csv"
+  )
   parser.add_argument(
     "--ranking",
     default="results/expanded_26Q1/full/expanded_rses_onco.tsv",
   )
-  parser.add_argument("--output-dir", default="data/processed/extended_multiomics")
+  parser.add_argument(
+    "--output-dir", default="data/processed/extended_multiomics"
+  )
   parser.add_argument("--min-group-size", type=int, default=3)
   parser.add_argument("--loss-threshold", type=float, default=0.30)
   parser.add_argument("--strict", action="store_true")
   args = parser.parse_args()
 
   config_path = resolve(args.config)
-  config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+  config = yaml.safe_load(
+    config_path.read_text(encoding="utf-8")
+  ) or {}
   input_dir = resolve(args.input_dir)
   output_dir = resolve(args.output_dir)
   output_dir.mkdir(parents=True, exist_ok=True)
@@ -97,12 +118,19 @@ def main() -> None:
     for key, value in source_config.items()
   ]
   inventory = source_inventory(specs, input_dir)
-  write_tsv(inventory, output_dir / "extended_multiomics_source_inventory.tsv")
+  write_tsv(
+    inventory,
+    output_dir / "extended_multiomics_source_inventory.tsv",
+  )
 
   statuses: list[dict[str, object]] = []
   matrices: dict[str, pd.DataFrame] = {}
 
-  def load_matrix(key: str, *, gene_features: bool | None = None) -> pd.DataFrame | None:
+  def load_matrix(
+    key: str,
+    *,
+    gene_features: bool | None = None,
+  ) -> pd.DataFrame | None:
     specification = source_config.get(key) or {}
     path = input_dir / str(specification.get("filename") or "")
     if not path.exists() or path.stat().st_size == 0:
@@ -130,10 +158,16 @@ def main() -> None:
             else gene_features
           ),
         )
+      if matrix.empty and args.strict and key in DIRECT_SCORE_SOURCE_KEYS:
+        raise ValueError(
+          f"Direct score source {key} is empty after standardization"
+        )
       matrices[key] = matrix
       statuses.append({
         "source_key": key,
-        "status": "ok" if not matrix.empty else "empty_after_standardization",
+        "status": (
+          "ok" if not matrix.empty else "empty_after_standardization"
+        ),
         "path": str(path),
         "rows": len(matrix),
         "columns": len(matrix.columns),
@@ -147,11 +181,18 @@ def main() -> None:
         "path": str(path),
         "message": str(exc),
       })
-      if args.strict:
+      if args.strict and (
+        key in DIRECT_SCORE_SOURCE_KEYS
+        or bool(specification.get("required", False))
+      ):
         raise
       return None
 
-  relative_cn = read_model_feature_matrix(copy_number_path, models, gene_features=True)
+  relative_cn = read_model_feature_matrix(
+    copy_number_path,
+    models,
+    gene_features=True,
+  )
   dependency_probability = load_matrix("crispr_dependency")
   damaging = load_matrix("damaging_mutations")
   mutation_table = load_matrix("mutation_table")
@@ -203,18 +244,28 @@ def main() -> None:
     "rnai_p_value",
   ):
     if p_column in pair_evidence.columns:
-      q_column = p_column.replace("p_value", "q_value_bh_within_cancer")
+      q_column = p_column.replace(
+        "p_value", "q_value_bh_within_cancer"
+      )
       pair_evidence[q_column] = (
         pair_evidence.groupby("cancer", group_keys=False)[p_column]
           .transform(lambda values: bh_adjust(values))
       )
   if not protein_evidence.empty and "p_value" in protein_evidence.columns:
     protein_evidence["q_value_bh_within_source_cancer"] = (
-      protein_evidence.groupby(["source", "cancer"], group_keys=False)["p_value"]
+      protein_evidence.groupby(
+        ["source", "cancer"], group_keys=False
+      )["p_value"]
         .transform(lambda values: bh_adjust(values))
     )
-  write_tsv(pair_evidence, output_dir / "extended_pair_evidence_by_cancer.tsv")
-  write_tsv(protein_evidence, output_dir / "proteomics_pair_evidence_by_source.tsv")
+  write_tsv(
+    pair_evidence,
+    output_dir / "extended_pair_evidence_by_cancer.tsv",
+  )
+  write_tsv(
+    protein_evidence,
+    output_dir / "proteomics_pair_evidence_by_source.tsv",
+  )
 
   covariate_frames = []
   for key in (
@@ -248,7 +299,10 @@ def main() -> None:
     if covariate_frames
     else pd.DataFrame()
   )
-  write_tsv(covariates, output_dir / "extended_covariate_context.tsv")
+  write_tsv(
+    covariates,
+    output_dir / "extended_covariate_context.tsv",
+  )
 
   drug_frames = []
   for key in (
@@ -296,7 +350,10 @@ def main() -> None:
     if drug_frames
     else pd.DataFrame()
   )
-  write_tsv(drug_long, output_dir / "custom_drug_sensitivity_long.tsv")
+  write_tsv(
+    drug_long,
+    output_dir / "custom_drug_sensitivity_long.tsv",
+  )
 
   combination_key_map = {
     "anchor_viability": "gdsc_combination_anchor_viability",
@@ -311,30 +368,48 @@ def main() -> None:
     matrix = load_matrix(source_key, gene_features=False)
     if matrix is not None and not matrix.empty:
       combination_matrices[short_key] = matrix
-      combination_files[short_key] = input_dir / source_config[source_key]["filename"]
+      combination_files[short_key] = (
+        input_dir / source_config[source_key]["filename"]
+      )
   combination = build_gdsc_combination_table(
     combination_matrices,
     combination_files,
   )
-  write_tsv(combination, output_dir / "gdsc_combination_evidence_long.tsv")
+  write_tsv(
+    combination,
+    output_dir / "gdsc_combination_evidence_long.tsv",
+  )
 
   status = pd.DataFrame(statuses)
-  write_tsv(status, output_dir / "extended_multiomics_source_status.tsv")
+  write_tsv(
+    status,
+    output_dir / "extended_multiomics_source_status.tsv",
+  )
   provenance = inventory.merge(
     status,
     on="source_key",
     how="left",
     suffixes=("_inventory", "_standardization"),
   )
-  write_tsv(provenance, output_dir / "extended_multiomics_source_provenance.tsv")
+  write_tsv(
+    provenance,
+    output_dir / "extended_multiomics_source_provenance.tsv",
+  )
 
   payload = {
-    "version": str(config.get("version") or "RSES-Onco-extended-multiomics-v0.12.0"),
+    "version": str(
+      config.get("version")
+      or "RSES-Onco-extended-multiomics-v0.12.0"
+    ),
     "input_directory": str(input_dir),
     "ranking": str(ranking_path),
     "source_count": len(specs),
     "available_source_count": int(inventory["exists"].sum()),
-    "standardized_source_count": int((status.get("status") == "ok").sum()) if not status.empty else 0,
+    "standardized_source_count": (
+      int((status.get("status") == "ok").sum())
+      if not status.empty
+      else 0
+    ),
     "functional_loss_rows": len(loss_table),
     "pair_evidence_rows": len(pair_evidence),
     "protein_evidence_rows": len(protein_evidence),
@@ -359,7 +434,10 @@ def main() -> None:
       "fusions without breakpoint-level disruption annotation",
     ],
   }
-  write_status_json(output_dir / "extended_multiomics_status.json", payload)
+  write_status_json(
+    output_dir / "extended_multiomics_status.json",
+    payload,
+  )
   print(json.dumps(payload, indent=2))
 
 
