@@ -456,49 +456,91 @@ def figure_context(
 def figure_rank_stability(
   ranking: pd.DataFrame,
 ) -> tuple[plt.Figure, pd.DataFrame]:
-  columns = [
-    column
-    for column in (
-      "pair_id",
-      "cancer",
-      "baseline_rank_within_cancer",
-      "extended_rank_within_cancer",
-      "extended_rank_change",
-      "baseline_coverage_adjusted_rses",
-      "coverage_adjusted_rses",
-    )
+  scenarios = {
+    "Baseline": "baseline_rank_within_cancer",
+    "Full v0.12.0": "extended_rank_within_cancer",
+    "Without functional loss": (
+      "ablation_without_integrated_functional_loss_rank_within_cancer"
+    ),
+    "Without dependency probability": (
+      "ablation_without_dependency_probability_rank_within_cancer"
+    ),
+    "Without protein compensation": (
+      "ablation_without_protein_compensation_rank_within_cancer"
+    ),
+    "Without RNAi": (
+      "ablation_without_rnai_orthogonal_support_rank_within_cancer"
+    ),
+  }
+  available = {
+    label: column
+    for label, column in scenarios.items()
     if column in ranking.columns
+  }
+  rows = []
+  for cancer, subset in ranking.groupby("cancer"):
+    reference = pd.to_numeric(
+      subset.get("extended_rank_within_cancer"), errors="coerce"
+    )
+    for label, column in available.items():
+      comparison = pd.to_numeric(subset[column], errors="coerce")
+      valid = reference.notna() & comparison.notna()
+      correlation = (
+        float(
+          reference.loc[valid].corr(
+            comparison.loc[valid], method="spearman"
+          )
+        )
+        if int(valid.sum()) >= 3
+        else np.nan
+      )
+      rows.append({
+        "cancer": cancer,
+        "scenario": label,
+        "spearman_rank_correlation_to_full": correlation,
+        "n_rows": int(valid.sum()),
+      })
+  data = pd.DataFrame(rows)
+  fig, axis = plt.subplots(figsize=(11.2, 5.8), constrained_layout=True)
+  if (
+    data.empty
+    or data["spearman_rank_correlation_to_full"].notna().sum() == 0
+  ):
+    placeholder(
+      axis,
+      "Extended rank stability",
+      "No full-versus-ablation rank correlations were available.",
+    )
+    return fig, data
+  pivot = data.pivot(
+    index="cancer",
+    columns="scenario",
+    values="spearman_rank_correlation_to_full",
+  )
+  ordered_columns = [
+    label for label in scenarios if label in pivot.columns
   ]
-  data = ranking[columns].copy() if columns else pd.DataFrame()
-  fig, axis = plt.subplots(figsize=(9.5, 6.2), constrained_layout=True)
-  if data.empty or "extended_rank_change" not in data.columns:
-    placeholder(
-      axis,
-      "Extended rank stability",
-      "No baseline-to-extended rank comparison was available.",
-    )
-    return fig, data
-  groups = []
-  labels = []
-  for cancer, subset in data.groupby("cancer"):
-    values = pd.to_numeric(
-      subset["extended_rank_change"], errors="coerce"
-    ).dropna()
-    if len(values):
-      groups.append(values.to_numpy())
-      labels.append(str(cancer))
-  if not groups:
-    placeholder(
-      axis,
-      "Extended rank stability",
-      "Rank changes were unavailable after filtering.",
-    )
-    return fig, data
-  axis.boxplot(groups, labels=labels, showfliers=False)
-  axis.axhline(0, linestyle="--", linewidth=1.0)
-  axis.set_ylabel("Baseline rank − extended rank\n(positive = improved rank)")
-  axis.set_title("Cancer-specific ranking stability after multi-omics extension")
-  axis.grid(axis="y", alpha=0.2)
+  pivot = pivot.reindex(columns=ordered_columns)
+  image = axis.imshow(
+    np.ma.masked_invalid(pivot.to_numpy()),
+    aspect="auto",
+    vmin=0,
+    vmax=1,
+  )
+  axis.set_yticks(np.arange(len(pivot.index)), pivot.index)
+  axis.set_xticks(
+    np.arange(len(pivot.columns)),
+    [str(value).replace(" ", "\n") for value in pivot.columns],
+    fontsize=7.5,
+  )
+  axis.set_title(
+    "Rank stability under leave-one-extended-layer-out ablation"
+  )
+  fig.colorbar(
+    image,
+    ax=axis,
+    label="Spearman rank correlation to full v0.12.0",
+  )
   return fig, data
 
 
