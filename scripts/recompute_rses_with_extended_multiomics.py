@@ -21,6 +21,14 @@ from rses_onco.expanded import (
 from rses_onco.extended_multiomics import clamp01, coverage_consensus
 
 
+ABLATIONS = {
+  "integrated_functional_loss": "integrated_functional_loss_support",
+  "dependency_probability": "dependency_probability_support",
+  "protein_compensation": "protein_compensation_support",
+  "rnai_orthogonal_support": "rnai_orthogonal_support",
+}
+
+
 def resolve(value: str | Path) -> Path:
   path = Path(value)
   return path if path.is_absolute() else ROOT / path
@@ -42,6 +50,102 @@ def combine(
     {"baseline": baseline, "extension": extension},
     {"baseline": baseline_weight, "extension": 1.0 - baseline_weight},
   )
+
+
+def score_row(
+  row: pd.Series,
+  *,
+  exclude: str | None = None,
+) -> dict[str, object]:
+  extension_values = {
+    key: None if exclude == key else numeric(row, column)
+    for key, column in ABLATIONS.items()
+  }
+  tumor_event, tumor_coverage = combine(
+    numeric(row, "baseline_component_tumor_event"),
+    extension_values["integrated_functional_loss"],
+    baseline_weight=0.65,
+  )
+  dependency, dependency_coverage = combine(
+    numeric(row, "baseline_component_dependency"),
+    extension_values["dependency_probability"],
+    baseline_weight=0.75,
+  )
+  expression_compensation, expression_coverage = combine(
+    numeric(row, "baseline_component_expression_compensation"),
+    extension_values["protein_compensation"],
+    baseline_weight=0.65,
+  )
+  genetic_phenotype, genetic_coverage = combine(
+    numeric(row, "baseline_microniche_genetic_phenotype"),
+    extension_values["rnai_orthogonal_support"],
+    baseline_weight=0.70,
+  )
+
+  microniche_components = {
+    "expression_context": numeric(
+      row, "baseline_microniche_expression_context"
+    ),
+    "localization": numeric(row, "baseline_microniche_localization"),
+    "biochemical_structural": numeric(
+      row, "baseline_microniche_biochemical_structural"
+    ),
+    "genetic_phenotype": genetic_phenotype,
+    "interaction_network": numeric(
+      row, "baseline_microniche_interaction_network"
+    ),
+    "regulatory_network": numeric(
+      row, "baseline_microniche_regulatory_network"
+    ),
+  }
+  eligible_microniche = {
+    key
+    for key in FUNCTIONAL_MICRONICHE_WEIGHTS
+    if bool(row.get(f"eligible_microniche_{key}", True))
+  }
+  microniche = coverage_aware_score(
+    microniche_components,
+    FUNCTIONAL_MICRONICHE_WEIGHTS,
+    eligible_domains=eligible_microniche,
+  )
+
+  onco_components = {
+    "tumor_event": tumor_event,
+    "dependency": dependency,
+    "selectivity": numeric(row, "baseline_component_selectivity"),
+    "expression_compensation": expression_compensation,
+    "functional_relation": numeric(
+      row, "baseline_component_functional_relation"
+    ),
+    "functional_microniche": (
+      microniche.adjusted_score
+      if np.isfinite(microniche.adjusted_score)
+      else None
+    ),
+    "validation_tractability": numeric(
+      row, "baseline_component_validation_tractability"
+    ),
+  }
+  eligible_onco = {
+    key
+    for key in EXPANDED_ONCO_WEIGHTS
+    if bool(row.get(f"eligible_component_{key}", True))
+  }
+  onco = coverage_aware_score(
+    onco_components,
+    EXPANDED_ONCO_WEIGHTS,
+    eligible_domains=eligible_onco,
+  )
+  return {
+    "microniche_components": microniche_components,
+    "onco_components": onco_components,
+    "microniche": microniche,
+    "onco": onco,
+    "tumor_coverage": tumor_coverage,
+    "dependency_coverage": dependency_coverage,
+    "expression_coverage": expression_coverage,
+    "genetic_coverage": genetic_coverage,
+  }
 
 
 def main() -> None:
@@ -97,86 +201,13 @@ def main() -> None:
 
   output_rows = []
   for _, row in merged.iterrows():
-    tumor_event, tumor_coverage = combine(
-      numeric(row, "baseline_component_tumor_event"),
-      numeric(row, "integrated_functional_loss_support"),
-      baseline_weight=0.65,
-    )
-    dependency, dependency_coverage = combine(
-      numeric(row, "baseline_component_dependency"),
-      numeric(row, "dependency_probability_support"),
-      baseline_weight=0.75,
-    )
-    expression_compensation, expression_coverage = combine(
-      numeric(row, "baseline_component_expression_compensation"),
-      numeric(row, "protein_compensation_support"),
-      baseline_weight=0.65,
-    )
-    genetic_phenotype, genetic_coverage = combine(
-      numeric(row, "baseline_microniche_genetic_phenotype"),
-      numeric(row, "rnai_orthogonal_support"),
-      baseline_weight=0.70,
-    )
-
-    microniche_components = {
-      "expression_context": numeric(
-        row, "baseline_microniche_expression_context"
-      ),
-      "localization": numeric(row, "baseline_microniche_localization"),
-      "biochemical_structural": numeric(
-        row, "baseline_microniche_biochemical_structural"
-      ),
-      "genetic_phenotype": genetic_phenotype,
-      "interaction_network": numeric(
-        row, "baseline_microniche_interaction_network"
-      ),
-      "regulatory_network": numeric(
-        row, "baseline_microniche_regulatory_network"
-      ),
-    }
-    eligible_microniche = {
-      key
-      for key in FUNCTIONAL_MICRONICHE_WEIGHTS
-      if bool(row.get(f"eligible_microniche_{key}", True))
-    }
-    microniche = coverage_aware_score(
-      microniche_components,
-      FUNCTIONAL_MICRONICHE_WEIGHTS,
-      eligible_domains=eligible_microniche,
-    )
-
-    onco_components = {
-      "tumor_event": tumor_event,
-      "dependency": dependency,
-      "selectivity": numeric(row, "baseline_component_selectivity"),
-      "expression_compensation": expression_compensation,
-      "functional_relation": numeric(
-        row, "baseline_component_functional_relation"
-      ),
-      "functional_microniche": (
-        microniche.adjusted_score
-        if np.isfinite(microniche.adjusted_score)
-        else None
-      ),
-      "validation_tractability": numeric(
-        row, "baseline_component_validation_tractability"
-      ),
-    }
-    eligible_onco = {
-      key
-      for key in EXPANDED_ONCO_WEIGHTS
-      if bool(row.get(f"eligible_component_{key}", True))
-    }
-    onco = coverage_aware_score(
-      onco_components,
-      EXPANDED_ONCO_WEIGHTS,
-      eligible_domains=eligible_onco,
-    )
-
+    full = score_row(row)
+    microniche = full["microniche"]
+    onco = full["onco"]
     updated = row.to_dict()
-    for key, value in microniche_components.items():
+    for key, value in full["microniche_components"].items():
       updated[f"microniche_{key}"] = value
-    for key, value in onco_components.items():
+    for key, value in full["onco_components"].items():
       updated[f"component_{key}"] = value
     updated.update({
       "functional_microniche_rses": microniche.observed_score,
@@ -191,13 +222,19 @@ def main() -> None:
       "n_domains": onco.n_domains,
       "observed_domain_weight": onco.observed_weight,
       "eligible_domain_weight": onco.eligible_weight,
-      "extended_tumor_event_internal_coverage": tumor_coverage,
-      "extended_dependency_internal_coverage": dependency_coverage,
-      "extended_expression_internal_coverage": expression_coverage,
-      "extended_genetic_phenotype_internal_coverage": genetic_coverage,
+      "extended_tumor_event_internal_coverage": full["tumor_coverage"],
+      "extended_dependency_internal_coverage": full["dependency_coverage"],
+      "extended_expression_internal_coverage": full["expression_coverage"],
+      "extended_genetic_phenotype_internal_coverage": full["genetic_coverage"],
       "score_version": "RSES-Onco-expanded-v0.12.0",
       "extended_multiomics_semantics_version": (
         "causal-layers-scored-context-layers-separated-v1"
+      ),
+      "extended_internal_weights": (
+        "tumor_event:baseline=0.65,functional_loss=0.35;"
+        "dependency:Chronos=0.75,gene_dependency=0.25;"
+        "expression_compensation:RNA=0.65,protein=0.35;"
+        "genetic_phenotype:CRISPR=0.70,RNAi=0.30"
       ),
       "extended_primary_score_includes": (
         "integrated_functional_loss;crispr_dependency_probability;"
@@ -209,6 +246,12 @@ def main() -> None:
         "hotspot_mutations_without_LOF_annotation"
       ),
     })
+    for ablation in ABLATIONS:
+      ablated = score_row(row, exclude=ablation)
+      ablated_onco = ablated["onco"]
+      updated[
+        f"ablation_without_{ablation}_coverage_adjusted_rses"
+      ] = ablated_onco.adjusted_score
     output_rows.append(updated)
 
   result = pd.DataFrame(output_rows)
@@ -229,12 +272,21 @@ def main() -> None:
       result["baseline_rank_within_cancer"]
       - result["extended_rank_within_cancer"]
     )
+  for ablation in ABLATIONS:
+    score_column = f"ablation_without_{ablation}_coverage_adjusted_rses"
+    rank_column = f"ablation_without_{ablation}_rank_within_cancer"
+    result[rank_column] = result.groupby("cancer")[score_column].rank(
+      method="min",
+      ascending=False,
+      na_option="bottom",
+    )
 
   output_path.parent.mkdir(parents=True, exist_ok=True)
   temporary = output_path.with_suffix(output_path.suffix + ".tmp")
   result.to_csv(temporary, sep="\t", index=False)
   temporary.replace(output_path)
   print(f"Extended ranking rows: {len(result):,}")
+  print(f"Extended layer ablations: {len(ABLATIONS)}")
   print(f"Wrote {output_path}")
 
 
