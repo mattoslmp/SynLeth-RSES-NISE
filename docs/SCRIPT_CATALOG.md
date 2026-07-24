@@ -2,7 +2,7 @@
 
 This catalogue is generated directly from every Python, Bash and R source file in `scripts/` and `src/rses_onco/`. It is therefore an executable repository contract rather than a manually curated partial list.
 
-Generated entries: **127**
+Generated entries: **128**
 
 | Script/module | Stage | Language | Purpose | Reproduction command | Declared paths |
 |---|---|---|---|---|---|
@@ -113,6 +113,7 @@ Generated entries: **127**
 | `scripts/validate_real_inputs.py` | validation | Python | Structural and overlap validation for real DepMap inputs. | `python -u scripts/validate_real_inputs.py --help` | `data/curated/synthetic_lethality_reference_pairs.tsv` |
 | `scripts/validate_wgcna_regulatory_evidence.py` | expression_and_regulation | Python | Validate WGCNA, promoter, TF and methylation evidence integration. | `python -u scripts/validate_wgcna_regulatory_evidence.py --help` | `data/processed/expanded_pair_functional_evidence.tsv;results/expanded_26Q1/full/expanded_rses_onco.tsv` |
 | `scripts/verify_complete_article_run.sh` | supporting_module | Bash | Verify the complete real-data, Circos, structural and publication workflow. | `bash scripts/verify_complete_article_run.sh` | `data/raw/ensembl/ensembl_acquisition_metadata.json};data/raw/gdc};data/supplementary/Figure_S70_source_data.tsv;docs/SCRIPT_CATALOG.md;docs/script_manifest.tsv;results/expanded_26Q1};supplementary/Table_S45_genomic_circos_gene_coordinates.tsv;supplementary/Table_S46_genomic_circos_pair_links.tsv;supplementary/Table_S47_genomic_circos_ring_values.tsv;supplementary/Table_S48_genomic_circos_track_definitions.tsv;supplementary/Table_S49_genomic_circos_expression_summary.tsv;supplementary/Table_S50_genomic_circos_expression_model_values.tsv;supplementary/Table_S51_pipeline_script_catalog.tsv;supplementary/Table_S52_genomic_circos_source_provenance.tsv` |
+| `scripts/verify_complete_article_run_v0120.sh` | orchestration | Bash | Verify the complete RSES-Onco v0.12.0 extended multi-omics submission package. | `bash scripts/verify_complete_article_run_v0120.sh` | `data/raw/gdc};results/expanded_26Q1}` |
 | `src/rses_onco/__init__.py` | supporting_module | Python | RSES-Onco: coverage-aware prioritization of cancer synthetic-lethal dependencies. | `python -u src/rses_onco/__init__.py --help` | `` |
 | `src/rses_onco/audit.py` | validation | Python | No module-level description was recorded. | `python -u src/rses_onco/audit.py --help` | `` |
 | `src/rses_onco/audit_eligibility.py` | validation | Python | No module-level description was recorded. | `python -u src/rses_onco/audit_eligibility.py --help` | `` |
