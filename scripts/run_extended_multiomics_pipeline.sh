@@ -62,11 +62,20 @@ preflight() {
 
 analysis() {
   preflight
-  log_stage "Build standardized extended multi-omics evidence"
   local strict_flag=()
   if [[ "$STRICT_EXTENDED_SOURCES" == "1" ]]; then
     strict_flag=(--strict)
   fi
+
+  log_stage "Validate all local extended-source schemas and duplicate content"
+  run_logged "$LOG_DIR/00_validate_extended_input_schemas.log" \
+    python -u scripts/validate_extended_input_schemas.py \
+      --config "$EXTENDED_CONFIG" \
+      --input-dir "$EXTENDED_DATA_DIR" \
+      --output "$EXTENDED_PROCESSED_DIR/extended_input_schema_validation.tsv" \
+      "${strict_flag[@]}"
+
+  log_stage "Build standardized extended multi-omics evidence"
   run_logged "$LOG_DIR/01_build_extended_multiomics_evidence.log" \
     python -u scripts/build_extended_multiomics_evidence.py \
       --config "$EXTENDED_CONFIG" \
@@ -79,8 +88,16 @@ analysis() {
       --loss-threshold "$LOSS_THRESHOLD" \
       "${strict_flag[@]}"
 
+  log_stage "Annotate gene- and platform-specific score eligibility"
+  run_logged "$LOG_DIR/02_annotate_extended_layer_eligibility.log" \
+    python -u scripts/annotate_extended_layer_eligibility.py \
+      --config "$EXTENDED_CONFIG" \
+      --input-dir "$EXTENDED_DATA_DIR" \
+      --models "$MODELS" \
+      --evidence "$EXTENDED_PROCESSED_DIR/extended_pair_evidence_by_cancer.tsv"
+
   log_stage "Recompute integrated TCGA-DepMap ranking as RSES-Onco v0.12.0"
-  run_logged "$LOG_DIR/02_recompute_full_extended_rses.log" \
+  run_logged "$LOG_DIR/03_recompute_full_extended_rses.log" \
     python -u scripts/recompute_rses_with_extended_multiomics.py \
       --ranking "$FULL_RANKING" \
       --evidence "$EXTENDED_PROCESSED_DIR/extended_pair_evidence_by_cancer.tsv" \
@@ -88,7 +105,7 @@ analysis() {
 
   if [[ -s "$DEPMAP_RANKING" ]]; then
     log_stage "Recompute DepMap-only ranking with the same causal multi-omics semantics"
-    run_logged "$LOG_DIR/03_recompute_depmap_extended_rses.log" \
+    run_logged "$LOG_DIR/04_recompute_depmap_extended_rses.log" \
       python -u scripts/recompute_rses_with_extended_multiomics.py \
         --ranking "$DEPMAP_RANKING" \
         --evidence "$EXTENDED_PROCESSED_DIR/extended_pair_evidence_by_cancer.tsv" \
@@ -100,7 +117,7 @@ analysis() {
   if [[ "$STRICT_EXTENDED_SOURCES" == "1" ]]; then
     source_flag=(--strict-sources)
   fi
-  run_logged "$LOG_DIR/04_validate_extended_multiomics_analysis.log" \
+  run_logged "$LOG_DIR/05_validate_extended_multiomics_analysis.log" \
     python -u scripts/validate_extended_multiomics_integrity.py \
       --processed-dir "$EXTENDED_PROCESSED_DIR" \
       --ranking "$FULL_RANKING" \
@@ -114,7 +131,7 @@ publication() {
   log_stage "Generate Supplementary Figures S71-S78"
   local layout_flag="--strict-layout"
   [[ "$STRICT_LAYOUT" == "1" ]] || layout_flag="--no-strict-layout"
-  run_logged "$LOG_DIR/05_make_extended_multiomics_figures.log" \
+  run_logged "$LOG_DIR/06_make_extended_multiomics_figures.log" \
     env MPLBACKEND=Agg python -u scripts/make_extended_multiomics_figures.py \
       --config config/extended_multiomics_asset.yaml \
       --ranking "$FULL_RANKING" \
@@ -123,12 +140,12 @@ publication() {
       "$layout_flag"
 
   log_stage "Register Figures S71-S78 and Supplementary Tables S53-S64"
-  run_logged "$LOG_DIR/06_register_extended_multiomics_assets.log" \
+  run_logged "$LOG_DIR/07_register_extended_multiomics_assets.log" \
     python -u scripts/register_extended_multiomics_assets.py \
       --article-root "$ARTICLE_ROOT"
 
   log_stage "Recatalog exact source data for every registered figure"
-  run_logged "$LOG_DIR/07_recatalog_figure_source_data.log" \
+  run_logged "$LOG_DIR/08_recatalog_figure_source_data.log" \
     python -u scripts/catalog_figure_source_data.py \
       --article-root "$ARTICLE_ROOT"
 
@@ -137,7 +154,7 @@ publication() {
   if [[ "$STRICT_EXTENDED_SOURCES" == "1" ]]; then
     source_flag=(--strict-sources)
   fi
-  run_logged "$LOG_DIR/08_validate_extended_multiomics_publication.log" \
+  run_logged "$LOG_DIR/09_validate_extended_multiomics_publication.log" \
     python -u scripts/validate_extended_multiomics_integrity.py \
       --processed-dir "$EXTENDED_PROCESSED_DIR" \
       --ranking "$FULL_RANKING" \
