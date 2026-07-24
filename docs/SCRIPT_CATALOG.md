@@ -2,7 +2,7 @@
 
 This catalogue is generated directly from every Python, Bash and R source file in `scripts/` and `src/rses_onco/`. It is therefore an executable repository contract rather than a manually curated partial list.
 
-Generated entries: **126**
+Generated entries: **127**
 
 | Script/module | Stage | Language | Purpose | Reproduction command | Declared paths |
 |---|---|---|---|---|---|
@@ -108,6 +108,7 @@ Generated entries: **126**
 | `scripts/validate_manual_inspection_completion.py` | validation | Python | Block final packaging until every registered figure passes manual inspection. | `python -u scripts/validate_manual_inspection_completion.py --help` | `` |
 | `scripts/validate_publication_documents.py` | validation | Python | Validate generated DOCX/PDF publication documents and page separation. | `python -u scripts/validate_publication_documents.py --help` | `article_outputs/documents` |
 | `scripts/validate_publication_outputs.py` | validation | Python | Validate completeness and reproducibility of the publication asset package. | `python -u scripts/validate_publication_outputs.py --help` | `data/curated/human_nise_bonafide_2017.tsv;data/figure_source_data_inventory.tsv;data/processed/circos/genomic_circos_status.json;data/processed/regulatory/wgcna/;data/processed/structures/;data/processed/structures/alphafold_structure_manifest.tsv;data/processed/structures/nise_structure_render_manifest.tsv;data/supplementary/Figure_S70_source_data.tsv;docs/SCRIPT_CATALOG.md;docs/script_manifest.tsv` |
+| `scripts/validate_publication_outputs_v0120.py` | validation | Python | Validate the 86-figure/68-table v0.12.0 package around the stable core validator. | `python -u scripts/validate_publication_outputs_v0120.py --help` | `` |
 | `scripts/validate_publication_scientific_integrity.py` | validation | Python | Validate scientific integrity, missingness semantics and figure-source traceability. | `python -u scripts/validate_publication_scientific_integrity.py --help` | `data/figure_source_data_inventory.tsv;data/figures/main;data/figures/supplementary` |
 | `scripts/validate_real_inputs.py` | validation | Python | Structural and overlap validation for real DepMap inputs. | `python -u scripts/validate_real_inputs.py --help` | `data/curated/synthetic_lethality_reference_pairs.tsv` |
 | `scripts/validate_wgcna_regulatory_evidence.py` | expression_and_regulation | Python | Validate WGCNA, promoter, TF and methylation evidence integration. | `python -u scripts/validate_wgcna_regulatory_evidence.py --help` | `data/processed/expanded_pair_functional_evidence.tsv;results/expanded_26Q1/full/expanded_rses_onco.tsv` |
