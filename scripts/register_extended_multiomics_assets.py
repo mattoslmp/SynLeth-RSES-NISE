@@ -121,6 +121,14 @@ def derived_tables(ranking: pd.DataFrame) -> dict[str, pd.DataFrame]:
       "extended_scored_layer_count",
       "extended_scored_layer_coverage",
       "score_version",
+      "ablation_without_integrated_functional_loss_coverage_adjusted_rses",
+      "ablation_without_dependency_probability_coverage_adjusted_rses",
+      "ablation_without_protein_compensation_coverage_adjusted_rses",
+      "ablation_without_rnai_orthogonal_support_coverage_adjusted_rses",
+      "ablation_without_integrated_functional_loss_rank_within_cancer",
+      "ablation_without_dependency_probability_rank_within_cancer",
+      "ablation_without_protein_compensation_rank_within_cancer",
+      "ablation_without_rnai_orthogonal_support_rank_within_cancer",
     )
     if column in ranking.columns
   ]
